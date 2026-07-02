@@ -12,10 +12,10 @@
 
 | Layer | Technology | Justification |
 |-------|-----------|---------------|
-| **Language** | Java 17 (LTS) | Aligns with bootcamp context (project is under `java/` path); strong typing aids correctness |
-| **Framework** | Spring Boot 3.x | Industry-standard, fast to scaffold REST APIs; auto-configuration reduces boilerplate; large ecosystem |
+| **Language** | Java 21 (LTS) | Aligns with bootcamp context (project is under `java/` path); strong typing aids correctness; virtual threads (Project Loom) available for free concurrency gains |
+| **Framework** | Spring Boot 4.1.x | Latest stable generation; built on Spring Framework 7; native Jakarta EE 11 support; requires Java 21 minimum |
 | **ORM** | Spring Data JPA + Hibernate | Handles DB mapping, transactions, and query generation with minimal SQL boilerplate |
-| **Database** | PostgreSQL 15 | Reliable relational DB; ACID transactions essential for point balance integrity; free and widely available |
+| **Database** | PostgreSQL 18 | Latest stable release; improved vacuum, logical replication, and query planner; ACID transactions essential for point balance integrity; free and widely available |
 | **DB Migration** | Flyway | Version-controlled schema migrations; easy to seed initial data (partners, rewards, exchange rates) |
 | **Build Tool** | Maven | Standard for Spring Boot; familiar to most Java developers |
 | **Testing** | JUnit 5 + Mockito | Standard Java testing stack; Mockito enables service-layer unit testing without DB |
@@ -23,6 +23,7 @@
 | **Containerization** | Docker + Docker Compose | One-command local setup (`docker compose up`); eliminates "works on my machine" issues |
 
 > **Why not Node.js / Python?** The project lives in a `java/` directory and the bootcamp context implies Java. Spring Boot is well-suited for 2-week delivery — abundant scaffolding tools (`spring initializr`), mature testing support, and straightforward REST + JPA patterns.
+> **Why Spring Boot 4.1.x over 3.x?** Spring Boot 4 drops legacy `javax.*` baggage entirely, ships with better virtual-thread integration (Java 21 Loom), and is the current recommended baseline as of mid-2026. Minimum Java version aligns with Java 21 LTS.
 
 ---
 
@@ -695,10 +696,11 @@ All values below should be set in `application.properties` or via environment va
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `spring.datasource.url` | `jdbc:postgresql://localhost:5432/loyalty` | DB connection URL |
+| `spring.datasource.url` | `jdbc:postgresql://localhost:5432/loyalty` | DB connection URL (PostgreSQL 18) |
 | `spring.datasource.username` | `loyalty_user` | DB username |
 | `spring.datasource.password` | *(env var)* | DB password |
 | `spring.jpa.hibernate.ddl-auto` | `validate` | Flyway manages schema; Hibernate validates |
+| `spring.threads.virtual.enabled` | `true` | Enable Java 21 virtual threads (Loom) for improved throughput |
 | `loyalty.admin.api-key` | *(env var)* | Static API key for admin endpoints |
 | `loyalty.points.default-rate` | `1` | Default points per IDR 1,000 (overridden per partner) |
 
