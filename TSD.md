@@ -271,8 +271,8 @@ flowchart TD
 | `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — | Member can only view own profile |
 | `PUT /members/{id}` | — | — | ✓ | — | Admin updates member name/email |
 | `PUT /members/{id}/status` | — | — | ✓ | — | Admin toggles ACTIVE/INACTIVE |
-| `GET /members/{id}/points` | — | ✓ (own) | ✓ (any) | — | View balances per partner |
-| `GET /members/{id}/transactions` | — | ✓ (own) | ✓ (any) | — | Paginated transaction history |
+| `GET /members/{id}/points` | — | ✓ (own) | — | — | Privacy: admin cannot view balances |
+| `GET /members/{id}/transactions` | — | ✓ (own) | — | — | Privacy: admin cannot view transaction history |
 | `POST /exchange` | — | ✓ | — | — | Member-initiated point exchange |
 | `POST /redeem` | — | ✓ | — | — | Member redeems reward |
 | `GET /rewards` | — | ✓ | ✓ | — | List active rewards (all partners) |
@@ -486,7 +486,7 @@ flowchart TD
 ### 4.5 `GET /members/{id}/points` — Get Point Balances
 
 **Description:** Get a member's point balances across all partners.  
-**Auth:** None
+**Auth:** MEMBER (own only) — Admin cannot access for privacy reasons
 
 **Response `200 OK`:**
 ```json
@@ -500,7 +500,7 @@ flowchart TD
 }
 ```
 
-**Status Codes:** `200`, `404`
+**Status Codes:** `200`, `403` (not own member), `404` (member not found)
 
 ---
 
@@ -508,7 +508,7 @@ flowchart TD
 
 **Description:** Paginated transaction history for a member.  
 **Query Params:** `?page=0&size=10&type=EARN|REDEEM|EXCHANGE_IN|EXCHANGE_OUT`  
-**Auth:** None
+**Auth:** MEMBER (own only) — Admin cannot access for privacy reasons
 
 **Response `200 OK`:**
 ```json
@@ -540,7 +540,7 @@ flowchart TD
 }
 ```
 
-**Status Codes:** `200`, `404`
+**Status Codes:** `200`, `403` (not own member), `404` (member not found)
 
 ---
 

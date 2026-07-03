@@ -173,9 +173,13 @@ com.jdt17.loyalty/
 | `POST /transactions` | — | — | — | ✓ |
 | `GET /members` | — | — | ✓ | — |
 | `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — |
+| `GET /members/{id}/points` | — | ✓ (own) | — | — |
+| `GET /members/{id}/transactions` | — | ✓ (own) | — | — |
 | `POST /exchange` | — | ✓ | — | — |
 | `POST /redeem` | — | ✓ | — | — |
 | `POST /partners` | — | — | ✓ | — |
+
+**Privacy:** Admin can manage member profiles but cannot view point balances or transaction history.
 
 Full matrix: TSD.md §4
 

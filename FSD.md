@@ -287,6 +287,8 @@ The following items are **not specified in the README**. Each is given a reasona
 
 All secured endpoints validate JWT and check role claim. Frontend (Next.js) stores JWT in localStorage and includes it in `Authorization: Bearer <token>` header.
 
+**Privacy constraint:** Admins can manage member profiles (name, email, status) but **cannot view point balances or transaction history** for privacy reasons. Only the member themselves can view their own financial data.
+
 ---
 
 ## 8. Glossary
