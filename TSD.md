@@ -122,7 +122,7 @@ erDiagram
 
 ```mermaid
 flowchart TD
-    A([Partner System calls POST /transactions]) --> B{"Resolve member by identifier<br>(ID, phone, or email)<br>Exists?"}
+    A([Partner System calls POST /transactions]) --> B{"Resolve member by identifier<br>(phone or email)<br>Exists?"}
     B -- No --> ERR1[Return 404 Member Not Found]
     B -- Yes --> C{Partner exists & ACTIVE?}
     C -- No --> ERR2[Return 404 Partner Not Found]

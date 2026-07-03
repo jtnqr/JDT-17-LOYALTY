@@ -98,11 +98,11 @@ The following are recognized but **not implemented** in this MVP:
 
 **Actor:** Partner System (simulated)  
 **Pre-conditions:** Member exists; Partner exists and is active  
-**Trigger:** A `POST /transactions` call is made with member identifier (memberId, phone, or email), partner, and transaction amount
+**Trigger:** A `POST /transactions` call is made with member identifier (phone or email), partner, and transaction amount
 
 **Main Flow:**
 1. Partner System calls `POST /transactions` with `memberIdentifier`, `partner`, and `trxAmount`.
-2. System resolves the member using the provided identifier (lookup by ID, phone, or email).
+2. System resolves the member using the provided identifier (lookup by phone or email).
 3. System validates that the member exists and the partner is active.
 4. System calculates points earned using the conversion formula (see Business Rules §5.1).
 5. System credits the member's point balance for the given partner.
@@ -165,7 +165,7 @@ The following are recognized but **not implemented** in this MVP:
 
 ### UC-07: View Transaction History
 
-**Actor:** Member / CMS Admin  
+**Actor:** Member  
 **Pre-conditions:** Member exists  
 **Trigger:** Caller queries `GET /members/{id}/transactions`
 
@@ -179,7 +179,7 @@ The following are recognized but **not implemented** in this MVP:
 
 ### UC-08: View Point Balance
 
-**Actor:** Member / CMS Admin  
+**Actor:** Member  
 **Pre-conditions:** Member exists  
 **Trigger:** Caller queries `GET /members/{id}/points`
 
