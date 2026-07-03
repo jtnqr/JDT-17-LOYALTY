@@ -17,6 +17,7 @@ flowchart LR
         UC3([UC-03: Point Accumulation])
         UC4([UC-04: Point Expiry])
         UC5([UC-05: Point Exchange Between Partners])
+        UC6([UC-06: Point Redemption])
         UC7([UC-07: View Transaction History])
         UC8([UC-08: View Point Balance])
     end
@@ -24,12 +25,14 @@ flowchart LR
     %% Relationship - Member
     A1 --- UC1
     A1 --- UC5
+    A1 --- UC6
     A1 --- UC7
     A1 --- UC8
     
     %% Relationship - Admin
-    A2 --- UC1
     A2 --- UC2
+    A2 --- UC7
+    A2 --- UC8
     
     %% Relationship - Partner System
     A3 --- UC3

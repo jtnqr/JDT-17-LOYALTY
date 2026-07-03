@@ -200,6 +200,32 @@ flowchart TD
 
 ---
 
+### 3.4 Point Redemption Flow
+
+```mermaid
+flowchart TD
+    A([Member calls POST /redeem]) --> B{Member exists & ACTIVE?}
+    B -- No --> ERR1[Return 404 / 400]
+    B -- Yes --> C{Reward exists & ACTIVE?}
+    C -- No --> ERR2[Return 404]
+    C -- Yes --> D["Lookup TRX_POINT_BALANCE<br>for member + reward's partner"]
+    D --> E{"Balance >= reward.pointCost?"}
+    E -- No --> ERR3[Return 422 Insufficient Points]
+    E -- Yes --> F[BEGIN DB Transaction]
+    F --> G["UPDATE TRX_POINT_BALANCE<br>balance -= reward.pointCost"]
+    G --> H["Insert TRX_TRANSACTION<br>type=REDEEM, link rewardId"]
+    H --> I["Insert TRX_AUDIT_TRAIL<br>eventType = POINTS_REDEEMED"]
+    I --> J[COMMIT]
+    J --> K([Return 200 with transaction + new balance])
+
+    ERR1 --> End((End))
+    ERR2 --> End
+    ERR3 --> End
+    K --> End
+```
+
+---
+
 ## 4. API Specification
 
 ### Conventions

@@ -6,12 +6,13 @@ Dokumen ini berisi Activity Diagram untuk setiap fitur (Use Case) utama yang dij
 
 ```mermaid
 flowchart TD
-    Start((Start)) --> A[Actor calls POST /members]
+    Start((Start)) --> A[Actor calls POST /auth/register]
     A --> B[System generates internal UUID]
     B --> C[System creates TRX_POINT_BALANCE record = 0 <br/> for all ACTIVE partners]
     C --> D[System writes TRX_AUDIT_TRAIL: MEMBER_REGISTERED]
-    D --> E[System returns 201 Created <br/> with member object]
-    E --> End((End))
+    D --> E[System generates JWT token with role=MEMBER]
+    E --> F[System returns 201 Created <br/> with JWT + member object]
+    F --> End((End))
 ```
 
 ---
@@ -24,7 +25,7 @@ flowchart TD
     A --> B{Validate Admin JWT?}
     B -- Invalid --> ERR1[Return 401/403]
     B -- Valid --> C[System creates new MST_PARTNER record]
-    C --> D[System initializes 0 point balance <br/> for all existing members]
+    C --> D[System initializes 0 point balance <br/> for all existing members via bulk SQL]
     D --> E[System writes TRX_AUDIT_TRAIL: PARTNER_CREATED]
     E --> F[System returns 201 Created <br/> with partner object]
     F --> End((End))
@@ -46,7 +47,7 @@ flowchart TD
     D -- No --> ERR2[Return 404 / 400]
     D -- Yes --> E[Calculate pointsEarned = <br/> floor trxAmount / 1000 * rate]
     E --> F[Credit member's TRX_POINT_BALANCE]
-    F --> G[Create TRX_TRANSACTION record <br/> type = EARN]
+    F --> G[Create TRX_TRANSACTION record <br/> type = EARN, set expiresAt]
     G --> H[Write TRX_AUDIT_TRAIL: POINTS_EARNED]
     H --> I[Return 201 Created]
     I --> End((End))
@@ -61,7 +62,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start((Start)) --> A[Scheduler triggers daily cron job]
+    Start((Start)) --> A[Scheduler triggers daily cron job at 1am]
     A --> B["Query EARN transactions <br/> where expiresAt <= now()"]
     B --> C{Transactions found?}
     C -- No --> End((End))
@@ -95,4 +96,29 @@ flowchart TD
     
     ERR1 --> End
     ERR2 --> End
+```
+
+---
+
+## UC-06: Point Redemption
+
+```mermaid
+flowchart TD
+    Start((Start)) --> A[Member calls POST /redeem]
+    A --> B{Member exists & ACTIVE?}
+    B -- No --> ERR1[Return 404 / 400]
+    B -- Yes --> C{Reward exists & ACTIVE?}
+    C -- No --> ERR2[Return 404]
+    C -- Yes --> D[Lookup member balance for reward's partner]
+    D --> E{Balance >= reward.pointCost?}
+    E -- No --> ERR3[Return 422 Insufficient Points]
+    E -- Yes --> F[Deduct pointCost from balance]
+    F --> G[Create TRX_TRANSACTION record <br/> type = REDEEM, link rewardId]
+    G --> H[Write TRX_AUDIT_TRAIL: POINTS_REDEEMED]
+    H --> I[Return 200 OK with transaction + new balance]
+    I --> End((End))
+    
+    ERR1 --> End
+    ERR2 --> End
+    ERR3 --> End
 ```
