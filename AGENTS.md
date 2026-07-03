@@ -198,9 +198,15 @@ Current phase: **Phase 1 (not started)**
 - **Deadline:** July 14, 2026 — 11 days remaining
 - **Scope:** 93 story points across 6 use cases (aggressive for 2-person team)
 - **No Jira** — using plan file + commit messages for tracking
-- **Seed data bcrypt hash** — placeholder used, regenerate before first run
-- **No WCAG validation** — accessibility is best-effort, not audited
-- **No production hardening** — this is bootcamp demo, not prod deployment
+- **Seed data bcrypt hash** — placeholder used, regenerate before deployment
+- **No WCAG compliance audit** — accessibility is best-effort, not formally validated
+- **MVP scope** — membership tiers, point transfer between members, dashboard analytics deferred to post-MVP
+
+**Production Readiness:**
+- Core architecture is production-capable (JWT, optimistic locking, audit trail, TDD)
+- Security hardening required before public deployment (rotate secrets, HTTPS, rate limiting)
+- Performance testing pending (load test, stress test)
+- This is apprenticeship work presented to higher-ups — code quality matters
 
 ---
 

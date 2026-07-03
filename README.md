@@ -1,194 +1,420 @@
-# JDT-17-LOYALTY
+# JDT-17 Loyalty Platform
 
-# Task BOOTCAMP
+Multi-partner loyalty points management system supporting point accumulation, redemption, and cross-partner exchange. Developed as part of the Indivara Technology Java Developer Apprenticeship Program (Batch 17).
 
-**MENTOR INVOLVEMENT PLAN**
+**Demo:** TBD (post-deployment)  
+**Deadline:** July 14, 2026  
+**Team:** 2-person development team
 
-1. **Initial Phase (Day 1-2): 02 & 03 July 2026**
-- Kickoff Session: Mentors meet their assigned teams to:
-    1. Understand the team’s chosen theme.
-    2. Help define the scope of the project.
-    3. Break the project into clear milestones (e.g., database setup, backend APIs).
-1. **Midway Checkpoints (Week 1): 02 s.d 09 July 2026**
-- Hold two checkpoints during the first week:
-    1. Checkpoint 1: Review the team’s progress on initial setup (e.g., database schema, API design).
-    2. Checkpoint 2: Focus on integration of frontend and backend, and ensure they’re following good coding practices. (if we have to create FE)
-1. **Final Week (Week 2): 10 s.d 20 July 2026Code Reviews: Evaluate the overall quality of the code and suggest improvements.**
-    - Presentation Guidance: Help the team structure their final presentation/demo to highlight key features and problem-solving approaches.
-2. **Submission Mini Case: 21 July 2026**
+---
 
-**DELIVERABLE EXPECTATION**
+## Overview
 
-1. Simple FSD TSD
-2. ERD
-3. Use Cases
-4. Flow Chart/BPMN
-5. API Spec
-6. Source Code in git, for a working demo
-7. Unit Testing
-8. Audit Trails
-9. Presentation
+A full-stack loyalty platform enabling members to earn, redeem, and exchange points across multiple partner merchants (KFC, McDonald's pilot). Features include:
 
-**Loyalty**
+- **Member Management** — Self-registration, profile management, balance tracking
+- **Point Accumulation** — Partner-driven transaction recording via REST API
+- **Point Redemption** — Exchange points for partner rewards
+- **Cross-Partner Exchange** — Convert points between merchants (KFC ↔ McD)
+- **Point Expiry** — Automated daily scheduler with configurable expiry per partner
+- **Admin CMS** — Member management, status control, reporting
+- **Audit Trail** — Complete activity logging for compliance
 
-- Member registration (keep it simple, input validation is not required)
-- The system must provide a points accumulation feature for transactions made through third-party partners such as KFC and McDonald’s
-- The system must provide a simple point redemption feature that allows users to exchange points for rewards. The system should only validate point balance and perform point deduction. Reward availability does not require validation and rewards may be injected directly from the database
-- The system must provide a point exchange feature between third-party partners (e.g., converting KFC points into McDonald’s points and vice versa). This feature is a primary requirement and must be prioritized
+---
 
-My review after breakdown: 
+## Tech Stack
 
-Requirement:
+### Backend
+- **Framework:** Spring Boot 4.1.x (Java 21 LTS)
+- **Database:** PostgreSQL 18
+- **ORM:** JPA / Hibernate
+- **Migrations:** Flyway
+- **Authentication:** JWT (Spring Security)
+- **Testing:** JUnit 5 + Mockito (TDD approach)
+- **Build:** Maven
 
-1. Member regist
-2. System must provide a poin
-3. Data dummy
-4. System bisa menukar poin dengan reward (voucher, product, merchandise)
-5. Mengatur penambahan poin / pengurangan poin
-6. Data reward langsung di inject.
-7. Bisa reward di third party (mcd ke kfc dan sebaliknya)
+### Frontend
+- **Framework:** Next.js 16 (App Router)
+- **UI Library:** shadcn/ui + Tailwind CSS
+- **State Management:** React Query (TanStack)
+- **Language:** TypeScript
+- **Build:** Vite
 
-FSD TSD 1-5 poin
+### Infrastructure
+- **Deployment:** Docker Compose
+- **Orchestration:** docker-compose.yml (PostgreSQL + Backend + Frontend)
 
-> 14 July 2026 → deadline
-> 
+---
 
-ini websitenya : https://indivaragroup.com/indivara-loyalty-platform-02/ 
+## Quick Start
 
-goodie ada beberapa fitur:
+### Prerequisites
+- Docker Desktop 24.0+
+- Node.js 20+ (for local frontend dev)
+- Java 21 (for local backend dev)
+- Git
 
-- Membership Tiering
+### Setup
 
-> With Membership Tiering, you can segment your customer base more effectively, by monitoring and analyzing member activities and interests. You can improve the customer experience they provide and create highly-targeted communication. Also, customers will feel that the brand looks after them.
-> 
-- Transfer Point
+```bash
+# 1. Clone repository
+git clone https://github.com/jtnqr/JDT-17-LOYALTY.git
+cd JDT-17-LOYALTY
 
-> Transfer point between member allows users to connected with other users and share experiences using your platform and services.
-> 
-- Exchange Point
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with:
+#   - Strong POSTGRES_PASSWORD
+#   - JWT_SECRET (generate with: openssl rand -hex 64)
+#   - Partner API keys (see seed-data.sql)
 
-> This feature allows users to exchange their loyalty points from one merchant to another merchant which they prefer to use.
-> 
-- Redeem point
+chmod 600 .env
 
-my notes:
+# 3. Start services
+docker-compose up -d
 
-AI → stitch for UI / UX design
+# 4. Verify migrations
+docker-compose logs backend | grep Flyway
 
-Loyalty → system berbasis poin (loyalty yang mengatur). pihak 3 yang ngatur poin-nya. 
+# 5. Load seed data
+docker-compose exec db psql -U loyalty -d jdt17_loyalty -f /docker-entrypoint-initdb.d/seed-data.sql
 
-KFC sama McD. 
-
-CMS : View Member, Edit Member, Member Status
-
-Merchant : KFC & McD
-
-API Contract
-
-Point Balance
-
-```jsx
-GET /members/{id}/points
+# 6. Access services
+# Backend API: http://localhost:8080/api/v1
+# Frontend: http://localhost:3000
+# PostgreSQL: localhost:5432
 ```
 
-Point History
+### Default Credentials (Seed Data)
 
-```jsx
-GET /members/{id}/transactions
+**Admin:**
+- Email: `admin@jdt17loyalty.com`
+- Password: `Admin123!`
+
+**Test Member:**
+- Email: `budi.santoso@example.com`
+- Password: `Member123!`
+
+**Partner API Keys:**
+- KFC: `kfc_api_key_2026_secure_demo_only`
+- McD: `mcd_api_key_2026_secure_demo_only`
+
+⚠️ **Security Note:** Change all default credentials before production deployment.
+
+---
+
+## Architecture
+
+### Database Schema (ERD)
 
 ```
-
-Transaction API
-
-```jsx
-POST /transactions
+MST_MEMBER (members)
+MST_PARTNER (KFC, McD)
+MST_REWARD (reward catalog)
+MST_EXCHANGE_RATE (KFC↔McD rates)
+TRX_POINT_BALANCE (balances per member per partner)
+TRX_TRANSACTION (EARN | REDEEM | EXCHANGE_IN | EXCHANGE_OUT | EXPIRED)
+TRX_AUDIT_TRAIL (compliance logging)
 ```
 
-Body: 
+See `erd.md` for detailed schema.
+
+### Authentication Flow
+
+1. Member registers via `POST /auth/register` → JWT returned
+2. Admin/Member login via `POST /auth/login` → JWT returned
+3. Partner requests token via `POST /auth/partner/token` (validates API key) → JWT returned
+4. All secured endpoints require `Authorization: Bearer <JWT>`
+5. JWT contains role claim (MEMBER | ADMIN | PARTNER) for authorization
+
+### Key Design Decisions
+
+- **Optimistic Locking** — `@Version` on `TRX_POINT_BALANCE` prevents concurrent update race conditions
+- **Bulk Balance Initialization** — Native SQL INSERT-SELECT for partner creation (scales to millions of members)
+- **EXPIRED Transaction Type** — Point expiry creates visible transaction record (members see why balance decreased)
+- **Configurable Expiry** — `expiryDays` per partner, computed at EARN time
+- **Partner-Scoped Balances** — One balance row per member per partner (no cross-contamination)
+
+---
+
+## API Documentation
+
+### Base URL
+```
+http://localhost:8080/api/v1
+```
+
+### Authentication Endpoints (Public)
+
+**Register Member**
+```http
+POST /auth/register
+Content-Type: application/json
 
 {
-
-"memberId":"M001",
-
-"partner":"KFC",
-
-"trxAmount":150000
-
+  "name": "Budi Santoso",
+  "email": "budi@example.com",
+  "phone": "081234567890",
+  "password": "SecurePass123!"
 }
 
-Exchange Rate *contoh: 
-
-1 KFC poin = 0.8 McD poin
-
-Reward Catalog
-
-```jsx
-GET /rewards
+Response 201:
+{
+  "token": "eyJhbG...",
+  "member": { "id": "...", "name": "Budi Santoso", ... }
+}
 ```
 
-If possible adding new merchant :
+**Login (Member or Admin)**
+```http
+POST /auth/login
+Content-Type: application/json
 
-```jsx
-GET /partners 
+{
+  "email": "budi@example.com",
+  "password": "SecurePass123!"
+}
+
+Response 200:
+{
+  "token": "eyJhbG...",
+  "role": "MEMBER",
+  "user": { ... }
+}
 ```
 
-Membership tier just suggest: 
+**Partner Token**
+```http
+POST /auth/partner/token
+Content-Type: application/json
 
-- Bronze
-- Silver
-- Gold
+{
+  "partnerId": "...",
+  "apiKey": "kfc_api_key_2026_..."
+}
 
-Expired date → possible for poin
-
-Dashboard berisi (Total Member, Total Transaction, Total Point Issued, Total Point Redeemed, Total Exchange)
-
-```jsx
-GET /dashboard
+Response 200:
+{
+  "token": "eyJhbG...",
+  "expiresIn": 3600
+}
 ```
 
-Audit Trail: untuk dapat semua aktivitas yang dilakukan user
+### Full API Specification
+See `TSD.md` §4 for complete endpoint documentation, authorization matrix, and error codes.
 
-API suggest:
+---
 
-POST /members
+## Development Workflow
 
-GET /members
+### Backend (Spring Boot)
 
-GET /members/{id}
+```bash
+# Run locally (outside Docker)
+cd backend
+./mvnw spring-boot:run
 
-GET /members/{id}/points
+# Run tests
+./mvnw test
 
-GET /members/{id}/transactions
+# Build
+./mvnw clean package
+```
 
-POST /transactions
+**Package Structure:**
+```
+com.jdt17.loyalty/
+├── config/        # Spring Security, JWT filter
+├── entity/        # JPA entities
+├── repository/    # Spring Data repos
+├── service/       # Business logic (TDD here)
+├── controller/    # REST controllers
+├── dto/           # Request/Response DTOs
+├── exception/     # Custom exceptions
+└── scheduler/     # Expiry job
+```
 
-GET /partners
+### Frontend (Next.js)
 
-GET /rewards
+```bash
+# Run locally
+cd frontend
+npm install
+npm run dev
 
-POST /redeem
+# Build
+npm run build
 
-POST /exchange
+# Type check
+npm run type-check
+```
 
-GET /dashboard
+**Route Structure:**
+```
+app/
+├── register/      # Member registration
+├── login/         # Login page
+├── dashboard/     # Member home
+├── rewards/       # Reward catalog
+├── redeem/        # Redemption flow
+├── exchange/      # Point exchange
+├── history/       # Transaction history
+└── admin/         # CMS (member list + detail)
+```
 
-**Must Have (sesuai requirement):**
+### Testing Approach
 
-- Member Registration
-- Partner Master (KFC, McDonald's)
-- Point Balance
-- Point Accumulation (berdasarkan transaksi dummy)
-- Point Redemption
-- Point Exchange antar partner
-- Reward Catalog
-- Transaction History
-- Audit Trail
-- Unit Testing
+**Backend (TDD):**
+- Service layer: `@ExtendWith(MockitoExtension.class)`, mock repositories
+- Controller layer: `@WebMvcTest`, mock services
+- Write test first (RED), implement (GREEN), refactor
+- Target: 80% coverage on service layer
 
-**Nice to Have (kalau waktu memungkinkan):**
+**Frontend:**
+- Component tests: React Testing Library
+- E2E: Optional (Playwright if time permits)
 
-- Membership Tier (Bronze/Silver/Gold)
-- Dashboard Summary
-- Configurable Exchange Rate
-- Expired Point
-- Transfer Point antar member
+---
+
+## Deployment
+
+### Docker Compose (Current)
+
+```bash
+docker-compose up -d        # Start all services
+docker-compose logs -f      # Watch logs
+docker-compose down         # Stop all
+docker-compose restart      # Restart services
+```
+
+### Production Considerations
+
+Before deploying to production:
+
+1. **Security Hardening**
+   - Regenerate all bcrypt hashes with strong passwords
+   - Generate unique partner API keys
+   - Use secure JWT secret (64+ bytes entropy)
+   - Enable HTTPS (SSL/TLS termination at load balancer)
+   - Configure CORS allowlist (no wildcards)
+
+2. **Database**
+   - Use managed PostgreSQL (AWS RDS, GCP Cloud SQL, etc.)
+   - Enable automated backups
+   - Configure read replicas for high traffic
+   - Use connection pooling (PgBouncer)
+
+3. **Application**
+   - Set `SPRING_PROFILES_ACTIVE=prod`
+   - Configure logging (JSON format, centralized aggregation)
+   - Enable Spring Boot Actuator endpoints (`/actuator/health`)
+   - Set up monitoring (Prometheus, Grafana)
+
+4. **Frontend**
+   - Build optimized production bundle (`npm run build`)
+   - Configure CDN for static assets
+   - Enable rate limiting on API gateway
+
+---
+
+## Project Structure
+
+```
+.
+├── AGENTS.md                  # AI agent guidelines (auto-loaded)
+├── FSD.md                     # Functional Specification
+├── TSD.md                     # Technical Specification
+├── README.md                  # This file
+├── .env.example               # Environment variables template
+├── docker-compose.yml         # Service orchestration
+├── docs/
+│   └── seed-data.sql          # Demo data SQL
+├── .hermes/
+│   └── plans/                 # Implementation roadmap
+├── activity.diagram.md        # Use case flowcharts
+├── usecase.diagram.md         # Actor-use case relationships
+├── erd.md                     # Entity relationship diagram
+├── bpmn.md                    # Business process flows
+├── backend/                   # Spring Boot application
+└── frontend/                  # Next.js application
+```
+
+---
+
+## Specifications
+
+| Document | Purpose |
+|----------|---------|
+| `FSD.md` | Functional requirements, business rules, use cases |
+| `TSD.md` | Technical design, ERD, API spec, architecture |
+| `.hermes/plans/` | Implementation plan (5 phases, task breakdown) |
+| `erd.md` | Detailed entity reference with field specs |
+| `bpmn.md` | BPMN Level 0-3 process flows |
+| `AGENTS.md` | Development guidelines for AI-assisted coding |
+
+---
+
+## Timeline
+
+| Phase | Duration | Deliverables |
+|-------|----------|--------------|
+| **Phase 1: Infrastructure** | Day 1-2 | Spring Boot scaffold, Flyway migrations, Docker setup, Next.js init |
+| **Phase 2: Backend Core** | Day 3-4 | Entities, repositories, JWT authentication, base services |
+| **Phase 3: Business Logic** | Day 5-7 | EARN, expiry scheduler, exchange, redemption (TDD) |
+| **Phase 4: Frontend** | Day 8-9 | Auth pages, member screens, admin CMS |
+| **Phase 5: Integration** | Day 10-11 | E2E testing, bug fixes, FSD/TSD updates |
+
+**Deadline:** July 14, 2026
+
+---
+
+## Deliverables (Apprenticeship Requirements)
+
+- [x] Functional Specification (FSD)
+- [x] Technical Specification (TSD)
+- [x] Entity Relationship Diagram (ERD)
+- [x] Use Cases & Activity Diagrams
+- [x] Flow Chart / BPMN
+- [x] API Specification
+- [ ] Source Code (in progress)
+- [ ] Unit Testing (TDD approach)
+- [ ] Audit Trail Implementation
+- [ ] Presentation Materials
+
+---
+
+## Known Limitations (MVP Scope)
+
+- **No membership tiering** (Bronze/Silver/Gold) — out of scope for July 14 deadline
+- **No point transfer between members** — exchange is partner-to-partner only
+- **No stock management for rewards** — balance validation only
+- **No WCAG compliance audit** — accessibility is best-effort
+- **No load testing** — performance validation pending
+
+These features are documented as future enhancements in `FSD.md` §2.2.
+
+---
+
+## Team
+
+**Development Team:**
+- [Your Name] — Backend & Infrastructure
+- [Teammate Name] — Frontend & Integration
+
+**Program:** Indivara Technology Java Developer Apprenticeship (Batch 17)  
+**Mentor:** [Mentor Name]
+
+---
+
+## License
+
+Proprietary — Indivara Technology Apprenticeship Project
+
+---
+
+## Contact
+
+For questions or issues, contact:
+- **Email:** [your-email]
+- **Repository:** https://github.com/jtnqr/JDT-17-LOYALTY
+- **Issue Tracker:** https://github.com/jtnqr/JDT-17-LOYALTY/issues

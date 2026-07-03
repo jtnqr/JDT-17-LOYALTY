@@ -383,8 +383,9 @@ VALUES
 -- 4 Sample Transactions (EARN)
 -- 4 Sample Audit Trail entries
 --
--- For demo purposes:
+-- SECURITY NOTES:
 -- - All passwords use the same bcrypt hash (Member123! / Admin123!)
--- - API keys are demo-only, replace in production
--- - UUIDs are hardcoded for reproducible testing
+-- - Regenerate hashes with BCryptPasswordEncoder before deployment
+-- - API keys are for development/testing — rotate before production
+-- - UUIDs are hardcoded for reproducible testing environments
 -- ============================================================
