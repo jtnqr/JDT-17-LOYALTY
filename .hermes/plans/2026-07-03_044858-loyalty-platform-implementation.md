@@ -466,7 +466,23 @@ Register (Screen 1) and Login with Zod validation. Store JWT in localStorage, re
 
 ### Task 4.3: Member Screens (2-6)
 
-- Screen 2: Home (balances + recent activity)
+**Frontend Routes Map:**
+
+| Route | Screen | Auth | Component |
+|-------|--------|------|-----------|
+| `/register` | Screen 1: Registration | Public | `app/register/page.tsx` |
+| `/login` | Login | Public | `app/login/page.tsx` |
+| `/dashboard` | Screen 2: Home + Balances | MEMBER | `app/dashboard/page.tsx` |
+| `/rewards` | Screen 3: Reward Catalog | MEMBER | `app/rewards/page.tsx` |
+| `/redeem` | Screen 4: Redemption | MEMBER | `app/redeem/page.tsx` |
+| `/exchange` | Screen 5: Point Exchange | MEMBER | `app/exchange/page.tsx` |
+| `/history` | Screen 6: Transaction History | MEMBER | `app/history/page.tsx` |
+| `/admin` | Screen 7: Member List (CMS) | ADMIN | `app/admin/page.tsx` |
+| `/admin/members/[id]` | Screen 8: Member Detail (CMS) | ADMIN | `app/admin/members/[id]/page.tsx` |
+
+**Auth guard:** `middleware.ts` at root — redirect unauthenticated to `/login`, redirect ADMIN to `/admin` on login.
+
+Screens:
 - Screen 3: Reward catalog (2-col grid, partner filters)
 - Screen 4: Redemption confirm (bottom sheet)
 - Screen 5: Exchange (with real-time preview)

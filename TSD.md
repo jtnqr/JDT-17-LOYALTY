@@ -238,9 +238,55 @@ flowchart TD
   {
     "status": 400,
     "error": "BAD_REQUEST",
-    "message": "Insufficient point balance"
+    "message": "Insufficient point balance",
+    "code": "INSUFFICIENT_BALANCE"
   }
   ```
+- **Standard Error Codes:**
+  - `MEMBER_NOT_FOUND` — Member ID does not exist
+  - `MEMBER_INACTIVE` — Member status is INACTIVE
+  - `PARTNER_NOT_FOUND` — Partner ID does not exist
+  - `PARTNER_INACTIVE` — Partner status is INACTIVE
+  - `REWARD_NOT_FOUND` — Reward ID does not exist
+  - `REWARD_INACTIVE` — Reward status is INACTIVE
+  - `INSUFFICIENT_BALANCE` — Not enough points for redemption/exchange
+  - `EXCHANGE_RATE_NOT_CONFIGURED` — No exchange rate exists for partner pair
+  - `INVALID_CREDENTIALS` — Wrong email/password or API key
+  - `UNAUTHORIZED` — Missing or invalid JWT token
+  - `FORBIDDEN` — JWT valid but role does not have permission
+  - `DUPLICATE_EMAIL` — Email already registered
+  - `DUPLICATE_PHONE` — Phone number already registered
+
+---
+
+### API Authorization Matrix
+
+| Endpoint | Public | MEMBER | ADMIN | PARTNER | Notes |
+|----------|--------|--------|-------|---------|-------|
+| `POST /auth/register` | ✓ | — | — | — | Self-registration |
+| `POST /auth/login` | ✓ | — | — | — | Returns JWT + role |
+| `POST /auth/partner/token` | ✓ | — | — | — | Validates partner apiKey |
+| `POST /transactions` | — | — | — | ✓ | Partner records EARN transactions |
+| `GET /members` | — | — | ✓ | — | Admin CMS member list |
+| `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — | Member can only view own profile |
+| `PUT /members/{id}` | — | — | ✓ | — | Admin updates member name/email |
+| `PUT /members/{id}/status` | — | — | ✓ | — | Admin toggles ACTIVE/INACTIVE |
+| `GET /members/{id}/points` | — | ✓ (own) | ✓ (any) | — | View balances per partner |
+| `GET /members/{id}/transactions` | — | ✓ (own) | ✓ (any) | — | Paginated transaction history |
+| `POST /exchange` | — | ✓ | — | — | Member-initiated point exchange |
+| `POST /redeem` | — | ✓ | — | — | Member redeems reward |
+| `GET /rewards` | — | ✓ | ✓ | — | List active rewards (all partners) |
+| `GET /rewards?partnerId={id}` | — | ✓ | ✓ | — | Filter rewards by partner |
+| `POST /partners` | — | — | ✓ | — | Admin creates new partner |
+| `GET /partners` | — | ✓ | ✓ | — | List all partners |
+| `PUT /partners/{id}` | — | — | ✓ | — | Admin updates partner config |
+
+**Notes:**
+- "✓ (own)" means JWT `sub` claim must match `{id}` path parameter
+- "✓ (any)" means any valid JWT with that role can access any member
+- Missing JWT → `401 UNAUTHORIZED`
+- Valid JWT but wrong role → `403 FORBIDDEN`
+- Public endpoints still validate request body schema
 
 ---
 
