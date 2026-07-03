@@ -27,10 +27,12 @@ This document covers **requirements 1–5** as scoped for the 14 July 2026 deadl
 | 3 | **Point Balance & Accumulation** | View member point balance; accumulate points from simulated partner transactions |
 | 4 | **Point Expiry** | Expire points via a scheduled job for points past their expiry date |
 | 5 | **Point Exchange** | Exchange points between partners (KFC ↔ McDonald's) at a configurable rate |
-| + | **JWT Authentication** | Implement JWT for authenticating Admin and Member API endpoints |
+| 6 | **Point Redemption** | Redeem points for rewards from the catalog; balance validation only (no stock check) |
+| + | **JWT Authentication** | JWT for all actors: Member, Admin, and Partner API calls |
 | + | **Transaction History** | View member transaction and exchange history |
-| + | **Audit Trail** | Log all significant system events (registration, earn, exchange, expiry, partner creation) |
+| + | **Audit Trail** | Log all significant system events (registration, earn, redeem, exchange, expiry, partner creation) |
 | + | **Unit Testing** | Unit tests covering core business logic |
+| + | **Web UI** | Mobile-first member app (6 screens) + desktop admin CMS (2 screens) built with Next.js 16 |
 
 ### 2.2 Out of Scope / Future
 
@@ -38,7 +40,6 @@ The following are recognized but **not implemented** in this MVP:
 
 - **Membership Tiering** (Bronze/Silver/Gold) — tier upgrade logic and tier-based benefits
 - **Dashboard Summary** (`GET /dashboard`) — aggregate statistics for CMS admin
-- **Point Expiry** — (Moved to In Scope)
 - **Transfer Point Between Members** — peer-to-peer point gifting
 - **Admin UI for Exchange Rate Management** — the rate is configurable in DB/config but no UI CRUD is built
 
@@ -63,11 +64,11 @@ The following are recognized but **not implemented** in this MVP:
 **Trigger:** Member submits registration data
 
 **Main Flow:**
-1. Actor calls `POST /members` with name, email, phone, password, and optional partner references.
+1. Actor calls `POST /auth/register` with name, email, phone, and password.
 2. System generates a unique internal member ID.
 3. System creates a point balance record (balance = 0) for each active partner.
 4. System writes an audit trail event: `MEMBER_REGISTERED`.
-5. System returns the created member object with the assigned member ID.
+5. System returns a JWT token and the created member object.
 
 **Post-conditions:** Member record exists in the system; point balance initialized to 0.  
 **Exceptions:** None (no input validation required per scope).
@@ -275,11 +276,16 @@ The following items are **not specified in the README**. Each is given a reasona
 
 ---
 
-### 7.4 CMS & Member API Authentication
+### 7.4 Authentication Strategy
 
 **Question:** How are endpoints secured?
 
-**Assumption:** JWT authentication is used. Admin endpoints require a valid admin JWT, while member endpoints require a valid member JWT. The system provides login endpoints to issue these JWTs.
+**Decision:** JWT authentication for all actors:
+- **Members:** Obtain JWT via `POST /auth/register` or `POST /auth/login`. Role claim = `MEMBER`.
+- **Admin:** Obtain JWT via `POST /auth/login` (email/password). Role claim = `ADMIN`.
+- **Partners:** Obtain JWT via `POST /auth/partner/token` (API key validation). Role claim = `PARTNER`.
+
+All secured endpoints validate JWT and check role claim. Frontend (Next.js) stores JWT in localStorage and includes it in `Authorization: Bearer <token>` header.
 
 ---
 

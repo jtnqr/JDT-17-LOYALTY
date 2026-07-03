@@ -20,6 +20,7 @@
 | **Build Tool** | Maven | Standard for Spring Boot; familiar to most Java developers |
 | **Testing** | JUnit 5 + Mockito | Standard Java testing stack; Mockito enables service-layer unit testing without DB |
 | **API Docs** | SpringDoc OpenAPI (Swagger UI) | Auto-generates interactive API docs from annotations; useful for demo |
+| **Frontend** | Next.js 16 + React 19 + TypeScript | Mobile-first web UI; App Router architecture; TypeScript for type safety; shadcn/ui components + Tailwind CSS for styling |
 | **Containerization** | Docker + Docker Compose | One-command local setup (`docker compose up`); eliminates "works on my machine" issues |
 
 > **Why not Node.js / Python?** The project lives in a `java/` directory and the bootcamp context implies Java. Spring Boot is well-suited for 2-week delivery — abundant scaffolding tools (`spring initializr`), mature testing support, and straightforward REST + JPA patterns.
@@ -48,7 +49,9 @@ erDiagram
         UUID id PK
         string name
         string code "KFC | MCD"
-        int pointsPerThousandIDR "default 1 — ASSUMPTION"
+        int pointsPerThousandIDR "default 1"
+        int expiryDays "default 365, configurable per partner"
+        string apiKey "for partner JWT authentication"
         enum status "ACTIVE | INACTIVE"
         UUID createdBy
         UUID updatedBy
@@ -68,10 +71,11 @@ erDiagram
         UUID id PK
         UUID memberId FK
         UUID partnerId FK
-        enum type "EARN | EXCHANGE_IN | EXCHANGE_OUT | EXPIRED"
+        enum type "EARN | REDEEM | EXCHANGE_IN | EXCHANGE_OUT | EXPIRED"
         long points
         long trxAmountIDR "null for non-EARN"
         UUID relatedTxId "links EXCHANGE_OUT to EXCHANGE_IN"
+        UUID rewardId FK "links to MST_REWARD for REDEEM transactions"
         timestamp expiresAt "expiry date for EARN transactions"
         timestamp createdAt
     }
@@ -91,11 +95,21 @@ erDiagram
         UUID id PK
         string eventType
         UUID actorId "memberId or null for system"
-        string actorType "MEMBER | SYSTEM | ADMIN"
-        string entityType "MEMBER | PARTNER | TRANSACTION | EXCHANGE"
+        string actorType "MEMBER | SYSTEM | ADMIN | PARTNER"
+        string entityType "MEMBER | PARTNER | TRANSACTION | EXCHANGE | REWARD"
         UUID entityId
         jsonb payload "before/after snapshot"
         timestamp createdAt
+    }
+
+    MST_REWARD {
+        UUID id PK
+        UUID partnerId FK
+        string name
+        int pointCost
+        enum status "ACTIVE | INACTIVE"
+        timestamp createdAt
+        timestamp updatedAt
     }
 
     MST_MEMBER ||--o{ TRX_POINT_BALANCE : "has"
@@ -104,15 +118,21 @@ erDiagram
     MST_PARTNER ||--o{ TRX_TRANSACTION : "associated with"
     MST_PARTNER ||--o{ MST_EXCHANGE_RATE : "fromPartner"
     MST_PARTNER ||--o{ MST_EXCHANGE_RATE : "toPartner"
+    MST_PARTNER ||--o{ MST_REWARD : "offers"
+    MST_REWARD ||--o{ TRX_TRANSACTION : "redeemed via"
 ```
 
 ### Key Design Decisions
 
 - **`TRX_POINT_BALANCE`** is a dedicated balance table (not computed from transaction sum on every read) — faster reads, simpler balance check logic. Balance is updated atomically with each transaction within a DB transaction.
-- **`pointsPerThousandIDR`** on `MST_PARTNER` is the configurable accumulation rate (see FSD §5.1 Assumption).
+- **`pointsPerThousandIDR`** on `MST_PARTNER` is the configurable accumulation rate.
+- **`expiryDays`** on `MST_PARTNER` is the configurable expiry duration per partner (default 365 days). Expiry date is computed at EARN time: `expiresAt = now + partner.expiryDays days`.
 - **`MST_EXCHANGE_RATE`** stores directional rates: one row for KFC→McD, another for McD→KFC. This allows asymmetric rates.
+- **`MST_REWARD`** stores partner reward catalog. `pointCost` is validated against member balance at redemption time. No stock management in MVP.
+- **`TRX_TRANSACTION.type = EXPIRED`** is recorded as a transaction row for member-visible history. Members can see why their balance decreased.
+- **`TRX_TRANSACTION.rewardId`** links REDEEM transactions to the specific reward item redeemed.
 - **`TRX_AUDIT_TRAIL.payload`** stores a JSON snapshot for event reconstruction without joining other tables.
-- `expiresAt` on `TRX_TRANSACTION` is actively used for Point Expiry jobs.
+- **`apiKey`** on `MST_PARTNER` is validated on `POST /auth/partner/token` to issue a partner-scoped JWT.
 
 ---
 
@@ -184,7 +204,7 @@ flowchart TD
 
 - **Base URL:** `http://localhost:8080/api/v1`
 - **Content-Type:** `application/json`
-- **Auth:** Endpoints require header: `Authorization: Bearer <jwt_token>` (Roles: ADMIN, MEMBER)
+- **Auth:** Secured endpoints require header: `Authorization: Bearer <JWT>`. JWT contains role claim (MEMBER | ADMIN | PARTNER).
 - **Error response format** (all errors):
   ```json
   {
@@ -196,38 +216,131 @@ flowchart TD
 
 ---
 
-### 4.1 `POST /members` — Register Member
+## 4.0 Authentication Endpoints
 
-**Description:** Register a new loyalty member. No input validation.  
-**Auth:** None
+### 4.0.1 POST /auth/register
 
-**Request:**
+**Description:** Register a new member and return JWT + member object (auto-login).
+
+**Authorization:** Public (no JWT required)
+
+**Request Body:**
 ```json
 {
   "name": "Budi Santoso",
   "email": "budi@example.com",
   "phone": "081234567890",
-  "password": "secure_password_123"
+  "password": "securePassword123"
 }
 ```
 
-**Response `201 Created`:**
+**Response 201:**
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440001",
-  "name": "Budi Santoso",
-  "email": "budi@example.com",
-  "phone": "081234567890",
-  "status": "ACTIVE",
-  "pointBalances": [
-    { "partnerId": "kfc-uuid", "partnerName": "KFC", "balance": 0 },
-    { "partnerId": "mcd-uuid", "partnerName": "McDonald's", "balance": 0 }
-  ],
-  "createdAt": "2026-07-02T10:00:00Z"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "member": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Budi Santoso",
+    "email": "budi@example.com",
+    "phone": "081234567890",
+    "status": "ACTIVE",
+    "createdAt": "2026-07-03T10:00:00Z"
+  }
 }
 ```
 
-**Status Codes:** `201` (created), `500` (unexpected error)
+**Notes:**
+- Member balances are auto-initialized to 0 for all active partners.
+- JWT includes role claim = `MEMBER`.
+
+---
+
+### 4.0.2 POST /auth/login
+
+**Description:** Login for Member or Admin. System checks both repositories.
+
+**Authorization:** Public (no JWT required)
+
+**Request Body:**
+```json
+{
+  "email": "budi@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response 200:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "role": "MEMBER",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Budi Santoso",
+    "email": "budi@example.com",
+    "phone": "081234567890",
+    "status": "ACTIVE"
+  }
+}
+```
+
+**Response 401:**
+```json
+{
+  "status": 401,
+  "error": "UNAUTHORIZED",
+  "message": "Invalid email or password"
+}
+```
+
+**Notes:**
+- JWT includes role claim = `MEMBER` or `ADMIN`.
+- Frontend uses role to route user to correct UI (member app vs admin CMS).
+
+---
+
+### 4.0.3 POST /auth/partner/token
+
+**Description:** Generate JWT for partner API calls. Validates apiKey against MST_PARTNER table.
+
+**Authorization:** Public (no JWT required)
+
+**Request Body:**
+```json
+{
+  "partnerId": "kfc-uuid",
+  "apiKey": "kfc-api-key-demo"
+}
+```
+
+**Response 200:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": 3600
+}
+```
+
+**Response 401:**
+```json
+{
+  "status": 401,
+  "error": "UNAUTHORIZED",
+  "message": "Invalid partner credentials"
+}
+```
+
+**Notes:**
+- JWT includes role claim = `PARTNER`.
+- Partner system includes this JWT in subsequent API calls (POST /transactions).
+
+---
+
+### 4.1 ~~POST /members~~ — Member Registration (DEPRECATED)
+
+**Note:** Member registration is now handled by `POST /auth/register` (see §4.0.1). This endpoint returns both a JWT token and the member object, enabling immediate login after registration.
+
+**Migration:** Replace calls to `POST /members` with `POST /auth/register`. The new endpoint auto-initializes point balances for all active partners and returns a JWT for immediate authentication.
 
 ---
 
@@ -485,6 +598,84 @@ flowchart TD
 
 ---
 
+### 4.11 `GET /rewards` — List Available Rewards
+
+**Description:** List all active rewards. Optional filter by partnerId.  
+**Auth:** Bearer JWT (any authenticated user)
+
+**Query Params:**
+- `partnerId` (optional): Filter rewards by partner UUID
+
+**Response `200 OK`:**
+```json
+{
+  "data": [
+    {
+      "id": "reward-uuid-001",
+      "partnerId": "kfc-uuid",
+      "partnerName": "KFC",
+      "name": "KFC Original Bucket (4 pcs)",
+      "pointCost": 500,
+      "status": "ACTIVE",
+      "createdAt": "2026-07-01T00:00:00Z"
+    },
+    {
+      "id": "reward-uuid-002",
+      "partnerId": "kfc-uuid",
+      "partnerName": "KFC",
+      "name": "KFC Zinger Burger",
+      "pointCost": 200,
+      "status": "ACTIVE",
+      "createdAt": "2026-07-01T00:00:00Z"
+    }
+  ],
+  "total": 2
+}
+```
+
+**Status Codes:** `200`, `401` (missing/invalid JWT)
+
+---
+
+### 4.12 `POST /redeem` — Redeem Points for Reward
+
+**Description:** Redeem a reward using member's points. Validates balance, deducts points, creates REDEEM transaction.  
+**Auth:** Bearer JWT (Role: MEMBER or ADMIN)
+
+**Request:**
+```json
+{
+  "memberId": "550e8400-e29b-41d4-a716-446655440001",
+  "rewardId": "reward-uuid-001"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+  "transactionId": "tx-uuid-006",
+  "rewardName": "KFC Original Bucket (4 pcs)",
+  "partnerId": "kfc-uuid",
+  "partnerName": "KFC",
+  "pointsDeducted": 500,
+  "newBalance": 0,
+  "redeemedAt": "2026-07-03T10:00:00Z"
+}
+```
+
+**Response `422 Unprocessable Entity`:**
+```json
+{
+  "status": 422,
+  "error": "UNPROCESSABLE_ENTITY",
+  "message": "Insufficient points. Required: 500, Available: 300"
+}
+```
+
+**Status Codes:** `200`, `400` (inactive member), `404` (member or reward not found), `422` (insufficient balance)
+
+---
+
 ## 5. Audit Trail Design
 
 ### 5.1 Purpose
@@ -494,14 +685,15 @@ Every significant state-changing action is logged in the `AUDIT_TRAIL` table. Th
 ### 5.2 Events Logged
 
 | Event Type | Trigger | Actor Type |
-|------------|---------|-----------|
-| `MEMBER_REGISTERED` | `POST /members` | SYSTEM |
+|------------|---------|-----------| 
+| `MEMBER_REGISTERED` | `POST /auth/register` | SYSTEM |
 | `MEMBER_UPDATED` | `PUT /members/{id}` | ADMIN |
 | `MEMBER_STATUS_CHANGED` | Status toggle via `PUT /members/{id}` | ADMIN |
 | `PARTNER_CREATED` | `POST /partners` | ADMIN |
 | `POINTS_EARNED` | `POST /transactions` | SYSTEM |
 | `POINT_EXPIRED` | Expiry Cron Job | SYSTEM |
 | `POINTS_EXCHANGED` | `POST /exchange` | MEMBER |
+| `POINTS_REDEEMED` | `POST /redeem` | MEMBER |
 
 ### 5.3 Audit Trail Schema
 
