@@ -409,6 +409,13 @@ All business logic services follow test-driven development. Write failing test f
 
 Implement member registration (auto-init balances for all partners), get, update, status toggle. All write operations log audit trail.
 
+**PointBalance entity must include `@Version` for optimistic locking:**
+```java
+@Version
+private Long version;  // ponytail: prevents concurrent balance update race conditions
+```
+This is a single annotation — prevents double-spend bugs at zero infra cost.
+
 ### Task 3.2: Transaction Service (EARN)
 
 Formula: `pointsEarned = (trxAmount / 1000) * partner.pointsPerThousandIdr`
@@ -434,6 +441,16 @@ Validate balance >= reward.pointCost, deduct, create REDEEM transaction.
 GET /partners, GET /rewards, GET /members, GET /members/{id}/points, GET /members/{id}/transactions (paginated)
 
 **Key:** POST /partners must auto-initialize balance=0 for all existing members.
+
+**IMPORTANT — do NOT use `memberRepo.findAll()`** (OOM at scale). Use bulk native SQL instead:
+```java
+entityManager.createNativeQuery("""
+    INSERT INTO trx_point_balance (id, member_id, partner_id, balance, version, updated_at)
+    SELECT gen_random_uuid(), m.id, :partnerId, 0, 0, now()
+    FROM mst_member m WHERE m.status = 'ACTIVE'
+""").setParameter("partnerId", partner.getId()).executeUpdate();
+```
+One query vs. N+1. Works for any number of members.
 
 ---
 

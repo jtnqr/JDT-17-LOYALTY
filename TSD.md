@@ -64,6 +64,7 @@ erDiagram
         UUID memberId FK
         UUID partnerId FK
         long balance
+        long version "optimistic locking — prevents concurrent update race conditions"
         timestamp updatedAt
     }
 
@@ -125,6 +126,7 @@ erDiagram
 ### Key Design Decisions
 
 - **`TRX_POINT_BALANCE`** is a dedicated balance table (not computed from transaction sum on every read) — faster reads, simpler balance check logic. Balance is updated atomically with each transaction within a DB transaction.
+- **`TRX_POINT_BALANCE.version`** enables optimistic locking via JPA `@Version`. Prevents race conditions when two concurrent transactions try to update the same member's balance simultaneously. Spring automatically retries on `OptimisticLockException`.
 - **`pointsPerThousandIDR`** on `MST_PARTNER` is the configurable accumulation rate.
 - **`expiryDays`** on `MST_PARTNER` is the configurable expiry duration per partner (default 365 days). Expiry date is computed at EARN time: `expiresAt = now + partner.expiryDays days`.
 - **`MST_EXCHANGE_RATE`** stores directional rates: one row for KFC→McD, another for McD→KFC. This allows asymmetric rates.
