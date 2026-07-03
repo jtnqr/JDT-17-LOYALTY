@@ -31,26 +31,32 @@
 
 ```mermaid
 erDiagram
-    MEMBER {
+    MST_MEMBER {
         UUID id PK
         string name
         string email
         string phone
+        string password
         enum status "ACTIVE | INACTIVE"
+        UUID createdBy
+        UUID updatedBy
         timestamp createdAt
         timestamp updatedAt
     }
 
-    PARTNER {
+    MST_PARTNER {
         UUID id PK
         string name
         string code "KFC | MCD"
         int pointsPerThousandIDR "default 1 — ASSUMPTION"
         enum status "ACTIVE | INACTIVE"
+        UUID createdBy
+        UUID updatedBy
         timestamp createdAt
+        timestamp updatedAt
     }
 
-    POINT_BALANCE {
+    TRX_POINT_BALANCE {
         UUID id PK
         UUID memberId FK
         UUID partnerId FK
@@ -58,77 +64,55 @@ erDiagram
         timestamp updatedAt
     }
 
-    TRANSACTION {
+    TRX_TRANSACTION {
         UUID id PK
         UUID memberId FK
         UUID partnerId FK
-        enum type "EARN | REDEEM | EXCHANGE_IN | EXCHANGE_OUT"
+        enum type "EARN | EXCHANGE_IN | EXCHANGE_OUT | EXPIRED"
         long points
         long trxAmountIDR "null for non-EARN"
         UUID relatedTxId "links EXCHANGE_OUT to EXCHANGE_IN"
-        timestamp expiresAt "nullable — reserved for future expiry"
+        timestamp expiresAt "expiry date for EARN transactions"
         timestamp createdAt
     }
 
-    REDEMPTION_LOG {
-        UUID id PK
-        UUID memberId FK
-        UUID partnerId FK
-        UUID rewardId FK
-        UUID transactionId FK
-        long pointsDeducted
-        timestamp redeemedAt
-    }
-
-    REWARD {
-        UUID id PK
-        UUID partnerId FK
-        string name
-        string description
-        long pointCost
-        enum status "ACTIVE | INACTIVE"
-        timestamp createdAt
-    }
-
-    EXCHANGE_RATE {
+    MST_EXCHANGE_RATE {
         UUID id PK
         UUID fromPartnerId FK
         UUID toPartnerId FK
         decimal rate "e.g. 0.8 for KFC->McD"
         timestamp effectiveFrom
+        UUID createdBy
+        UUID updatedBy
         timestamp updatedAt
     }
 
-    AUDIT_TRAIL {
+    TRX_AUDIT_TRAIL {
         UUID id PK
         string eventType
         UUID actorId "memberId or null for system"
         string actorType "MEMBER | SYSTEM | ADMIN"
-        string entityType "MEMBER | TRANSACTION | REDEMPTION | EXCHANGE"
+        string entityType "MEMBER | PARTNER | TRANSACTION | EXCHANGE"
         UUID entityId
         jsonb payload "before/after snapshot"
         timestamp createdAt
     }
 
-    MEMBER ||--o{ POINT_BALANCE : "has"
-    PARTNER ||--o{ POINT_BALANCE : "tracked by"
-    MEMBER ||--o{ TRANSACTION : "performs"
-    PARTNER ||--o{ TRANSACTION : "associated with"
-    MEMBER ||--o{ REDEMPTION_LOG : "redeems"
-    PARTNER ||--o{ REWARD : "offers"
-    REWARD ||--o{ REDEMPTION_LOG : "fulfilled by"
-    TRANSACTION ||--o| REDEMPTION_LOG : "backs"
-    PARTNER ||--o{ EXCHANGE_RATE : "fromPartner"
-    PARTNER ||--o{ EXCHANGE_RATE : "toPartner"
+    MST_MEMBER ||--o{ TRX_POINT_BALANCE : "has"
+    MST_PARTNER ||--o{ TRX_POINT_BALANCE : "tracked by"
+    MST_MEMBER ||--o{ TRX_TRANSACTION : "performs"
+    MST_PARTNER ||--o{ TRX_TRANSACTION : "associated with"
+    MST_PARTNER ||--o{ MST_EXCHANGE_RATE : "fromPartner"
+    MST_PARTNER ||--o{ MST_EXCHANGE_RATE : "toPartner"
 ```
 
 ### Key Design Decisions
 
-- **`POINT_BALANCE`** is a dedicated balance table (not computed from transaction sum on every read) — faster reads, simpler balance check logic. Balance is updated atomically with each transaction within a DB transaction.
-- **`pointsPerThousandIDR`** on `PARTNER` is the configurable accumulation rate (see FSD §5.1 Assumption).
-- **`EXCHANGE_RATE`** stores directional rates: one row for KFC→McD, another for McD→KFC. This allows asymmetric rates.
-- **`AUDIT_TRAIL.payload`** stores a JSON snapshot for event reconstruction without joining other tables.
-- `expiresAt` on `TRANSACTION` is nullable and unused in MVP — reserved for future point expiry feature.
+- **`TRX_POINT_BALANCE`** is a dedicated balance table (not computed from transaction sum on every read) — faster reads, simpler balance check logic. Balance is updated atomically with each transaction within a DB transaction.
+- **`pointsPerThousandIDR`** on `MST_PARTNER` is the configurable accumulation rate (see FSD §5.1 Assumption).
+- **`MST_EXCHANGE_RATE`** stores directional rates: one row for KFC→McD, another for McD→KFC. This allows asymmetric rates.
+- **`TRX_AUDIT_TRAIL.payload`** stores a JSON snapshot for event reconstruction without joining other tables.
+- `expiresAt` on `TRX_TRANSACTION` is actively used for Point Expiry jobs.
 
 ---
 
@@ -138,39 +122,35 @@ erDiagram
 
 ```mermaid
 flowchart TD
-    A([Partner System calls POST /transactions]) --> B{Member exists?}
+    A([Partner System calls POST /transactions]) --> B{"Resolve member by identifier<br>(ID, phone, or email)<br>Exists?"}
     B -- No --> ERR1[Return 404 Member Not Found]
     B -- Yes --> C{Partner exists & ACTIVE?}
     C -- No --> ERR2[Return 404 Partner Not Found]
     C -- Yes --> D{Member status ACTIVE?}
     D -- No --> ERR3[Return 400 Member Inactive]
-    D -- Yes --> E[Calculate points\npointsEarned = floor trxAmount / 1000\ntimes pointsPerThousandIDR]
+    D -- Yes --> E["Calculate points<br>pointsEarned = floor trxAmount / 1000<br>times pointsPerThousandIDR"]
     E --> F[BEGIN DB Transaction]
-    F --> G[Insert TRANSACTION record\ntype = EARN]
-    G --> H[UPDATE POINT_BALANCE\nbalance += pointsEarned]
-    H --> I[Insert AUDIT_TRAIL\neventType = POINTS_EARNED]
+    F --> G["Insert TRANSACTION record<br>type = EARN"]
+    G --> H["UPDATE TRX_POINT_BALANCE<br>balance += pointsEarned"]
+    H --> I["Insert TRX_AUDIT_TRAIL<br>eventType = POINTS_EARNED"]
     I --> J[COMMIT]
     J --> K([Return 201 with transaction + new balance])
 ```
 
-### 3.2 Point Redemption Flow
+### 3.2 Point Expiry Job Flow
 
 ```mermaid
 flowchart TD
-    A([Member calls POST /redeem]) --> B{Member exists?}
-    B -- No --> ERR1[Return 404]
-    B -- Yes --> C{Reward exists?}
-    C -- No --> ERR2[Return 404]
-    C -- Yes --> D[Fetch reward.pointCost\nand reward.partnerId]
-    D --> E{Member balance for partner\n>= pointCost?}
-    E -- No --> ERR3[Return 400 Insufficient Balance]
-    E -- Yes --> F[BEGIN DB Transaction]
-    F --> G[Insert TRANSACTION record\ntype = REDEEM, points = pointCost]
-    G --> H[UPDATE POINT_BALANCE\nbalance -= pointCost]
-    H --> I[Insert REDEMPTION_LOG]
-    I --> J[Insert AUDIT_TRAIL\neventType = POINTS_REDEEMED]
-    J --> K[COMMIT]
-    K --> L([Return 200 with redemption confirmation\nand remaining balance])
+    A([Daily Cron Job Triggers]) --> B["Query EARN Transactions<br>where expiresAt <= now()"]
+    B --> C{Transactions found?}
+    C -- No --> D([End Job])
+    C -- Yes --> E["For each transaction, calculate<br>remaining unexpired points"]
+    E --> F[BEGIN DB Transaction]
+    F --> G["Insert TRANSACTION record<br>type = EXPIRED"]
+    G --> H["UPDATE TRX_POINT_BALANCE<br>balance -= expiredPoints"]
+    H --> I["Insert TRX_AUDIT_TRAIL<br>eventType = POINT_EXPIRED"]
+    I --> J[COMMIT]
+    J --> K([End Job])
 ```
 
 ### 3.3 Point Exchange Flow
@@ -179,19 +159,19 @@ flowchart TD
 flowchart TD
     A([Member calls POST /exchange]) --> B{Member exists?}
     B -- No --> ERR1[Return 404]
-    B -- Yes --> C{fromPartner & toPartner\nexist and ACTIVE?}
+    B -- Yes --> C{"fromPartner & toPartner<br>exist and ACTIVE?"}
     C -- No --> ERR2[Return 404]
-    C -- Yes --> D{ExchangeRate exists for\nfromPartner -> toPartner?}
+    C -- Yes --> D{"ExchangeRate exists for<br>fromPartner -> toPartner?"}
     D -- No --> ERR3[Return 404 Exchange Rate Not Configured]
-    D -- Yes --> E{Member balance for fromPartner\n>= requestedPoints?}
+    D -- Yes --> E{"Member balance for fromPartner<br>>= requestedPoints?"}
     E -- No --> ERR4[Return 400 Insufficient Balance]
-    E -- Yes --> F[Calculate target points\ntargetPoints = floor points x rate]
+    E -- Yes --> F["Calculate target points<br>targetPoints = floor points x rate"]
     F --> G[BEGIN DB Transaction]
-    G --> H[Insert TRANSACTION\ntype=EXCHANGE_OUT, fromPartner]
-    H --> I[Insert TRANSACTION\ntype=EXCHANGE_IN, toPartner\nrelatedTxId = EXCHANGE_OUT.id]
-    I --> J[UPDATE POINT_BALANCE\nfromPartner balance -= points]
-    J --> K[UPDATE POINT_BALANCE\ntoPartner balance += targetPoints]
-    K --> L[Insert AUDIT_TRAIL\neventType = POINTS_EXCHANGED]
+    G --> H["Insert TRANSACTION<br>type=EXCHANGE_OUT, fromPartner"]
+    H --> I["Insert TRANSACTION<br>type=EXCHANGE_IN, toPartner<br>relatedTxId = EXCHANGE_OUT.id"]
+    I --> J["UPDATE TRX_POINT_BALANCE<br>fromPartner balance -= points"]
+    J --> K["UPDATE TRX_POINT_BALANCE<br>toPartner balance += targetPoints"]
+    K --> L["Insert TRX_AUDIT_TRAIL<br>eventType = POINTS_EXCHANGED"]
     L --> M[COMMIT]
     M --> N([Return 200 with both updated balances])
 ```
@@ -204,7 +184,7 @@ flowchart TD
 
 - **Base URL:** `http://localhost:8080/api/v1`
 - **Content-Type:** `application/json`
-- **Admin endpoints** require header: `X-Admin-Key: <configured-value>`
+- **Auth:** Endpoints require header: `Authorization: Bearer <jwt_token>` (Roles: ADMIN, MEMBER)
 - **Error response format** (all errors):
   ```json
   {
@@ -226,7 +206,8 @@ flowchart TD
 {
   "name": "Budi Santoso",
   "email": "budi@example.com",
-  "phone": "081234567890"
+  "phone": "081234567890",
+  "password": "secure_password_123"
 }
 ```
 
@@ -253,7 +234,7 @@ flowchart TD
 ### 4.2 `GET /members` — List Members
 
 **Description:** List all members. Supports optional `?status=ACTIVE|INACTIVE`.  
-**Auth:** `X-Admin-Key` (admin endpoint)
+**Auth:** Bearer JWT (Role: ADMIN)
 
 **Response `200 OK`:**
 ```json
@@ -271,7 +252,7 @@ flowchart TD
 }
 ```
 
-**Status Codes:** `200`, `401` (missing/invalid admin key)
+**Status Codes:** `200`, `401` (missing/invalid JWT), `403` (insufficient role)
 
 ---
 
@@ -299,7 +280,7 @@ flowchart TD
 ### 4.4 `PUT /members/{id}` — Edit Member (CMS)
 
 **Description:** Update member details or status.  
-**Auth:** `X-Admin-Key`
+**Auth:** Bearer JWT (Role: ADMIN)
 
 **Request:**
 ```json
@@ -384,7 +365,7 @@ flowchart TD
 **Request:**
 ```json
 {
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
+  "memberIdentifier": "081234567890",
   "partner": "KFC",
   "trxAmount": 150000
 }
@@ -410,7 +391,7 @@ flowchart TD
 ### 4.8 `GET /partners` — List Partners
 
 **Description:** List all registered partners.  
-**Auth:** None
+**Auth:** Bearer JWT (Role: ADMIN or MEMBER)
 
 **Response `200 OK`:**
 ```json
@@ -434,82 +415,42 @@ flowchart TD
 }
 ```
 
-**Status Codes:** `200`
+### 4.9 `POST /partners` — Create Partner
 
----
-
-### 4.9 `GET /rewards` — List Reward Catalog
-
-**Description:** List all rewards (seeded dummy data). Filter by partner using `?partnerId=`.  
-**Auth:** None
-
-**Response `200 OK`:**
-```json
-{
-  "data": [
-    {
-      "id": "reward-uuid-001",
-      "partnerId": "kfc-uuid",
-      "partnerName": "KFC",
-      "name": "KFC Original Bucket",
-      "description": "1 bucket of KFC Original 8 pcs",
-      "pointCost": 500,
-      "status": "ACTIVE"
-    },
-    {
-      "id": "reward-uuid-002",
-      "partnerId": "mcd-uuid",
-      "partnerName": "McDonald's",
-      "name": "McD BigMac Voucher",
-      "description": "1 BigMac sandwich",
-      "pointCost": 300,
-      "status": "ACTIVE"
-    }
-  ]
-}
-```
-
-**Status Codes:** `200`
-
----
-
-### 4.10 `POST /redeem` — Redeem Points for Reward
-
-**Description:** Redeem a member's points for a reward. Validates balance only — no stock check.  
-**Auth:** None
+**Description:** Add a new partner to the system. Existing members will automatically have a 0 balance initialized for this new partner.
+**Auth:** Bearer JWT (Role: ADMIN)
 
 **Request:**
 ```json
 {
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "rewardId": "reward-uuid-001"
+  "name": "Starbucks",
+  "code": "SBUX",
+  "pointsPerThousandIDR": 2
 }
 ```
 
-**Response `200 OK`:**
+**Response `201 Created`:**
 ```json
 {
-  "redemptionId": "red-uuid-001",
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "reward": {
-    "id": "reward-uuid-001",
-    "name": "KFC Original Bucket",
-    "partnerName": "KFC"
-  },
-  "pointsDeducted": 500,
-  "remainingBalance": 0,
-  "redeemedAt": "2026-07-02T11:00:00Z"
+  "id": "sbux-uuid",
+  "name": "Starbucks",
+  "code": "SBUX",
+  "pointsPerThousandIDR": 2,
+  "status": "ACTIVE",
+  "createdAt": "2026-07-03T10:00:00Z"
 }
 ```
 
-**Status Codes:** `200`, `400` (insufficient balance), `404` (member or reward not found)
+**Status Codes:** `201`, `401` (missing/invalid JWT), `403` (insufficient role)
 
 ---
 
-### 4.11 `POST /exchange` — Exchange Points Between Partners
+
+
+### 4.10 `POST /exchange` — Exchange Points Between Partners
 
 **Description:** Convert a member's points from one partner to another at the configured rate.  
-**Auth:** None
+**Auth:** Bearer JWT (Role: MEMBER)
 
 **Request:**
 ```json
@@ -557,27 +498,28 @@ Every significant state-changing action is logged in the `AUDIT_TRAIL` table. Th
 | `MEMBER_REGISTERED` | `POST /members` | SYSTEM |
 | `MEMBER_UPDATED` | `PUT /members/{id}` | ADMIN |
 | `MEMBER_STATUS_CHANGED` | Status toggle via `PUT /members/{id}` | ADMIN |
+| `PARTNER_CREATED` | `POST /partners` | ADMIN |
 | `POINTS_EARNED` | `POST /transactions` | SYSTEM |
-| `POINTS_REDEEMED` | `POST /redeem` | MEMBER |
+| `POINT_EXPIRED` | Expiry Cron Job | SYSTEM |
 | `POINTS_EXCHANGED` | `POST /exchange` | MEMBER |
 
 ### 5.3 Audit Trail Schema
 
 ```sql
-CREATE TABLE audit_trail (
+CREATE TABLE trx_audit_trail (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type  VARCHAR(50)  NOT NULL,               -- e.g. POINTS_EARNED
     actor_id    UUID,                                  -- memberId or null
     actor_type  VARCHAR(20)  NOT NULL,               -- MEMBER | SYSTEM | ADMIN
-    entity_type VARCHAR(50)  NOT NULL,               -- MEMBER | TRANSACTION | REDEMPTION | EXCHANGE
+    entity_type VARCHAR(50)  NOT NULL,               -- MEMBER | PARTNER | TRANSACTION | EXCHANGE
     entity_id   UUID         NOT NULL,               -- PK of the affected row
     payload     JSONB,                                -- before/after snapshot
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_audit_actor   ON audit_trail(actor_id);
-CREATE INDEX idx_audit_entity  ON audit_trail(entity_type, entity_id);
-CREATE INDEX idx_audit_created ON audit_trail(created_at DESC);
+CREATE INDEX idx_audit_actor   ON trx_audit_trail(actor_id);
+CREATE INDEX idx_audit_entity  ON trx_audit_trail(entity_type, entity_id);
+CREATE INDEX idx_audit_created ON trx_audit_trail(created_at DESC);
 ```
 
 ### 5.4 Sample Payload Structure
@@ -623,7 +565,6 @@ For `POINTS_EXCHANGED`:
 | `V1__create_schema.sql` | Create all tables (member, partner, point_balance, transaction, reward, redemption_log, exchange_rate, audit_trail) |
 | `V2__seed_partners.sql` | Insert KFC and McDonald's partner records with `pointsPerThousandIDR = 1` |
 | `V3__seed_exchange_rates.sql` | Insert KFC→McD (rate: 0.8) and McD→KFC (rate: 1.25) |
-| `V4__seed_rewards.sql` | Insert 3–5 dummy rewards per partner |
 | `V5__seed_demo_members.sql` | (Optional) Insert 2–3 demo members for presentation |
 
 ---
@@ -662,12 +603,12 @@ src/
 | Class Under Test | Test Case |
 |-----------------|-----------|
 | `PointService#earnPoints` | Correct points calculated from trxAmount using `floor(trxAmount / 1000)` |
+| `PointService#earnPoints` | Member correctly resolved via phone or email identifier |
 | `PointService#earnPoints` | Throws `MemberNotFoundException` when member does not exist |
 | `PointService#earnPoints` | Throws `PartnerNotFoundException` when partner does not exist |
 | `PointService#earnPoints` | Throws `MemberInactiveException` when member is INACTIVE |
-| `PointService#redeemPoints` | Redemption succeeds when balance ≥ cost; balance correctly deducted |
-| `PointService#redeemPoints` | Throws `InsufficientBalanceException` when balance < cost |
-| `PointService#redeemPoints` | Throws `RewardNotFoundException` when reward does not exist |
+| `PointService#expirePoints` | Expiry succeeds; expired points correctly deducted and transaction logged |
+| `PartnerService#createPartner` | Partner created; balances initialized for existing members |
 | `PointService#exchangePoints` | Exchange succeeds; target points = `floor(sourcePoints × rate)` |
 | `PointService#exchangePoints` | Throws `InsufficientBalanceException` when source balance < requested |
 | `PointService#exchangePoints` | Throws `ExchangeRateNotFoundException` when rate not configured |
@@ -701,7 +642,7 @@ All values below should be set in `application.properties` or via environment va
 | `spring.datasource.password` | *(env var)* | DB password |
 | `spring.jpa.hibernate.ddl-auto` | `validate` | Flyway manages schema; Hibernate validates |
 | `spring.threads.virtual.enabled` | `true` | Enable Java 21 virtual threads (Loom) for improved throughput |
-| `loyalty.admin.api-key` | *(env var)* | Static API key for admin endpoints |
+| `jwt.secret` | *(env var)* | Secret key for JWT signing |
 | `loyalty.points.default-rate` | `1` | Default points per IDR 1,000 (overridden per partner) |
 
 ---

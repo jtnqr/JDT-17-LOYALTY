@@ -23,13 +23,13 @@ This document covers **requirements 1–5** as scoped for the 14 July 2026 deadl
 | # | Feature | Description |
 |---|---------|-------------|
 | 1 | **Member Registration** | Register a new loyalty member; no input validation required |
-| 2 | **Partner Master** | Manage partner data (KFC, McDonald's); supports future partner addition |
+| 2 | **Partner Master** | Add and manage partner data; supports dynamic partner addition |
 | 3 | **Point Balance & Accumulation** | View member point balance; accumulate points from simulated partner transactions |
-| 4 | **Point Redemption** | Redeem points for rewards; validates balance, deducts points; no reward stock check |
+| 4 | **Point Expiry** | Expire points via a scheduled job for points past their expiry date |
 | 5 | **Point Exchange** | Exchange points between partners (KFC ↔ McDonald's) at a configurable rate |
-| + | **Reward Catalog** | Dummy/seeded reward data for redemption |
-| + | **Transaction History** | View member transaction and redemption history |
-| + | **Audit Trail** | Log all significant system events (registration, earn, redeem, exchange) |
+| + | **JWT Authentication** | Implement JWT for authenticating Admin and Member API endpoints |
+| + | **Transaction History** | View member transaction and exchange history |
+| + | **Audit Trail** | Log all significant system events (registration, earn, exchange, expiry, partner creation) |
 | + | **Unit Testing** | Unit tests covering core business logic |
 
 ### 2.2 Out of Scope / Future
@@ -38,7 +38,7 @@ The following are recognized but **not implemented** in this MVP:
 
 - **Membership Tiering** (Bronze/Silver/Gold) — tier upgrade logic and tier-based benefits
 - **Dashboard Summary** (`GET /dashboard`) — aggregate statistics for CMS admin
-- **Point Expiry** — expiry date logic and expiry-triggered deductions
+- **Point Expiry** — (Moved to In Scope)
 - **Transfer Point Between Members** — peer-to-peer point gifting
 - **Admin UI for Exchange Rate Management** — the rate is configurable in DB/config but no UI CRUD is built
 
@@ -63,7 +63,7 @@ The following are recognized but **not implemented** in this MVP:
 **Trigger:** Member submits registration data
 
 **Main Flow:**
-1. Actor calls `POST /members` with name, email, phone, and optional partner references.
+1. Actor calls `POST /members` with name, email, phone, password, and optional partner references.
 2. System generates a unique internal member ID.
 3. System creates a point balance record (balance = 0) for each active partner.
 4. System writes an audit trail event: `MEMBER_REGISTERED`.
@@ -77,15 +77,20 @@ The following are recognized but **not implemented** in this MVP:
 ### UC-02: Partner Master Management
 
 **Actor:** CMS Admin  
-**Pre-conditions:** System has at least KFC and McDonald's seeded on first run  
-**Trigger:** Admin queries partner list or system needs to look up a partner
+**Pre-conditions:** Admin is authenticated via JWT.  
+**Trigger:** Admin queries partner list or creates a new partner.
 
-**Main Flow:**
+**Main Flow (View):**
 1. Admin calls `GET /partners` to retrieve the list of registered partners.
 2. System returns partner ID, name, point conversion rate, and status.
 
-**Post-conditions:** Admin can see all active partners.  
-**Notes:** Adding a new partner is possible via DB insertion but no admin API for partner creation is in MVP scope.
+**Main Flow (Create):**
+1. Admin calls `POST /partners` with name, code, and points conversion rate.
+2. System creates a new partner record.
+3. System initializes empty point balances for all existing members for the new partner.
+4. System writes an audit trail event: `PARTNER_CREATED`.
+
+**Post-conditions:** New partner is created, or admin can see all active partners.
 
 ---
 
@@ -93,43 +98,37 @@ The following are recognized but **not implemented** in this MVP:
 
 **Actor:** Partner System (simulated)  
 **Pre-conditions:** Member exists; Partner exists and is active  
-**Trigger:** A `POST /transactions` call is made with member ID, partner, and transaction amount
+**Trigger:** A `POST /transactions` call is made with member identifier (memberId, phone, or email), partner, and transaction amount
 
 **Main Flow:**
-1. Partner System calls `POST /transactions` with `memberId`, `partner`, and `trxAmount`.
-2. System validates that the member exists and the partner is active.
-3. System calculates points earned using the conversion formula (see Business Rules §5.1).
-4. System credits the member's point balance for the given partner.
-5. System creates a transaction record (type: `EARN`).
-6. System writes an audit trail event: `POINTS_EARNED`.
-7. System returns the transaction record including points awarded.
+1. Partner System calls `POST /transactions` with `memberIdentifier`, `partner`, and `trxAmount`.
+2. System resolves the member using the provided identifier (lookup by ID, phone, or email).
+3. System validates that the member exists and the partner is active.
+4. System calculates points earned using the conversion formula (see Business Rules §5.1).
+5. System credits the member's point balance for the given partner.
+6. System creates a transaction record (type: `EARN`).
+7. System writes an audit trail event: `POINTS_EARNED`.
+8. System returns the transaction record including points awarded.
 
 **Post-conditions:** Member's point balance is increased; transaction record created.  
 **Exceptions:** Member not found → `404`; Partner not found or inactive → `404`/`400`.
 
 ---
 
-### UC-04: Point Redemption
+### UC-04: Point Expiry (Background Process)
 
-**Actor:** Member  
-**Pre-conditions:** Member exists; Reward exists (seeded in DB); Member has sufficient points  
-**Trigger:** Member calls `POST /redeem`
+**Actor:** System Scheduler  
+**Pre-conditions:** `EARN` transactions exist with an `expiresAt` date in the past.  
+**Trigger:** Scheduled job runs daily.
 
 **Main Flow:**
-1. Member calls `POST /redeem` with `memberId`, `partnerId`, and `rewardId`.
-2. System looks up the reward cost (in points) from the Reward Catalog.
-3. System checks the member's point balance for the specified partner.
-4. If balance ≥ reward cost: system deducts the points and creates a redemption log (type: `REDEEM`).
-5. System writes an audit trail event: `POINTS_REDEEMED`.
-6. System returns the redemption confirmation with remaining balance.
+1. System queries all `EARN` transactions where `expiresAt <= now()` and points have not been fully consumed/expired.
+2. For each applicable transaction, system calculates remaining unexpired points.
+3. System deducts the expired points from the member's partner point balance.
+4. System creates a transaction record (type: `EXPIRED`).
+5. System writes an audit trail event: `POINT_EXPIRED`.
 
-**Post-conditions:** Member's point balance is reduced; redemption log created.  
-**Exceptions:**
-- Member not found → `404`
-- Reward not found → `404`
-- Insufficient balance → `400` with error message
-
-**Explicitly Out of Scope:** Reward stock/quantity validation (see Assumptions §7.4).
+**Post-conditions:** Member's point balance is reduced by the expired amount; expired transactions are logged.
 
 ---
 
@@ -160,17 +159,7 @@ The following are recognized but **not implemented** in this MVP:
 
 ---
 
-### UC-06: View Reward Catalog
 
-**Actor:** Member  
-**Pre-conditions:** Rewards are seeded in the database  
-**Trigger:** Member calls `GET /rewards`
-
-**Main Flow:**
-1. Member calls `GET /rewards` (optionally filtered by `?partnerId=`).
-2. System returns the list of available rewards with name, point cost, and partner association.
-
-**Post-conditions:** Member can see available rewards.
 
 ---
 
@@ -182,7 +171,7 @@ The following are recognized but **not implemented** in this MVP:
 
 **Main Flow:**
 1. Caller provides member ID.
-2. System returns paginated list of all transaction records (EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT) for that member, sorted by date descending.
+2. System returns paginated list of all transaction records (EARN, EXCHANGE_IN, EXCHANGE_OUT, EXPIRED) for that member, sorted by date descending.
 
 **Post-conditions:** Transaction history displayed.
 
@@ -228,12 +217,11 @@ The following are recognized but **not implemented** in this MVP:
 - Resulting target points are **floor-rounded** to avoid fractional points.
 - Formula: `targetPoints = floor(sourcePoints × exchangeRate)`
 
-### 5.3 Point Redemption Rules
+### 5.3 Point Expiry Rules
 
-- Redemption deducts points from a **specific partner's balance** (a reward is tied to one partner).
-- System **only validates balance** — no reward stock/availability check.
-- Points are deducted **atomically** with the creation of the redemption log record.
-- If the balance is insufficient, the entire redemption is rejected; no partial redemption.
+- Points earned have an expiration date (e.g., 1 year from the earn date).
+- Expiry is processed by a background job that deducts the appropriate amount from the member's balance.
+- A transaction of type `EXPIRED` is logged to reflect the point deduction.
 
 ### 5.4 Member Status
 
@@ -283,35 +271,15 @@ The following items are **not specified in the README**. Each is given a reasona
 
 **Question:** Do points expire? The README says "possible for point."
 
-**Assumption:** **Point expiry is out of scope for this MVP.** The data model includes an optional `expiresAt` column on the `Transaction` table to make a future addition easy, but no expiry logic, cron jobs, or expiry-triggered deductions are implemented.
+**Assumption:** **Yes.** Points expire based on the `expiresAt` date set when they are earned. A daily background job calculates and deducts expired points. 
 
 ---
 
-### 7.4 Reward Stock/Quantity on Redemption
+### 7.4 CMS & Member API Authentication
 
-**Question:** Should the system decrement a reward's stock count when redeemed?
+**Question:** How are endpoints secured?
 
-**Assumption:** **No.** As explicitly stated in the README: "Reward availability does not require validation and rewards may be injected directly from the database." The system **only** validates the member's point balance and deducts points. No stock field is decremented.
-
----
-
-### 7.5 CMS Authentication & Authorization
-
-**Question:** Is there any login/auth for the CMS (View/Edit Member, Member Status)?
-
-**Assumption:** A **minimal single-admin-role model** is used. No login flow is implemented in MVP. Admin API endpoints are protected by a static **API key** passed in the `X-Admin-Key` HTTP header. The key value is configured in environment variables. All admin endpoints require this key; public/member-facing endpoints do not.
-
-*Override: A full JWT-based auth system can be layered on top of this in a future iteration.*
-
----
-
-### 7.6 API Authentication for Member-Facing Endpoints
-
-**Question:** Are member-facing endpoints authenticated?
-
-**Assumption:** **No member authentication** in MVP. Endpoints are open (no JWT, no session). Member identity is passed as a path/body parameter (`memberId`). This is acceptable for a bootcamp demo environment.
-
-*Override: Adding JWT or session-based auth for member endpoints is a natural post-MVP hardening step.*
+**Assumption:** JWT authentication is used. Admin endpoints require a valid admin JWT, while member endpoints require a valid member JWT. The system provides login endpoints to issue these JWTs.
 
 ---
 
@@ -321,7 +289,6 @@ The following items are **not specified in the README**. Each is given a reasona
 |------|------------|
 | Points | The unit of loyalty currency managed by this platform |
 | Partner | A third-party merchant (KFC, McDonald's) whose transactions generate points |
-| Redemption | Exchange of points for a reward item |
 | Exchange | Conversion of points from one partner's balance to another |
 | Audit Trail | A tamper-evident log of every significant action in the system |
 | Dummy Data | Manually injected or seeded test data used to simulate real transactions in MVP |
