@@ -380,35 +380,36 @@ flowchart TD
 
 These diagrams describe the actual API layer, database transaction boundaries, data persistence details, and HTTP responses.
 
-### Technical Flow 1: Member Registration (`POST /members`)
+### Technical Flow 1: Member Registration (`POST /auth/register`)
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Client / Admin
-    participant API as Member Controller
-    participant Service as Member Service
+    actor Client as Client (Member Self-Registration)
+    participant API as Auth Controller
+    participant Service as Auth Service
     participant DB as PostgreSQL Database
 
-    Client->>API: POST /members {name, email, phone}
+    Client->>API: POST /auth/register {name, email, phone, password}
     API->>Service: registerMember(dto)
 
     Note over Service, DB: DB TRANSACTION START (Required)
 
-    Service->>DB: INSERT INTO MEMBER (id, name, email, phone, status = ACTIVE)
-    Service->>DB: SELECT id FROM PARTNER WHERE status = ACTIVE
+    Service->>DB: INSERT INTO MST_MEMBER (id, name, email, phone, password_hash, status = ACTIVE)
+    Service->>DB: SELECT id FROM MST_PARTNER WHERE status = ACTIVE
     DB-->>Service: Return active partners (KFC, MCD)
 
     loop For each active partner
-        Service->>DB: INSERT INTO POINT_BALANCE (id, member_id, partner_id, balance = 0)
+        Service->>DB: INSERT INTO TRX_POINT_BALANCE (id, member_id, partner_id, balance = 0, version = 0)
     end
 
-    Service->>DB: INSERT INTO AUDIT_TRAIL (eventType = MEMBER_REGISTERED, payload)
+    Service->>DB: INSERT INTO TRX_AUDIT_TRAIL (eventType = MEMBER_REGISTERED, actorType = SYSTEM, payload)
 
     Note over Service, DB: DB TRANSACTION COMMIT
     DB-->>Service: Confirm updates committed
 
-    Service-->>API: Return created Member + PointBalances
-    API-->>Client: HTTP 201 Created {id, name, email, phone, status, balances}
+    Service->>Service: Generate JWT token (role = MEMBER, sub = member.id)
+    Service-->>API: Return created Member + JWT
+    API-->>Client: HTTP 201 Created {token, member: {id, name, email, phone, status, balances}}
 ```
 
 ---
@@ -486,19 +487,18 @@ sequenceDiagram
         API-->>Member: HTTP 404 Not Found {message: "Reward not found"}
     end
 
-    Service->>DB: SELECT balance FROM POINT_BALANCE WHERE member_id AND partner_id = reward.partner_id
+    Service->>DB: SELECT balance FROM TRX_POINT_BALANCE WHERE member_id AND partner_id = reward.partner_id
     alt Balance < reward.pointCost
         DB-->>Service: balance
         Service-->>API: Throw InsufficientBalanceException
-        API-->>Member: HTTP 400 Bad Request {message: "Insufficient balance"}
+        API-->>Member: HTTP 422 Unprocessable Entity {message: "Insufficient point balance"}
     end
 
     Note over Service, DB: DB TRANSACTION START (Required)
 
-    Service->>DB: INSERT INTO TRANSACTION (id, member_id, partner_id, type = REDEEM, points = reward.pointCost)
-    Service->>DB: UPDATE POINT_BALANCE SET balance = balance - reward.pointCost WHERE member_id AND partner_id
-    Service->>DB: INSERT INTO REDEMPTION_LOG (id, member_id, partner_id, reward_id, transaction_id, points_deducted)
-    Service->>DB: INSERT INTO AUDIT_TRAIL (eventType = POINTS_REDEEMED, payload)
+    Service->>DB: INSERT INTO TRX_TRANSACTION (id, member_id, partner_id, type = REDEEM, points = reward.pointCost, rewardId)
+    Service->>DB: UPDATE TRX_POINT_BALANCE SET balance = balance - reward.pointCost WHERE member_id AND partner_id
+    Service->>DB: INSERT INTO TRX_AUDIT_TRAIL (eventType = POINTS_REDEEMED, actorType = MEMBER, payload)
 
     Note over Service, DB: DB TRANSACTION COMMIT
     DB-->>Service: Commit confirmed
