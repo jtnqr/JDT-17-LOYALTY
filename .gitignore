@@ -1,0 +1,22 @@
+# Secrets — never commit
+.env
+
+# Backend
+backend/target/
+backend/*.log
+backend/.mvn/repository/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
