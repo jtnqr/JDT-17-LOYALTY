@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  Gift,
+  Building2,
   FileSpreadsheet,
   Settings,
 } from "lucide-react";
@@ -40,7 +40,7 @@ function SidebarItem({ href, label, icon, active }: SidebarItemProps) {
 
 interface AdminSidebarProps {
   className?: string;
-  activeTab?: "dashboard" | "members" | "rewards" | "transactions" | "settings";
+  activeTab?: "dashboard" | "members" | "partners" | "transactions" | "settings";
 }
 
 export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
@@ -66,10 +66,10 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
       icon: <Users className="w-5 h-5" />,
     },
     {
-      tab: "rewards",
-      href: "/admin/rewards",
-      label: "Rewards",
-      icon: <Gift className="w-5 h-5" />,
+      tab: "partners",
+      href: "/admin/partners",
+      label: "Partners",
+      icon: <Building2 className="w-5 h-5" />,
     },
     {
       tab: "transactions",
