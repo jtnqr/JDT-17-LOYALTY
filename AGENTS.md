@@ -245,6 +245,39 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 - Open PR → teammate reviews → merge → delete branch
 - Commit convention: `feat(earn): POST /transactions`, `fix(auth): token expiry`, `chore(db): V3 seed rates`
 
+### Frontend branches (friend — in progress, not yet merged)
+
+| Branch | Coverage |
+|--------|----------|
+| `feat/slicing-auth-dashboard-ui` | Login, register, member dashboard, admin member list, atomic/molecule/organism components, theme tokens |
+| `feat/frontend-admin` | Admin dashboard, member list route, partner list/edit, admin rewards catalog |
+| `feat/frontend-exchange` | Member exchange page (mock data) |
+| `feat/frontend-rewards` | Member rewards catalog + modal, admin rewards view |
+| `feat/frontend-history` | Transaction history with filters |
+
+**Frontend still needed:** redeem page, member points balance detail, member profile page.
+
+### Backend branches (you — not started)
+
+| Branch | Endpoint / Feature |
+|--------|--------------------|
+| `feat/flyway-schema` | V1 migration: all 8 tables |
+| `feat/flyway-seed` | V2–V5: partners, rates, rewards, admin + demo members |
+| `feat/entities` | All JPA entities (MST_* + TRX_*) |
+| `feat/auth-register` | POST /auth/register |
+| `feat/auth-login` | POST /auth/login (checks MST_MEMBER + MST_ADMIN) |
+| `feat/auth-partner` | POST /auth/partner/token |
+| `feat/member-list` | GET /members (ADMIN) |
+| `feat/member-detail` | GET /members/{id}, PUT /members/{id} |
+| `feat/member-points` | GET /members/{id}/points |
+| `feat/member-transactions` | GET /members/{id}/transactions |
+| `feat/partner-crud` | GET /partners, POST /partners, PUT /partners/{id} |
+| `feat/earn-points` | POST /transactions (PARTNER JWT) |
+| `feat/exchange-points` | POST /exchange |
+| `feat/redeem-points` | POST /redeem + GET /rewards |
+| `feat/expiry-scheduler` | @Scheduled cron 0 0 17 * * * |
+| `feat/audit-trail` | AuditTrailService wired to all endpoints |
+
 ---
 
 ## Implementation Phases (reference)
