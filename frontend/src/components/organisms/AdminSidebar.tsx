@@ -30,7 +30,12 @@ function SidebarItem({ href, label, icon, active }: SidebarItemProps) {
           : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/50 border-l-transparent"
       )}
     >
-      <div className={cn("w-5 h-5 flex items-center justify-center shrink-0", active ? "text-[#8B3D06]" : "text-neutral-400")}>
+      <div
+        className={cn(
+          "w-5 h-5 flex items-center justify-center shrink-0",
+          active ? "text-[#8B3D06]" : "text-neutral-400"
+        )}
+      >
         {icon}
       </div>
       <span>{label}</span>
@@ -40,7 +45,12 @@ function SidebarItem({ href, label, icon, active }: SidebarItemProps) {
 
 interface AdminSidebarProps {
   className?: string;
-  activeTab?: "dashboard" | "members" | "partners" | "transactions" | "settings";
+  activeTab?:
+    | "dashboard"
+    | "members"
+    | "partners"
+    | "transactions"
+    | "settings";
 }
 
 export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
@@ -55,7 +65,7 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
   const menuItems = [
     {
       tab: "dashboard",
-      href: "/admin/dashboard",
+      href: "/admin",
       label: "Dashboard",
       icon: <LayoutDashboard className="w-5 h-5" />,
     },
