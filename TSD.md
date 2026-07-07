@@ -1,785 +1,308 @@
 # Technical Specification Document (TSD)
-## JDT-17-LOYALTY — Loyalty Points Platform
-**Version:** 1.0  
-**Date:** 2 July 2026  
-**Deadline:** 14 July 2026  
-**Author:** Technical Architect (AI-assisted)  
-**References:** FSD.md, README.md
+# PISTOS – Loyalty App
+
+**Author:** Julius (JDT-17 Apprentice)
+**Version:** 1.1
+**Last Update:** 07/Jul/2026
+**Project:** PISTOS (Points Integration System for Transaction-Originated Services)
 
 ---
 
-## 1. Proposed Tech Stack
+## Version History
 
-| Layer | Technology | Justification |
-|-------|-----------|---------------|
-| **Language** | Java 21 (LTS) | Aligns with bootcamp context (project is under `java/` path); strong typing aids correctness; virtual threads (Project Loom) available for free concurrency gains |
-| **Framework** | Spring Boot 4.1.x | Latest stable generation; built on Spring Framework 7; native Jakarta EE 11 support; requires Java 21 minimum |
-| **ORM** | Spring Data JPA + Hibernate | Handles DB mapping, transactions, and query generation with minimal SQL boilerplate |
-| **Database** | PostgreSQL 18 | Latest stable release; improved vacuum, logical replication, and query planner; ACID transactions essential for point balance integrity; free and widely available |
-| **DB Migration** | Flyway | Version-controlled schema migrations; easy to seed initial data (partners, rewards, exchange rates) |
-| **Build Tool** | Maven | Standard for Spring Boot; familiar to most Java developers |
-| **Testing** | JUnit 5 + Mockito | Standard Java testing stack; Mockito enables service-layer unit testing without DB |
-| **API Docs** | SpringDoc OpenAPI (Swagger UI) | Auto-generates interactive API docs from annotations; useful for demo |
-| **Frontend** | Next.js 16 + React 19 + TypeScript | Mobile-first web UI; App Router architecture; TypeScript for type safety; shadcn/ui components + Tailwind CSS for styling |
-| **Containerization** | Docker + Docker Compose | One-command local setup (`docker compose up`); eliminates "works on my machine" issues |
-
-> **Why not Node.js / Python?** The project lives in a `java/` directory and the bootcamp context implies Java. Spring Boot is well-suited for 2-week delivery — abundant scaffolding tools (`spring initializr`), mature testing support, and straightforward REST + JPA patterns.
-> **Why Spring Boot 4.1.x over 3.x?** Spring Boot 4 drops legacy `javax.*` baggage entirely, ships with better virtual-thread integration (Java 21 Loom), and is the current recommended baseline as of mid-2026. Minimum Java version aligns with Java 21 LTS.
+| Version | Date | By | Change Summary |
+|---------|------|----|----------------|
+| 1.0 | 03/Jul/2026 | Julius | Initial document |
+| 1.1 | 07/Jul/2026 | Julius | Corrected login request schema; fixed McD→KFC rate to 0.9; moved Point Exchange to member-scoped POST /api/v1/exchange; corrected metadata |
 
 ---
 
-## 2. Entity Relationship Diagram (ERD)
+## Executive Summary
 
-```mermaid
-erDiagram
-    MST_MEMBER {
-        UUID id PK
-        string name
-        string email
-        string phone
-        string password
-        enum status "ACTIVE | INACTIVE"
-        UUID createdBy
-        UUID updatedBy
-        timestamp createdAt
-        timestamp updatedAt
-    }
+PISTOS is a multi-partner loyalty platform for the Indivara Java Developer Apprenticeship (Batch 17). Two pilot partners: KFC and McDonald's.
 
-    MST_PARTNER {
-        UUID id PK
-        string name
-        string code "KFC | MCD"
-        int pointsPerThousandIDR "default 1"
-        int expiryDays "default 365, configurable per partner"
-        string apiKey "for partner JWT authentication"
-        enum status "ACTIVE | INACTIVE"
-        UUID createdBy
-        UUID updatedBy
-        timestamp createdAt
-        timestamp updatedAt
-    }
+**System delivers:**
+- Unified Member Management — single profile, partner-scoped balances
+- Point Accumulation — 1 point per IDR 1,000 (configurable per partner)
+- Point Exchange — KFC→McD: 0.8, McD→KFC: 0.9
+- Point Redemption — 11 rewards total
+- Point Expiry — automated, 365 days (configurable per partner)
+- Audit Trail — append-only, tamper-evident
+- JWT Authentication — MEMBER, ADMIN, PARTNER roles (HS512)
 
-    TRX_POINT_BALANCE {
-        UUID id PK
-        UUID memberId FK
-        UUID partnerId FK
-        long balance
-        long version "optimistic locking — prevents concurrent update race conditions"
-        timestamp updatedAt
-    }
+**Stack:**
+- Backend: Spring Boot 4.1.0, Java 21
+- Database: PostgreSQL 18 (Flyway migrations)
+- Frontend: Next.js 16 (React 19, App Router)
+- Deployment: Docker Compose
 
-    TRX_TRANSACTION {
-        UUID id PK
-        UUID memberId FK
-        UUID partnerId FK
-        enum type "EARN | REDEEM | EXCHANGE_IN | EXCHANGE_OUT | EXPIRED"
-        long points
-        long trxAmountIDR "null for non-EARN"
-        UUID relatedTxId "links EXCHANGE_OUT to EXCHANGE_IN"
-        UUID rewardId FK "links to MST_REWARD for REDEEM transactions"
-        timestamp expiresAt "expiry date for EARN transactions"
-        timestamp createdAt
-    }
-
-    MST_EXCHANGE_RATE {
-        UUID id PK
-        UUID fromPartnerId FK
-        UUID toPartnerId FK
-        decimal rate "e.g. 0.8 for KFC->McD"
-        timestamp effectiveFrom
-        UUID createdBy
-        UUID updatedBy
-        timestamp updatedAt
-    }
-
-    TRX_AUDIT_TRAIL {
-        UUID id PK
-        string eventType
-        UUID actorId "memberId or null for system"
-        string actorType "MEMBER | SYSTEM | ADMIN | PARTNER"
-        string entityType "MEMBER | PARTNER | TRANSACTION | EXCHANGE | REWARD"
-        UUID entityId
-        jsonb payload "before/after snapshot"
-        timestamp createdAt
-    }
-
-    MST_REWARD {
-        UUID id PK
-        UUID partnerId FK
-        string name
-        int pointCost
-        enum status "ACTIVE | INACTIVE"
-        timestamp createdAt
-        timestamp updatedAt
-    }
-
-    MST_MEMBER ||--o{ TRX_POINT_BALANCE : "has"
-    MST_PARTNER ||--o{ TRX_POINT_BALANCE : "tracked by"
-    MST_MEMBER ||--o{ TRX_TRANSACTION : "performs"
-    MST_PARTNER ||--o{ TRX_TRANSACTION : "associated with"
-    MST_PARTNER ||--o{ MST_EXCHANGE_RATE : "fromPartner"
-    MST_PARTNER ||--o{ MST_EXCHANGE_RATE : "toPartner"
-    MST_PARTNER ||--o{ MST_REWARD : "offers"
-    MST_REWARD ||--o{ TRX_TRANSACTION : "redeemed via"
-```
-
-### Key Design Decisions
-
-- **`TRX_POINT_BALANCE`** is a dedicated balance table (not computed from transaction sum on every read) — faster reads, simpler balance check logic. Balance is updated atomically with each transaction within a DB transaction.
-- **`TRX_POINT_BALANCE.version`** enables optimistic locking via JPA `@Version`. Prevents race conditions when two concurrent transactions try to update the same member's balance simultaneously. Spring automatically retries on `OptimisticLockException`.
-- **`pointsPerThousandIDR`** on `MST_PARTNER` is the configurable accumulation rate.
-- **`expiryDays`** on `MST_PARTNER` is the configurable expiry duration per partner (default 365 days). Expiry date is computed at EARN time: `expiresAt = now + partner.expiryDays days`.
-- **`MST_EXCHANGE_RATE`** stores directional rates: one row for KFC→McD, another for McD→KFC. This allows asymmetric rates.
-- **`MST_REWARD`** stores partner reward catalog. `pointCost` is validated against member balance at redemption time. No stock management in MVP.
-- **`TRX_TRANSACTION.type = EXPIRED`** is recorded as a transaction row for member-visible history. Members can see why their balance decreased.
-- **`TRX_TRANSACTION.rewardId`** links REDEEM transactions to the specific reward item redeemed.
-- **`TRX_AUDIT_TRAIL.payload`** stores a JSON snapshot for event reconstruction without joining other tables.
-- **`apiKey`** on `MST_PARTNER` is validated on `POST /auth/partner/token` to issue a partner-scoped JWT.
+**Access points (local):**
+- Member/Admin UI: http://localhost:3000
+- Backend API: http://localhost:8080/api/v1
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- Database: postgresql://localhost:5432/jdt17_loyalty
 
 ---
 
-## 3. Flowcharts
+## Technology Stack
 
-### 3.1 Point Accumulation Flow
+| No. | Component | Details |
+|-----|-----------|---------|
+| 1 | Operating System | Linux (Docker containers) |
+| 2 | Programming Language | Java 21 LTS, TypeScript 5 |
+| 3 | Backend Framework | Spring Boot 4.1.0 (Spring Framework 7) |
+| 4 | ORM | Spring Data JPA + Hibernate |
+| 5 | Database | PostgreSQL 18 |
+| 6 | Migration Tool | Flyway |
+| 7 | Authentication | JWT via Spring Security (HS512) |
+| 8 | API Documentation | SpringDoc OpenAPI 3 (Swagger UI) |
+| 9 | Frontend Framework | Next.js 16 (React 19, App Router) |
+| 10 | UI Components | shadcn/ui + Tailwind CSS |
+| 11 | State Management | React Query (TanStack) |
+| 12 | Build Tool (Backend) | Maven 3.9+ |
+| 13 | Testing | JUnit 5 + Mockito (backend), Vitest (frontend) |
+| 14 | Containerization | Docker 24+ + Docker Compose v2 |
+| 15 | Version Control | Git |
 
-```mermaid
-flowchart TD
-    A([Partner System calls POST /transactions]) --> B{"Resolve member by identifier<br>(phone or email)<br>Exists?"}
-    B -- No --> ERR1[Return 404 Member Not Found]
-    B -- Yes --> C{Partner exists & ACTIVE?}
-    C -- No --> ERR2[Return 404 Partner Not Found]
-    C -- Yes --> D{Member status ACTIVE?}
-    D -- No --> ERR3[Return 400 Member Inactive]
-    D -- Yes --> E["Calculate points<br>pointsEarned = floor trxAmount / 1000<br>times pointsPerThousandIDR"]
-    E --> F[BEGIN DB Transaction]
-    F --> G["Insert TRANSACTION record<br>type = EARN"]
-    G --> H["UPDATE TRX_POINT_BALANCE<br>balance += pointsEarned"]
-    H --> I["Insert TRX_AUDIT_TRAIL<br>eventType = POINTS_EARNED"]
-    I --> J[COMMIT]
-    J --> K([Return 201 with transaction + new balance])
+---
+
+## Logical Architecture
+
+**Three-tier:**
+
+**Presentation (Frontend — Next.js 16)**
+- Member Web App: Home, Rewards Catalog, Exchange, Redeem, Transaction History, Profile
+- Admin CMS: Member Management, Partner Management
+
+**Application (Backend — Spring Boot 4.1.0)**
+- Controllers: AuthController, MemberController, PartnerController, TransactionController, ExchangeController, RedemptionController
+- Services: PointService, MemberService, PartnerService, RedemptionService, AuditTrailService
+- Repositories: Spring Data JPA (auto-generated + custom queries)
+
+**Data (PostgreSQL 18)**
+- 5 master tables (MST_*), 3 transaction tables (TRX_*)
+- Flyway migrations for schema versioning
+- JSONB for audit trail payloads
+
+---
+
+## Package Structure (Backend)
+
 ```
-
-### 3.2 Point Expiry Job Flow
-
-```mermaid
-flowchart TD
-    A([Daily Cron Job Triggers]) --> B["Query EARN Transactions<br>where expiresAt <= now()"]
-    B --> C{Transactions found?}
-    C -- No --> D([End Job])
-    C -- Yes --> E["For each transaction, calculate<br>remaining unexpired points"]
-    E --> F[BEGIN DB Transaction]
-    F --> G["Insert TRANSACTION record<br>type = EXPIRED"]
-    G --> H["UPDATE TRX_POINT_BALANCE<br>balance -= expiredPoints"]
-    H --> I["Insert TRX_AUDIT_TRAIL<br>eventType = POINT_EXPIRED"]
-    I --> J[COMMIT]
-    J --> K([End Job])
-```
-
-### 3.3 Point Exchange Flow
-
-```mermaid
-flowchart TD
-    A([Member calls POST /exchange]) --> B{Member exists?}
-    B -- No --> ERR1[Return 404]
-    B -- Yes --> C{"fromPartner & toPartner<br>exist and ACTIVE?"}
-    C -- No --> ERR2[Return 404]
-    C -- Yes --> D{"ExchangeRate exists for<br>fromPartner -> toPartner?"}
-    D -- No --> ERR3[Return 404 Exchange Rate Not Configured]
-    D -- Yes --> E{"Member balance for fromPartner<br>>= requestedPoints?"}
-    E -- No --> ERR4[Return 400 Insufficient Balance]
-    E -- Yes --> F["Calculate target points<br>targetPoints = floor points x rate"]
-    F --> G[BEGIN DB Transaction]
-    G --> H["Insert TRANSACTION<br>type=EXCHANGE_OUT, fromPartner"]
-    H --> I["Insert TRANSACTION<br>type=EXCHANGE_IN, toPartner<br>relatedTxId = EXCHANGE_OUT.id"]
-    I --> J["UPDATE TRX_POINT_BALANCE<br>fromPartner balance -= points"]
-    J --> K["UPDATE TRX_POINT_BALANCE<br>toPartner balance += targetPoints"]
-    K --> L["Insert TRX_AUDIT_TRAIL<br>eventType = POINTS_EXCHANGED"]
-    L --> M[COMMIT]
-    M --> N([Return 200 with both updated balances])
+com.jdt17.loyalty/
+├── config/           # Spring config, security, virtual threads
+├── controller/       # REST controllers
+├── service/          # Business logic (TDD)
+├── repository/       # Spring Data JPA repositories
+├── entity/           # JPA entities
+├── dto/              # Request/Response DTOs
+├── exception/        # Custom exceptions + GlobalExceptionHandler
+├── security/         # JWT filter, UserDetailsService
+├── scheduler/        # Point expiry cron job
+└── audit/            # AuditTrailService
 ```
 
 ---
 
-### 3.4 Point Redemption Flow
+## Entity Relation Diagram (Overview)
 
-```mermaid
-flowchart TD
-    A([Member calls POST /redeem]) --> B{Member exists & ACTIVE?}
-    B -- No --> ERR1[Return 404 / 400]
-    B -- Yes --> C{Reward exists & ACTIVE?}
-    C -- No --> ERR2[Return 404]
-    C -- Yes --> D["Lookup TRX_POINT_BALANCE<br>for member + reward's partner"]
-    D --> E{"Balance >= reward.pointCost?"}
-    E -- No --> ERR3[Return 422 Insufficient Points]
-    E -- Yes --> F[BEGIN DB Transaction]
-    F --> G["UPDATE TRX_POINT_BALANCE<br>balance -= reward.pointCost"]
-    G --> H["Insert TRX_TRANSACTION<br>type=REDEEM, link rewardId"]
-    H --> I["Insert TRX_AUDIT_TRAIL<br>eventType = POINTS_REDEEMED"]
-    I --> J[COMMIT]
-    J --> K([Return 200 with transaction + new balance])
+**Master Tables (MST_*):**
+- MST_MEMBER — registered members
+- MST_PARTNER — KFC, McDonald's config
+- MST_REWARD — 11 reward catalog items
+- MST_EXCHANGE_RATE — directional rates between partners
+- MST_ADMIN — single CMS admin
 
-    ERR1 --> End((End))
-    ERR2 --> End
-    ERR3 --> End
-    K --> End
-```
+**Transaction Tables (TRX_*):**
+- TRX_POINT_BALANCE — current balance per (memberId, partnerId), `@Version` optimistic locking
+- TRX_TRANSACTION — immutable log: EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT, EXPIRED
+- TRX_AUDIT_TRAIL — append-only compliance log
+
+**Key design decisions:**
+- Partner-scoped balances: one TRX_POINT_BALANCE per (memberId, partnerId)
+- Optimistic locking: `version` on TRX_POINT_BALANCE; JPA auto-increments on update; second concurrent update throws OptimisticLockException
+- UUID PKs on all tables
+- All timestamps TIMESTAMPTZ (UTC)
 
 ---
 
-## 4. API Specification
-
-### Conventions
-
-- **Base URL:** `http://localhost:8080/api/v1`
-- **Content-Type:** `application/json`
-- **Auth:** Secured endpoints require header: `Authorization: Bearer <JWT>`. JWT contains role claim (MEMBER | ADMIN | PARTNER).
-- **Error response format** (all errors):
-  ```json
-  {
-    "status": 400,
-    "error": "BAD_REQUEST",
-    "message": "Insufficient point balance",
-    "code": "INSUFFICIENT_BALANCE"
-  }
-  ```
-- **Standard Error Codes:**
-  - `MEMBER_NOT_FOUND` — Member ID does not exist
-  - `MEMBER_INACTIVE` — Member status is INACTIVE
-  - `PARTNER_NOT_FOUND` — Partner ID does not exist
-  - `PARTNER_INACTIVE` — Partner status is INACTIVE
-  - `REWARD_NOT_FOUND` — Reward ID does not exist
-  - `REWARD_INACTIVE` — Reward status is INACTIVE
-  - `INSUFFICIENT_BALANCE` — Not enough points for redemption/exchange
-  - `EXCHANGE_RATE_NOT_CONFIGURED` — No exchange rate exists for partner pair
-  - `INVALID_CREDENTIALS` — Wrong email/password or API key
-  - `UNAUTHORIZED` — Missing or invalid JWT token
-  - `FORBIDDEN` — JWT valid but role does not have permission
-  - `DUPLICATE_EMAIL` — Email already registered
-  - `DUPLICATE_PHONE` — Phone number already registered
-
----
-
-### API Authorization Matrix
-
-| Endpoint | Public | MEMBER | ADMIN | PARTNER | Notes |
-|----------|--------|--------|-------|---------|-------|
-| `POST /auth/register` | ✓ | — | — | — | Self-registration |
-| `POST /auth/login` | ✓ | — | — | — | Returns JWT + role |
-| `POST /auth/partner/token` | ✓ | — | — | — | Validates partner apiKey |
-| `POST /transactions` | — | — | — | ✓ | Partner records EARN transactions |
-| `GET /members` | — | — | ✓ | — | Admin CMS member list |
-| `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — | Member can only view own profile |
-| `PUT /members/{id}` | — | — | ✓ | — | Admin updates member name/email |
-| `PUT /members/{id}/status` | — | — | ✓ | — | Admin toggles ACTIVE/INACTIVE |
-| `GET /members/{id}/points` | — | ✓ (own) | — | — | Privacy: admin cannot view balances |
-| `GET /members/{id}/transactions` | — | ✓ (own) | — | — | Privacy: admin cannot view transaction history |
-| `POST /exchange` | — | ✓ | — | — | Member-initiated point exchange |
-| `POST /redeem` | — | ✓ | — | — | Member redeems reward |
-| `GET /rewards` | — | ✓ | ✓ | — | List active rewards (all partners) |
-| `GET /rewards?partnerId={id}` | — | ✓ | ✓ | — | Filter rewards by partner |
-| `POST /partners` | — | — | ✓ | — | Admin creates new partner |
-| `GET /partners` | — | ✓ | ✓ | — | List all partners |
-| `PUT /partners/{id}` | — | — | ✓ | — | Admin updates partner config |
-
-**Notes:**
-- "✓ (own)" means JWT `sub` claim must match `{id}` path parameter
-- "✓ (any)" means any valid JWT with that role can access any member
-- Missing JWT → `401 UNAUTHORIZED`
-- Valid JWT but wrong role → `403 FORBIDDEN`
-- Public endpoints still validate request body schema
-
----
-
-## 4.0 Authentication Endpoints
-
-### 4.0.1 POST /auth/register
-
-**Description:** Register a new member and return JWT + member object (auto-login).
-
-**Authorization:** Public (no JWT required)
-
-**Request Body:**
-```json
-{
-  "name": "Budi Santoso",
-  "email": "budi@example.com",
-  "phone": "081234567890",
-  "password": "securePassword123"
-}
-```
-
-**Response 201:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "member": {
-    "id": "550e8400-e29b-41d4-a716-446655440001",
-    "name": "Budi Santoso",
-    "email": "budi@example.com",
-    "phone": "081234567890",
-    "status": "ACTIVE",
-    "createdAt": "2026-07-03T10:00:00Z"
-  }
-}
-```
-
-**Notes:**
-- Member balances are auto-initialized to 0 for all active partners.
-- JWT includes role claim = `MEMBER`.
-
----
-
-### 4.0.2 POST /auth/login
-
-**Description:** Login for Member or Admin. System checks both repositories.
-
-**Authorization:** Public (no JWT required)
-
-**Request Body:**
-```json
-{
-  "email": "budi@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Response 200:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "role": "MEMBER",
-  "user": {
-    "id": "550e8400-e29b-41d4-a716-446655440001",
-    "name": "Budi Santoso",
-    "email": "budi@example.com",
-    "phone": "081234567890",
-    "status": "ACTIVE"
-  }
-}
-```
-
-**Response 401:**
-```json
-{
-  "status": 401,
-  "error": "UNAUTHORIZED",
-  "message": "Invalid email or password"
-}
-```
-
-**Notes:**
-- JWT includes role claim = `MEMBER` or `ADMIN`.
-- Frontend uses role to route user to correct UI (member app vs admin CMS).
-
----
-
-### 4.0.3 POST /auth/partner/token
-
-**Description:** Generate JWT for partner API calls. Validates apiKey against MST_PARTNER table.
-
-**Authorization:** Public (no JWT required)
-
-**Request Body:**
-```json
-{
-  "partnerId": "kfc-uuid",
-  "apiKey": "kfc-api-key-demo"
-}
-```
-
-**Response 200:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 3600
-}
-```
-
-**Response 401:**
-```json
-{
-  "status": 401,
-  "error": "UNAUTHORIZED",
-  "message": "Invalid partner credentials"
-}
-```
-
-**Notes:**
-- JWT includes role claim = `PARTNER`.
-- Partner system includes this JWT in subsequent API calls (POST /transactions).
-
----
-
-### 4.1 ~~POST /members~~ — Member Registration (DEPRECATED)
-
-**Note:** Member registration is now handled by `POST /auth/register` (see §4.0.1). This endpoint returns both a JWT token and the member object, enabling immediate login after registration.
-
-**Migration:** Replace calls to `POST /members` with `POST /auth/register`. The new endpoint auto-initializes point balances for all active partners and returns a JWT for immediate authentication.
-
----
-
-### 4.2 `GET /members` — List Members
-
-**Description:** List all members. Supports optional `?status=ACTIVE|INACTIVE`.  
-**Auth:** Bearer JWT (Role: ADMIN)
-
-**Response `200 OK`:**
-```json
-{
-  "data": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440001",
-      "name": "Budi Santoso",
-      "email": "budi@example.com",
-      "status": "ACTIVE",
-      "createdAt": "2026-07-02T10:00:00Z"
-    }
-  ],
-  "total": 1
-}
-```
-
-**Status Codes:** `200`, `401` (missing/invalid JWT), `403` (insufficient role)
-
----
-
-### 4.3 `GET /members/{id}` — Get Member Detail
-
-**Description:** Get a single member's profile.  
-**Auth:** None
-
-**Response `200 OK`:**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440001",
-  "name": "Budi Santoso",
-  "email": "budi@example.com",
-  "phone": "081234567890",
-  "status": "ACTIVE",
-  "createdAt": "2026-07-02T10:00:00Z"
-}
-```
-
-**Status Codes:** `200`, `404` (member not found)
-
----
-
-### 4.4 `PUT /members/{id}` — Edit Member (CMS)
-
-**Description:** Update member details or status.  
-**Auth:** Bearer JWT (Role: ADMIN)
-
-**Request:**
-```json
-{
-  "name": "Budi S.",
-  "phone": "089876543210",
-  "status": "INACTIVE"
-}
-```
-
-**Response `200 OK`:** Updated member object (same shape as 4.3).  
-**Status Codes:** `200`, `401`, `404`
-
----
-
-### 4.5 `GET /members/{id}/points` — Get Point Balances
-
-**Description:** Get a member's point balances across all partners.  
-**Auth:** MEMBER (own only) — Admin cannot access for privacy reasons
-
-**Response `200 OK`:**
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "memberName": "Budi Santoso",
-  "balances": [
-    { "partnerId": "kfc-uuid", "partnerName": "KFC", "balance": 350 },
-    { "partnerId": "mcd-uuid", "partnerName": "McDonald's", "balance": 120 }
-  ]
-}
-```
-
-**Status Codes:** `200`, `403` (not own member), `404` (member not found)
-
----
-
-### 4.6 `GET /members/{id}/transactions` — Get Transaction History
-
-**Description:** Paginated transaction history for a member.  
-**Query Params:** `?page=0&size=10&type=EARN|REDEEM|EXCHANGE_IN|EXCHANGE_OUT`  
-**Auth:** MEMBER (own only) — Admin cannot access for privacy reasons
-
-**Response `200 OK`:**
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "page": 0,
-  "size": 10,
-  "total": 2,
-  "transactions": [
-    {
-      "id": "tx-uuid-001",
-      "type": "EARN",
-      "partnerId": "kfc-uuid",
-      "partnerName": "KFC",
-      "points": 150,
-      "trxAmountIDR": 150000,
-      "createdAt": "2026-07-02T10:05:00Z"
-    },
-    {
-      "id": "tx-uuid-002",
-      "type": "EXCHANGE_OUT",
-      "partnerId": "kfc-uuid",
-      "partnerName": "KFC",
-      "points": -100,
-      "relatedTxId": "tx-uuid-003",
-      "createdAt": "2026-07-02T10:10:00Z"
-    }
-  ]
-}
-```
-
-**Status Codes:** `200`, `403` (not own member), `404` (member not found)
-
----
-
-### 4.7 `POST /transactions` — Simulate Partner Transaction (Point Earn)
-
-**Description:** Simulates a partner sending a transaction to earn points for a member.  
-**Auth:** None (simulated partner call; no API key in MVP — see FSD §7.6)
-
-**Request:**
-```json
-{
-  "memberIdentifier": "081234567890",
-  "partner": "KFC",
-  "trxAmount": 150000
-}
-```
-
-**Response `201 Created`:**
-```json
-{
-  "transactionId": "tx-uuid-001",
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "partner": "KFC",
-  "trxAmountIDR": 150000,
-  "pointsEarned": 150,
-  "newBalance": 350,
-  "createdAt": "2026-07-02T10:05:00Z"
-}
-```
-
-**Status Codes:** `201`, `400` (member inactive), `404` (member or partner not found)
-
----
-
-### 4.8 `GET /partners` — List Partners
-
-**Description:** List all registered partners.  
-**Auth:** Bearer JWT (Role: ADMIN or MEMBER)
-
-**Response `200 OK`:**
-```json
-{
-  "data": [
-    {
-      "id": "kfc-uuid",
-      "name": "KFC",
-      "code": "KFC",
-      "pointsPerThousandIDR": 1,
-      "status": "ACTIVE"
-    },
-    {
-      "id": "mcd-uuid",
-      "name": "McDonald's",
-      "code": "MCD",
-      "pointsPerThousandIDR": 1,
-      "status": "ACTIVE"
-    }
-  ]
-}
-```
-
-### 4.9 `POST /partners` — Create Partner
-
-**Description:** Add a new partner to the system. Existing members will automatically have a 0 balance initialized for this new partner.
-**Auth:** Bearer JWT (Role: ADMIN)
-
-**Request:**
-```json
-{
-  "name": "Starbucks",
-  "code": "SBUX",
-  "pointsPerThousandIDR": 2
-}
-```
-
-**Response `201 Created`:**
-```json
-{
-  "id": "sbux-uuid",
-  "name": "Starbucks",
-  "code": "SBUX",
-  "pointsPerThousandIDR": 2,
-  "status": "ACTIVE",
-  "createdAt": "2026-07-03T10:00:00Z"
-}
-```
-
-**Status Codes:** `201`, `401` (missing/invalid JWT), `403` (insufficient role)
-
----
-
-
-
-### 4.10 `POST /exchange` — Exchange Points Between Partners
-
-**Description:** Convert a member's points from one partner to another at the configured rate.  
-**Auth:** Bearer JWT (Role: MEMBER)
-
-**Request:**
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "fromPartnerId": "kfc-uuid",
-  "toPartnerId": "mcd-uuid",
-  "points": 100
-}
-```
-
-**Response `200 OK`:**
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "fromPartner": "KFC",
-  "toPartner": "McDonald's",
-  "pointsDeducted": 100,
-  "pointsCredited": 80,
-  "exchangeRate": 0.8,
-  "updatedBalances": {
-    "KFC": 250,
-    "McDonald's": 200
-  },
-  "outTransactionId": "tx-uuid-004",
-  "inTransactionId": "tx-uuid-005",
-  "exchangedAt": "2026-07-02T11:15:00Z"
-}
-```
-
-**Status Codes:** `200`, `400` (insufficient balance), `404` (member, partner, or exchange rate not found)
-
----
-
-### 4.11 `GET /rewards` — List Available Rewards
-
-**Description:** List all active rewards. Optional filter by partnerId.  
-**Auth:** Bearer JWT (any authenticated user)
-
-**Query Params:**
-- `partnerId` (optional): Filter rewards by partner UUID
-
-**Response `200 OK`:**
-```json
-{
-  "data": [
-    {
-      "id": "reward-uuid-001",
-      "partnerId": "kfc-uuid",
-      "partnerName": "KFC",
-      "name": "KFC Original Bucket (4 pcs)",
-      "pointCost": 500,
-      "status": "ACTIVE",
-      "createdAt": "2026-07-01T00:00:00Z"
-    },
-    {
-      "id": "reward-uuid-002",
-      "partnerId": "kfc-uuid",
-      "partnerName": "KFC",
-      "name": "KFC Zinger Burger",
-      "pointCost": 200,
-      "status": "ACTIVE",
-      "createdAt": "2026-07-01T00:00:00Z"
-    }
-  ],
-  "total": 2
-}
-```
-
-**Status Codes:** `200`, `401` (missing/invalid JWT)
-
----
-
-### 4.12 `POST /redeem` — Redeem Points for Reward
-
-**Description:** Redeem a reward using member's points. Validates balance, deducts points, creates REDEEM transaction.  
-**Auth:** Bearer JWT (Role: MEMBER or ADMIN)
-
-**Request:**
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "rewardId": "reward-uuid-001"
-}
-```
-
-**Response `200 OK`:**
-```json
-{
-  "transactionId": "tx-uuid-006",
-  "rewardName": "KFC Original Bucket (4 pcs)",
-  "partnerId": "kfc-uuid",
-  "partnerName": "KFC",
-  "pointsDeducted": 500,
-  "newBalance": 0,
-  "redeemedAt": "2026-07-03T10:00:00Z"
-}
-```
-
-**Response `422 Unprocessable Entity`:**
-```json
-{
-  "status": 422,
-  "error": "UNPROCESSABLE_ENTITY",
-  "message": "Insufficient points. Required: 500, Available: 300"
-}
-```
-
-**Status Codes:** `200`, `400` (inactive member), `404` (member or reward not found), `422` (insufficient balance)
-
----
-
-## 5. Audit Trail Design
-
-### 5.1 Purpose
-
-Every significant state-changing action is logged in the `AUDIT_TRAIL` table. This provides a tamper-evident history of member activity and admin operations without modifying business tables.
-
-### 5.2 Events Logged
-
-| Event Type | Trigger | Actor Type |
-|------------|---------|-----------| 
-| `MEMBER_REGISTERED` | `POST /auth/register` | SYSTEM |
-| `MEMBER_UPDATED` | `PUT /members/{id}` | ADMIN |
-| `MEMBER_STATUS_CHANGED` | Status toggle via `PUT /members/{id}` | ADMIN |
-| `PARTNER_CREATED` | `POST /partners` | ADMIN |
-| `POINTS_EARNED` | `POST /transactions` | SYSTEM |
-| `POINT_EXPIRED` | Expiry Cron Job | SYSTEM |
-| `POINTS_EXCHANGED` | `POST /exchange` | MEMBER |
-| `POINTS_REDEEMED` | `POST /redeem` | MEMBER |
-
-### 5.3 Audit Trail Schema
+## Tables Detail
+
+### MST_MEMBER
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | 990e8400-e29b-41d4-a716-446655440001 |
+| name | VARCHAR(255) | N | | Budi Santoso |
+| email | VARCHAR(255) | N | UNIQUE | budi.santoso@example.com |
+| phone | VARCHAR(20) | Y | | 081234567890 |
+| password_hash | VARCHAR(255) | N | | $2a$10$... (bcrypt) |
+| status | VARCHAR(20) | N | CHECK (ACTIVE, INACTIVE) | ACTIVE |
+| created_by | UUID | Y | FK → MST_ADMIN.id | NULL |
+| updated_by | UUID | Y | FK → MST_ADMIN.id | |
+| created_at | TIMESTAMPTZ | N | DEFAULT now() | |
+| updated_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+**Indexes:**
+- `idx_member_email ON (email)` — login lookup
+- `idx_member_phone ON (phone)` — earn transaction member resolution
+
+### MST_PARTNER
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | 660e8400-...001 |
+| name | VARCHAR(255) | N | | KFC Indonesia |
+| code | VARCHAR(10) | N | UNIQUE | KFC |
+| points_per_thousand_idr | INT | N | DEFAULT 1, CHECK > 0 | 1 |
+| expiry_days | INT | N | DEFAULT 365, CHECK > 0 | 365 |
+| api_key | VARCHAR(255) | Y | | SHA-256 hash of raw key |
+| status | VARCHAR(20) | N | CHECK (ACTIVE, INACTIVE) | ACTIVE |
+| created_by | UUID | Y | FK → MST_ADMIN.id | |
+| updated_by | UUID | Y | FK → MST_ADMIN.id | |
+| created_at | TIMESTAMPTZ | N | DEFAULT now() | |
+| updated_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+**Seeded partners:**
+
+| id | name | code | pointsPerThousandIDR | expiryDays |
+|----|------|------|---------------------|------------|
+| 660e8400-...001 | KFC Indonesia | KFC | 1 | 365 |
+| 660e8400-...002 | McDonald's Indonesia | MCD | 1 | 365 |
+
+### MST_ADMIN
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | 550e8400-e29b-41d4-a716-446655440001 |
+| name | VARCHAR(255) | N | | Admin PISTOS |
+| email | VARCHAR(255) | N | UNIQUE | admin@jdt17loyalty.com |
+| password_hash | VARCHAR(255) | N | | $2a$10$... (bcrypt) |
+| status | VARCHAR(20) | N | CHECK (ACTIVE, INACTIVE) | ACTIVE |
+| created_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+### TRX_POINT_BALANCE
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | |
+| member_id | UUID | N | FK → MST_MEMBER.id ON DELETE CASCADE | |
+| partner_id | UUID | N | FK → MST_PARTNER.id ON DELETE RESTRICT | |
+| balance | BIGINT | N | DEFAULT 0, CHECK >= 0 | 500 |
+| version | BIGINT | N | DEFAULT 0 | 3 |
+| updated_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+**Constraints:** UNIQUE (member_id, partner_id)
+
+**Optimistic locking:** if two concurrent transactions read version=N and both try UPDATE, the second throws OptimisticLockException.
+
+**Seeded balances:**
+
+| Member | Partner | Balance |
+|--------|---------|---------|
+| Budi Santoso | KFC | 500 |
+| Budi Santoso | McDonald's | 300 |
+| Siti Rahmawati | KFC | 1200 |
+| Siti Rahmawati | McDonald's | 50 |
+| Andi Wijaya | KFC | 0 |
+| Andi Wijaya | McDonald's | 0 |
+
+### TRX_TRANSACTION
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | |
+| member_id | UUID | N | FK → MST_MEMBER.id | |
+| partner_id | UUID | N | FK → MST_PARTNER.id | |
+| type | VARCHAR(20) | N | CHECK (EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT, EXPIRED) | EARN |
+| points | BIGINT | N | CHECK > 0 | 500 |
+| trx_amount_idr | BIGINT | Y | | 500000 |
+| related_tx_id | UUID | Y | FK → TRX_TRANSACTION.id | |
+| reward_id | UUID | Y | FK → MST_REWARD.id | |
+| expires_at | TIMESTAMPTZ | Y | | 2027-07-03T10:00:00Z |
+| created_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+**Type rules:**
+
+| Type | trx_amount_idr | expires_at | reward_id | related_tx_id |
+|------|----------------|------------|-----------|---------------|
+| EARN | Required | Required | NULL | NULL |
+| REDEEM | NULL | NULL | Required | NULL |
+| EXCHANGE_OUT | NULL | NULL | NULL | Required (→ EXCHANGE_IN) |
+| EXCHANGE_IN | NULL | NULL | NULL | Required (→ EXCHANGE_OUT) |
+| EXPIRED | NULL | NULL | NULL | Optional (→ original EARN) |
+
+**Indexes:**
+- `idx_transaction_member_date ON (member_id, created_at DESC)`
+- `idx_transaction_expiry ON (expires_at) WHERE type = 'EARN'`
+
+### MST_EXCHANGE_RATE
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | |
+| from_partner_id | UUID | N | FK → MST_PARTNER.id | KFC |
+| to_partner_id | UUID | N | FK → MST_PARTNER.id | MCD |
+| rate | DECIMAL(10,4) | N | CHECK > 0, from ≠ to | 0.8000 |
+| effective_from | TIMESTAMPTZ | N | DEFAULT now() | 2026-01-01T00:00:00Z |
+| created_by | UUID | Y | FK → MST_ADMIN.id | |
+| updated_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+**Constraints:** UNIQUE (from_partner_id, to_partner_id, effective_from)
+
+**Active rate selection:** `WHERE effective_from <= now() ORDER BY effective_from DESC LIMIT 1`
+
+**Seeded rates:**
+
+| From | To | Rate | Meaning |
+|------|----|------|---------|
+| KFC | McDonald's | 0.8000 | 100 KFC pts → 80 McD pts |
+| McDonald's | KFC | 0.9000 | 100 McD pts → 90 KFC pts |
+
+### MST_REWARD
+
+| Column | Data Type | Nullable | Constraint | Sample |
+|--------|-----------|----------|------------|--------|
+| id | UUID | N | PK | |
+| partner_id | UUID | N | FK → MST_PARTNER.id | |
+| name | VARCHAR(255) | N | | KFC Original Recipe Chicken 1pc |
+| point_cost | INT | N | CHECK > 0 | 250 |
+| status | VARCHAR(20) | N | CHECK (ACTIVE, INACTIVE) | ACTIVE |
+| created_at | TIMESTAMPTZ | N | DEFAULT now() | |
+| updated_at | TIMESTAMPTZ | N | DEFAULT now() | |
+
+**Seeded KFC rewards:**
+
+| Name | Point Cost |
+|------|------------|
+| KFC Original Recipe Chicken 1pc | 250 |
+| KFC French Fries Regular | 150 |
+| KFC Zinger Burger | 400 |
+| KFC Family Bucket (9pc) | 1200 |
+| KFC Pepsi Regular | 100 |
+
+**Seeded McDonald's rewards:**
+
+| Name | Point Cost |
+|------|------------|
+| Big Mac Burger | 350 |
+| McNuggets 6pcs | 200 |
+| McFlurry Oreo | 250 |
+| French Fries Large | 150 |
+| McCafe Latte | 180 |
+| McValue Meal (Burger + Fries + Drink) | 500 |
+
+### TRX_AUDIT_TRAIL
 
 ```sql
 CREATE TABLE trx_audit_trail (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_type  VARCHAR(50)  NOT NULL,               -- e.g. POINTS_EARNED
-    actor_id    UUID,                                  -- memberId or null
-    actor_type  VARCHAR(20)  NOT NULL,               -- MEMBER | SYSTEM | ADMIN
-    entity_type VARCHAR(50)  NOT NULL,               -- MEMBER | PARTNER | TRANSACTION | EXCHANGE
-    entity_id   UUID         NOT NULL,               -- PK of the affected row
-    payload     JSONB,                                -- before/after snapshot
+    event_type  VARCHAR(50)  NOT NULL,   -- POINTS_EARNED, MEMBER_REGISTERED, etc.
+    actor_id    UUID,                     -- memberId, adminId, or null (SYSTEM)
+    actor_type  VARCHAR(20)  NOT NULL,   -- MEMBER | SYSTEM | ADMIN | PARTNER
+    entity_type VARCHAR(50)  NOT NULL,   -- MEMBER | PARTNER | TRANSACTION | EXCHANGE
+    entity_id   UUID         NOT NULL,   -- PK of the affected row
+    payload     JSONB,                   -- before/after snapshot
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
@@ -788,137 +311,768 @@ CREATE INDEX idx_audit_entity  ON trx_audit_trail(entity_type, entity_id);
 CREATE INDEX idx_audit_created ON trx_audit_trail(created_at DESC);
 ```
 
-### 5.4 Sample Payload Structure
-
-For `POINTS_EARNED`:
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "partnerId": "kfc-uuid",
-  "trxAmountIDR": 150000,
-  "pointsEarned": 150,
-  "balanceBefore": 200,
-  "balanceAfter": 350
-}
-```
-
-For `POINTS_EXCHANGED`:
-```json
-{
-  "memberId": "550e8400-e29b-41d4-a716-446655440001",
-  "fromPartnerId": "kfc-uuid",
-  "toPartnerId": "mcd-uuid",
-  "pointsDeducted": 100,
-  "pointsCredited": 80,
-  "exchangeRate": 0.8,
-  "fromBalanceBefore": 350, "fromBalanceAfter": 250,
-  "toBalanceBefore": 120,   "toBalanceAfter": 200
-}
-```
-
-### 5.5 Audit Trail Implementation Notes
-
-- Audit writes happen **within the same DB transaction** as the business operation — if the business operation rolls back, the audit entry is also rolled back (consistent state).
-- Use a Spring `@Transactional` service method that writes both the business record and audit record.
-- Do **not** use DB triggers for audit writes — keep logic in the service layer for testability.
-
 ---
 
-## 6. Database Migration & Seeding Strategy (Flyway)
+## Flyway Migration Files
 
 | Migration File | Purpose |
 |----------------|---------|
-| `V1__create_schema.sql` | Create all tables (member, partner, point_balance, transaction, reward, redemption_log, exchange_rate, audit_trail) |
-| `V2__seed_partners.sql` | Insert KFC and McDonald's partner records with `pointsPerThousandIDR = 1` |
-| `V3__seed_exchange_rates.sql` | Insert KFC→McD (rate: 0.8) and McD→KFC (rate: 1.25) |
-| `V5__seed_demo_members.sql` | (Optional) Insert 2–3 demo members for presentation |
+| V1__create_schema.sql | Create all tables (MST_* and TRX_*) |
+| V2__seed_partners.sql | Insert KFC and McDonald's with pointsPerThousandIDR = 1 |
+| V3__seed_exchange_rates.sql | Insert KFC→McD (0.8) and McD→KFC (0.9) |
+| V4__seed_rewards.sql | Insert 11 rewards (5 KFC + 6 McDonald's) |
+| V5__seed_demo_members.sql | Insert 1 admin + 3 demo members + initial balances |
 
 ---
 
-## 7. Project Package Structure
+## API Specification
 
+### Authentication
+
+#### POST /api/v1/auth/register
+Access: Public
+
+**Request:**
+```json
+{
+  "name": "Budi Santoso",
+  "email": "budi.santoso@example.com",
+  "phone": "081234567890",
+  "password": "Member123!"
+}
 ```
-src/
-└── main/java/com/jdt/loyalty/
-    ├── config/           # Spring config, API key filter
-    ├── controller/       # REST controllers (MemberController, etc.)
-    ├── service/          # Business logic (MemberService, PointService, etc.)
-    ├── repository/       # Spring Data JPA repositories
-    ├── entity/           # JPA entities (Member, Partner, Transaction, etc.)
-    ├── dto/              # Request/Response DTOs
-    ├── exception/        # Custom exceptions + GlobalExceptionHandler
-    └── audit/            # AuditTrailService
-src/
-└── test/java/com/jdt/loyalty/
-    ├── service/          # Unit tests for service layer
-    └── controller/       # Integration tests (optional)
+
+**Success (201):**
+```json
+{
+  "token": "eyJhbG...",
+  "member": {
+    "id": "990e8400-e29b-41d4-a716-446655440001",
+    "name": "Budi Santoso",
+    "email": "budi.santoso@example.com",
+    "phone": "081234567890",
+    "status": "ACTIVE",
+    "createdAt": "2026-07-03T10:00:00Z"
+  }
+}
+```
+
+**Error (400):**
+```json
+{ "status": 400, "error": "BAD_REQUEST", "message": "Email already registered", "code": "DUPLICATE_EMAIL" }
+```
+
+**Backend Logic:**
+1. Validate payload; verify email uniqueness
+2. BCrypt hash password (cost factor 10)
+3. Insert into MST_MEMBER (status = ACTIVE)
+4. Bulk-seed TRX_POINT_BALANCE for all active partners (balance = 0)
+5. Write MEMBER_REGISTERED to TRX_AUDIT_TRAIL (actorType = SYSTEM)
+6. Issue JWT: `{ sub: memberId, role: MEMBER, exp: now+24h }`
+7. Return 201 with token + member
+
+---
+
+#### POST /api/v1/auth/login
+Access: Public
+
+**Request:**
+```json
+{
+  "email": "budi@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Success (200):**
+```json
+{
+  "token": "eyJhbG...",
+  "role": "MEMBER",
+  "user": {
+    "id": "990e8400-e29b-41d4-a716-446655440001",
+    "name": "Budi Santoso",
+    "email": "budi.santoso@example.com",
+    "status": "ACTIVE"
+  }
+}
+```
+
+**Error (401):**
+```json
+{ "status": 401, "error": "UNAUTHORIZED", "message": "Invalid email or password", "code": "INVALID_CREDENTIALS" }
+```
+
+**Backend Logic:**
+1. Query email against **both** MST_MEMBER and MST_ADMIN tables
+2. Validate BCrypt password
+3. Determine role from matching table (MEMBER or ADMIN)
+4. Issue JWT with resolved role claim
+5. Return token + role (frontend routes accordingly)
+
+---
+
+#### POST /api/v1/auth/partner/token
+Access: Public
+
+**Request:**
+```json
+{
+  "partnerId": "660e8400-e29b-41d4-a716-446655440001",
+  "apiKey": "kfc_api_key_2026_secure_demo_only"
+}
+```
+
+**Success (200):**
+```json
+{ "token": "eyJhbG...", "expiresIn": 3600 }
+```
+
+**Error (401):**
+```json
+{ "status": 401, "error": "UNAUTHORIZED", "message": "Invalid partner credentials", "code": "INVALID_CREDENTIALS" }
+```
+
+**Backend Logic:**
+1. Query MST_PARTNER by partnerId
+2. Validate SHA-256(apiKey) matches stored hash
+3. Issue JWT: `{ sub: partnerId, role: PARTNER, exp: now+1h }`
+
+---
+
+### Member Management
+
+#### GET /api/v1/members
+Access: ADMIN only
+
+**Query Parameters:**
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| page | int | No | Default 0 |
+| size | int | No | Default 20 |
+| status | string | No | ACTIVE or INACTIVE |
+
+**Success (200):**
+```json
+{
+  "data": [
+    {
+      "id": "990e8400-e29b-41d4-a716-446655440001",
+      "name": "Budi Santoso",
+      "email": "budi.santoso@example.com",
+      "phone": "081234567890",
+      "status": "ACTIVE",
+      "createdAt": "2026-07-03T10:00:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "total": 1
+}
 ```
 
 ---
 
-## 8. Unit Testing Plan
+#### GET /api/v1/members/{id}
+Access: MEMBER (own only) or ADMIN (any)
+Privacy: Point balances NOT included in response.
 
-### 8.1 Philosophy
-
-- **Service layer only** for unit tests — no DB, no HTTP in unit tests.
-- Use **Mockito** to mock repositories and dependencies.
-- Use **@SpringBootTest** only for integration smoke tests (optional in MVP scope).
-
-### 8.2 Test Cases
-
-| Class Under Test | Test Case |
-|-----------------|-----------|
-| `PointService#earnPoints` | Correct points calculated from trxAmount using `floor(trxAmount / 1000)` |
-| `PointService#earnPoints` | Member correctly resolved via phone or email identifier |
-| `PointService#earnPoints` | Throws `MemberNotFoundException` when member does not exist |
-| `PointService#earnPoints` | Throws `PartnerNotFoundException` when partner does not exist |
-| `PointService#earnPoints` | Throws `MemberInactiveException` when member is INACTIVE |
-| `PointService#expirePoints` | Expiry succeeds; expired points correctly deducted and transaction logged |
-| `PartnerService#createPartner` | Partner created; balances initialized for existing members |
-| `PointService#exchangePoints` | Exchange succeeds; target points = `floor(sourcePoints × rate)` |
-| `PointService#exchangePoints` | Throws `InsufficientBalanceException` when source balance < requested |
-| `PointService#exchangePoints` | Throws `ExchangeRateNotFoundException` when rate not configured |
-| `MemberService#registerMember` | Member created; point balances initialized to 0 for all active partners |
-| `AuditTrailService#log` | Audit record written with correct event type, actor, entity |
-
-### 8.3 Tools & Configuration
-
-```xml
-<!-- pom.xml test dependencies -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-test</artifactId>
-    <scope>test</scope>
-    <!-- Includes JUnit 5, Mockito, AssertJ -->
-</dependency>
+**Success (200):**
+```json
+{
+  "id": "990e8400-e29b-41d4-a716-446655440001",
+  "name": "Budi Santoso",
+  "email": "budi.santoso@example.com",
+  "phone": "081234567890",
+  "status": "ACTIVE",
+  "createdAt": "2026-07-03T10:00:00Z"
+}
 ```
-
-Run tests with: `mvn test`
 
 ---
 
-## 9. Configuration Reference
+#### PUT /api/v1/members/{id}
+Access: ADMIN only
+Note: Single endpoint for profile update AND status change. No separate PUT /status endpoint.
 
-All values below should be set in `application.properties` or via environment variables for local/Docker deployment.
+**Request:**
+```json
+{ "name": "Budi S.", "phone": "089876543210", "status": "INACTIVE" }
+```
+
+**Success (200):** Updated member object
+
+**Backend Logic:**
+1. Verify ADMIN JWT
+2. Query member by id (404 if not found)
+3. Apply field updates
+4. Write MEMBER_UPDATED to audit trail; if status changed, also write MEMBER_STATUS_CHANGED
+5. Return updated member
+
+---
+
+#### GET /api/v1/members/{id}/points
+Access: MEMBER (own only) — **ADMIN explicitly forbidden (403)**
+
+**Success (200):**
+```json
+{
+  "memberId": "990e8400-e29b-41d4-a716-446655440001",
+  "memberName": "Budi Santoso",
+  "balances": [
+    { "partnerId": "660e8400-...001", "partnerName": "KFC Indonesia", "balance": 500 },
+    { "partnerId": "660e8400-...002", "partnerName": "McDonald's Indonesia", "balance": 300 }
+  ]
+}
+```
+
+---
+
+#### GET /api/v1/members/{id}/transactions
+Access: MEMBER (own only) — **ADMIN explicitly forbidden (403)**
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| page | int | Default 0 |
+| size | int | Default 20 |
+| type | string | EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT, EXPIRED |
+
+**Success (200):**
+```json
+{
+  "memberId": "990e8400-e29b-41d4-a716-446655440001",
+  "page": 0,
+  "size": 10,
+  "total": 4,
+  "transactions": [
+    {
+      "id": "bb0e8400-e29b-41d4-a716-446655440001",
+      "type": "EARN",
+      "partnerId": "660e8400-...001",
+      "partnerName": "KFC Indonesia",
+      "points": 500,
+      "trxAmountIDR": 500000,
+      "expiresAt": "2027-07-01T08:00:00Z",
+      "createdAt": "2026-07-01T08:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Partner Management
+
+#### GET /api/v1/partners
+Access: ADMIN or MEMBER
+
+**Success (200):**
+```json
+{
+  "data": [
+    { "id": "660e8400-...001", "name": "KFC Indonesia", "code": "KFC", "pointsPerThousandIDR": 1, "expiryDays": 365, "status": "ACTIVE" },
+    { "id": "660e8400-...002", "name": "McDonald's Indonesia", "code": "MCD", "pointsPerThousandIDR": 1, "expiryDays": 365, "status": "ACTIVE" }
+  ]
+}
+```
+
+---
+
+#### POST /api/v1/partners
+Access: ADMIN only
+
+**Request:**
+```json
+{ "name": "Starbucks Indonesia", "code": "SBUX", "pointsPerThousandIDR": 2, "expiryDays": 180 }
+```
+
+**Success (201):** Created partner object
+
+**Backend Logic:**
+1. Verify ADMIN JWT
+2. Check partner code uniqueness (DUPLICATE_PARTNER_CODE if exists)
+3. Insert into MST_PARTNER
+4. Bulk-init TRX_POINT_BALANCE for all active members via native SQL:
+   ```sql
+   INSERT INTO trx_point_balance (id, member_id, partner_id, balance, version, updated_at)
+   SELECT gen_random_uuid(), m.id, :partnerId, 0, 0, now()
+   FROM mst_member m WHERE m.status = 'ACTIVE'
+   ```
+5. Write PARTNER_CREATED to audit trail
+6. Return 201
+
+---
+
+#### PUT /api/v1/partners/{id}
+Access: ADMIN only
+
+Updates partner name, conversion rate, status. Partner code immutable after creation.
+
+---
+
+### Point Transaction
+
+#### POST /api/v1/transactions
+Access: **PARTNER JWT required**
+
+**Request:**
+```json
+{ "memberIdentifier": "081234567890", "partner": "KFC", "trxAmount": 150000 }
+```
+
+**Success (201):**
+```json
+{
+  "transactionId": "bb0e8400-...",
+  "memberId": "990e8400-...",
+  "partner": "KFC",
+  "trxAmountIDR": 150000,
+  "pointsEarned": 150,
+  "newBalance": 650,
+  "expiresAt": "2027-07-03T10:00:00Z",
+  "createdAt": "2026-07-03T10:00:00Z"
+}
+```
+
+**Calculation:**
+```
+pointsEarned = floor(trxAmountIDR / 1000) × pointsPerThousandIDR
+expiresAt    = now() + partner.expiryDays
+```
+
+Example: IDR 150,000 × 1 pt/1000 IDR = 150 pts
+
+**Errors:**
+- 404 MEMBER_NOT_FOUND — memberIdentifier matches no member
+- 404 PARTNER_NOT_FOUND — partner code not found
+- 400 MEMBER_INACTIVE — member is disabled
+
+---
+
+### Exchange
+
+#### POST /api/v1/exchange
+Access: MEMBER only (memberId resolved from JWT sub)
+
+**Request:**
+```json
+{ "fromPartnerId": "660e8400-...001", "toPartnerId": "660e8400-...002", "points": 100 }
+```
+
+**Success (200):**
+```json
+{
+  "memberId": "990e8400-...",
+  "fromPartner": "KFC Indonesia",
+  "toPartner": "McDonald's Indonesia",
+  "pointsDeducted": 100,
+  "pointsCredited": 80,
+  "exchangeRate": 0.8,
+  "updatedBalances": { "KFC": 400, "MCD": 380 },
+  "outTransactionId": "tx-out-uuid",
+  "inTransactionId": "tx-in-uuid",
+  "exchangedAt": "2026-07-03T10:00:00Z"
+}
+```
+
+**Calculation:**
+```
+pointsCredited = floor(points × exchangeRate)
+```
+
+Example: 100 KFC pts × 0.8 = 80 McD pts
+
+**Errors:**
+- 404 EXCHANGE_RATE_NOT_CONFIGURED
+- 404 PARTNER_NOT_FOUND
+- 422 INSUFFICIENT_BALANCE
+
+---
+
+### Redemption
+
+#### GET /api/v1/rewards
+Access: Any authenticated user (MEMBER or ADMIN)
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| partnerId | UUID | Optional — filter by partner |
+
+**Success (200):**
+```json
+{
+  "data": [
+    { "id": "880e8400-...001", "partnerId": "660e8400-...001", "partnerName": "KFC Indonesia", "name": "KFC Original Recipe Chicken 1pc", "pointCost": 250, "status": "ACTIVE" }
+  ],
+  "total": 11
+}
+```
+
+---
+
+#### POST /api/v1/redeem
+Access: **MEMBER only**
+
+**Request:**
+```json
+{ "memberId": "990e8400-...", "rewardId": "880e8400-...001" }
+```
+
+**Success (200):**
+```json
+{
+  "transactionId": "tx-uuid-redeem",
+  "rewardName": "KFC Original Recipe Chicken 1pc",
+  "partnerId": "660e8400-...001",
+  "partnerName": "KFC Indonesia",
+  "pointsDeducted": 250,
+  "newBalance": 250,
+  "redeemedAt": "2026-07-03T10:00:00Z"
+}
+```
+
+**Error (422):**
+```json
+{ "status": 422, "error": "UNPROCESSABLE_ENTITY", "message": "Insufficient points. Required: 250, Available: 100", "code": "INSUFFICIENT_BALANCE" }
+```
+
+**Errors:**
+- 404 REWARD_NOT_FOUND
+- 404 REWARD_INACTIVE
+- 422 INSUFFICIENT_BALANCE
+
+---
+
+## Authorization Matrix
+
+| Endpoint | Public | MEMBER | ADMIN | PARTNER |
+|----------|--------|--------|-------|---------|
+| POST /auth/register | ✓ | — | — | — |
+| POST /auth/login | ✓ | — | — | — |
+| POST /auth/partner/token | ✓ | — | — | — |
+| POST /transactions | — | — | — | ✓ |
+| GET /members | — | — | ✓ | — |
+| GET /members/{id} | — | ✓ (own) | ✓ (any) | — |
+| PUT /members/{id} | — | — | ✓ | — |
+| GET /members/{id}/points | — | ✓ (own) | — (403) | — |
+| GET /members/{id}/transactions | — | ✓ (own) | — (403) | — |
+| POST /exchange | — | ✓ | — | — |
+| POST /redeem | — | ✓ | — | — |
+| GET /rewards | — | ✓ | ✓ | — |
+| GET /partners | — | ✓ | ✓ | — |
+| POST /partners | — | — | ✓ | — |
+| PUT /partners/{id} | — | — | ✓ | — |
+
+Legend: ✓ = allowed, — = forbidden (403 if JWT valid, 401 if no JWT)
+
+---
+
+## Security
+
+### JWT Configuration
+
+```
+Algorithm: HS512 (HMAC-SHA512)
+Secret: 128-character hex string (openssl rand -hex 64)
+Member/Admin expiry: 24 hours
+Partner expiry: 1 hour
+```
+
+**JWT Payload:**
+```json
+{
+  "sub": "990e8400-e29b-41d4-a716-446655440001",
+  "role": "MEMBER",
+  "iat": 1751500800,
+  "exp": 1751587200
+}
+```
+
+### Password Encryption
+
+- Algorithm: BCrypt (BCryptPasswordEncoder, cost factor 10)
+- ~100ms per hash on modern hardware
+- Each hash includes random salt
+- Seed data uses placeholder hash; regenerate before production
+
+### Security Controls
+
+| No. | Component | Control | Implementation |
+|-----|-----------|---------|----------------|
+| 1 | API | RBAC | JWT role claim per endpoint |
+| 2 | API | Financial data privacy | Admin blocked from points/transactions endpoints |
+| 3 | API | Auth required | All non-public endpoints require valid JWT |
+| 4 | DB | No raw SQL in services | Spring Data JPA except bulk partner init |
+| 5 | DB | Optimistic locking | @Version on TRX_POINT_BALANCE |
+| 6 | Secrets | Env vars | .env file (chmod 600), no hardcoded values |
+| 7 | Passwords | BCrypt | Cost factor 10 |
+| 8 | Transactions | Atomic | @Transactional on service methods |
+| 9 | Audit | Tamper-evident | TRX_AUDIT_TRAIL append-only; no UPDATE/DELETE |
+| 10 | API keys | Hashed | Partner API keys stored as SHA-256 hash |
+
+---
+
+## Audit Trail
+
+### Events
+
+| Event Type | Trigger | Actor Type |
+|------------|---------|------------|
+| MEMBER_REGISTERED | POST /auth/register | SYSTEM |
+| MEMBER_UPDATED | PUT /members/{id} | ADMIN |
+| MEMBER_STATUS_CHANGED | Status toggle via PUT /members/{id} | ADMIN |
+| PARTNER_CREATED | POST /partners | ADMIN |
+| POINTS_EARNED | POST /transactions | SYSTEM |
+| POINT_EXPIRED | Expiry Cron Job | SYSTEM |
+| POINTS_EXCHANGED | POST /exchange | MEMBER |
+| POINTS_REDEEMED | POST /redeem | MEMBER |
+
+### Payload Examples
+
+**POINTS_EARNED:**
+```json
+{
+  "memberId": "990e8400...",
+  "partnerId": "660e8400...",
+  "trxAmountIDR": 150000,
+  "pointsEarned": 150,
+  "balanceBefore": 500,
+  "balanceAfter": 650,
+  "expiresAt": "2027-07-03T10:00:00Z"
+}
+```
+
+**POINTS_EXCHANGED:**
+```json
+{
+  "memberId": "990e8400...",
+  "fromPartnerId": "660e8400-...-001",
+  "toPartnerId": "660e8400-...-002",
+  "pointsDeducted": 100,
+  "pointsCredited": 80,
+  "exchangeRate": 0.8,
+  "fromBalanceBefore": 500, "fromBalanceAfter": 400,
+  "toBalanceBefore": 300, "toBalanceAfter": 380
+}
+```
+
+**POINTS_REDEEMED:**
+```json
+{
+  "memberId": "990e8400...",
+  "rewardId": "880e8400...",
+  "rewardName": "KFC Original Recipe Chicken 1pc",
+  "partnerId": "660e8400...",
+  "pointsDeducted": 250,
+  "balanceBefore": 500,
+  "balanceAfter": 250
+}
+```
+
+**POINT_EXPIRED:**
+```json
+{
+  "memberId": "990e8400...",
+  "partnerId": "660e8400...",
+  "originalTxId": "bb0e8400...",
+  "pointsExpired": 500,
+  "balanceBefore": 500,
+  "balanceAfter": 0
+}
+```
+
+### Implementation Notes
+
+- Audit writes are **within the same `@Transactional`** — if business op rolls back, audit entry also rolls back (consistent state)
+- No DB triggers — all in service layer for testability
+
+---
+
+## Scheduler
+
+```java
+@Component
+@EnableScheduling
+public class PointExpiryScheduler {
+
+    @Scheduled(cron = "0 0 17 * * *")  // Daily 00:00 WIB = 17:00 UTC
+    @Transactional
+    public void expirePoints() {
+        // 1. Query EARN transactions where expiresAt <= now()
+        // 2. For each member: deduct points from TRX_POINT_BALANCE
+        // 3. Insert TRX_TRANSACTION (type=EXPIRED)
+        // 4. Insert TRX_AUDIT_TRAIL (POINT_EXPIRED)
+        // Per-member try/catch — one failure does not block others
+        // Idempotent — won't re-expire already-expired points
+    }
+}
+```
+
+---
+
+## Configuration Reference
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `spring.datasource.url` | `jdbc:postgresql://localhost:5432/loyalty` | DB connection URL (PostgreSQL 18) |
-| `spring.datasource.username` | `loyalty_user` | DB username |
-| `spring.datasource.password` | *(env var)* | DB password |
-| `spring.jpa.hibernate.ddl-auto` | `validate` | Flyway manages schema; Hibernate validates |
-| `spring.threads.virtual.enabled` | `true` | Enable Java 21 virtual threads (Loom) for improved throughput |
-| `jwt.secret` | *(env var)* | Secret key for JWT signing |
-| `loyalty.points.default-rate` | `1` | Default points per IDR 1,000 (overridden per partner) |
+| spring.datasource.url | jdbc:postgresql://db:5432/jdt17_loyalty | DB connection |
+| spring.datasource.username | loyalty | DB username |
+| spring.datasource.password | (env var) | DB password |
+| spring.jpa.hibernate.ddl-auto | validate | Flyway manages schema |
+| spring.threads.virtual.enabled | true | Java 21 virtual threads (Loom) |
+| jwt.secret | (env var) | HS512 signing key |
 
 ---
 
-## 10. Assumptions (Technical)
+## Unit Testing Plan
 
-| # | Assumption | Impact if Wrong |
-|---|-----------|----------------|
-| T-1 | Point balances are stored as `long` (integer). No fractional points. | If fractional points needed, change to `decimal`/`BigDecimal` |
-| T-2 | Exchange rate stored as `decimal(10,4)`. Target points floor-rounded. | If rounding rule changes, update `PointService#exchangePoints` |
-| T-3 | All IDs are UUIDs generated by the DB (`gen_random_uuid()`). | Sequential IDs can be used — change `@GeneratedValue` strategy |
-| T-4 | All timestamps stored as `TIMESTAMPTZ` (UTC). | Client-side timezone handling may be needed for display |
-| T-5 | `AUDIT_TRAIL.payload` is `JSONB` (PostgreSQL-specific). | For portability, change to `TEXT` and serialize manually |
+**Philosophy:** Service layer only. No DB, no HTTP. Mock repos with Mockito.
+
+| Class Under Test | Test Case |
+|-----------------|-----------|
+| PointService#earnPoints | Correct points from trxAmount: floor(trxAmount/1000) |
+| PointService#earnPoints | Member resolved via phone or email |
+| PointService#earnPoints | MemberNotFoundException when member not found |
+| PointService#earnPoints | PartnerNotFoundException when partner not found |
+| PointService#earnPoints | MemberInactiveException when INACTIVE |
+| PointService#expirePoints | Expired points deducted; EXPIRED transaction logged |
+| PartnerService#createPartner | Partner created; balances initialized for existing members |
+| PointService#exchangePoints | Exchange succeeds; target = floor(sourcePoints × rate) |
+| PointService#exchangePoints | InsufficientBalanceException when balance < requested |
+| PointService#exchangePoints | ExchangeRateNotFoundException when rate not configured |
+| MemberService#registerMember | Member created; point balances initialized to 0 for all active partners |
+| AuditTrailService#log | Audit record written with correct event type, actor, entity |
+
+**Run with:** `mvn test`
+
+---
+
+## Standard Error Response Format
+
+```json
+{ "status": 400, "error": "BAD_REQUEST", "message": "Insufficient point balance", "code": "INSUFFICIENT_BALANCE" }
+```
+
+### HTTP Status Codes
+
+| Code | Meaning | When |
+|------|---------|------|
+| 200 | OK | Successful GET, PUT, POST |
+| 201 | Created | Resource creation |
+| 400 | Bad Request | Invalid input or business rule violation |
+| 401 | Unauthorized | Missing or invalid JWT |
+| 403 | Forbidden | Valid JWT, insufficient role or ownership |
+| 404 | Not Found | Resource does not exist |
+| 422 | Unprocessable Entity | Logically valid but fails business constraint |
+| 500 | Internal Server Error | Unexpected server error |
+
+### Application Error Codes
+
+| Error Code | HTTP | Description |
+|------------|------|-------------|
+| MEMBER_NOT_FOUND | 404 | Member ID or identifier does not exist |
+| MEMBER_INACTIVE | 400 | Member account status is INACTIVE |
+| PARTNER_NOT_FOUND | 404 | Partner ID or code does not exist |
+| PARTNER_INACTIVE | 400 | Partner status is INACTIVE |
+| REWARD_NOT_FOUND | 404 | Reward ID does not exist |
+| REWARD_INACTIVE | 404 | Reward exists but is not ACTIVE |
+| INSUFFICIENT_BALANCE | 422 | Member does not have enough points |
+| EXCHANGE_RATE_NOT_CONFIGURED | 404 | No exchange rate for given partner pair |
+| INVALID_CREDENTIALS | 401 | Wrong email/password or invalid API key |
+| UNAUTHORIZED | 401 | Missing or invalid JWT token |
+| FORBIDDEN | 403 | JWT valid but role insufficient |
+| DUPLICATE_EMAIL | 400 | Email address already registered |
+| DUPLICATE_PHONE | 400 | Phone number already registered |
+| DUPLICATE_PARTNER_CODE | 400 | Partner code already exists |
+
+---
+
+## Known Limitations
+
+| # | Limitation | Risk | Planned Mitigation |
+|---|------------|------|-------------------|
+| L-1 | No rate limiting on auth endpoints | Brute-force susceptible | Add Bucket4j; per-IP lockout after N failures |
+| L-2 | No idempotency key on POST /transactions | Partner retries cause duplicate awards | Require partner-supplied idempotencyKey; unique DB constraint |
+| L-3 | JWTs not revocable before expiry | Deactivated member can use token up to 24h | Short-lived access + refresh token; or Redis denylist |
+| L-4 | Single JWT signing secret for all roles | Secret compromise forges any role token | Separate keys per role or distinct `aud` claim per endpoint |
+| L-5 | Expiry scheduler: single backend instance | Horizontal scale causes double-expiry | ShedLock distributed lock |
+| L-6 | No password complexity policy | Weak passwords | Enforce minimum length + character variety at DTO validation |
+| L-7 | DUPLICATE_EMAIL error enables account enumeration | Attacker confirms registered emails | Generic error messaging |
+| L-8 | No reward stock limits (MVP by design) | Unlimited redemptions | Add stock tracking in future release |
+| L-9 | Partner api_key stored as SHA-256 hash | Plaintext DB exposure enables impersonation | Already hashed; add rotation endpoint post-MVP |
+
+---
+
+## Sizing Estimates
+
+| Assumption | Value |
+|------------|-------|
+| Initial pilot members | ~500 (demo: 3) |
+| Partners in MVP | 2 (KFC, McDonald's) |
+| Peak transactions/day | ~1,000 earn transactions |
+| Transaction history retained | 2 years |
+| Concurrent API requests (peak) | ~50 |
+| Average response time target | < 500ms |
+| Total reward catalog | 11 |
+| JWT expiry: member | 24 hours |
+| JWT expiry: partner | 1 hour |
+
+| Table | Expected Rows | Estimated Size |
+|-------|--------------|----------------|
+| MST_MEMBER | 500 | 0.25 MB |
+| MST_PARTNER | 2 | < 1 KB |
+| MST_REWARD | 11 | < 1 KB |
+| MST_EXCHANGE_RATE | 2 | < 1 KB |
+| TRX_POINT_BALANCE | 1,000 | 0.13 MB |
+| TRX_TRANSACTION | 730,000 | 186 MB |
+| TRX_AUDIT_TRAIL | 730,000 | 373 MB |
+| **Total DB (2 years)** | | **~600 MB** |
+
+---
+
+## Appendix
+
+### Glossary
+
+| Term | Definition |
+|------|------------|
+| Points | Loyalty currency; stored as BIGINT (no fractions) |
+| Partner | Third-party merchant (KFC, McDonald's) whose transactions generate points |
+| Member | Registered loyalty participant with single platform identity |
+| Exchange | Conversion of points from one partner's balance to another |
+| Redemption | Using accumulated points to claim a reward |
+| Audit Trail | Tamper-evident, append-only log of every significant action |
+| Optimistic Locking | Concurrency control via version field; detects conflicts at write time |
+| EARN | Points credited from purchase |
+| REDEEM | Points deducted for reward claim |
+| EXCHANGE_OUT | Points deducted from source in an exchange |
+| EXCHANGE_IN | Points credited to destination in an exchange |
+| EXPIRED | Points deducted by system when earn passes expiry date |
+| CMS | Content Management System — admin interface |
+| JWT | JSON Web Token — stateless auth for all actors |
+| IDR | Indonesian Rupiah — transaction currency for point calculation |
+| BCrypt | Password hashing algorithm |
+| Flyway | Database migration tool |
+| PISTOS | Points Integration System for Transaction-Originated Services |
+
+### Appendix Files
+
+| No. | File | Description |
+|-----|------|-------------|
+| 1 | docs/seed-data.sql | Demo seed: 1 admin, 2 partners, 11 rewards, 3 members, transactions, audit entries |
+| 2 | erd.md | Entity Relationship Diagram |
+| 3 | FSD.md | Functional Specification Document |
+| 4 | TSD.md | This document |
+| 5 | .env.example | Environment variables template |
+| 6 | docker-compose.yml | Docker Compose stack |
+| 7 | AGENTS.md | AI agent development guidelines |
+
+### Swagger
+
+Auto-generated by SpringDoc OpenAPI 3:
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
