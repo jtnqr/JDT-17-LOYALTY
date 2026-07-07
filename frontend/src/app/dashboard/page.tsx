@@ -24,6 +24,9 @@ import {
   Wallet,
   ArrowDownLeft,
   ArrowUpRight,
+  Bell,
+  ArrowLeftRight,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
@@ -37,7 +40,7 @@ const MOCK_BALANCES = [
 const MOCK_TRANSACTIONS = [
   {
     id: "tx-uuid-001",
-    type: "EARN",
+    type: "EXCHANGE_OUT",
     partnerName: "McDonald's Purchase",
     points: 450,
     timeText: "2 hours ago",
@@ -50,22 +53,6 @@ const MOCK_TRANSACTIONS = [
     points: -200,
     timeText: "Yesterday",
     createdAt: "2026-07-06T10:00:00Z",
-  },
-  {
-    id: "tx-uuid-003",
-    type: "EXCHANGE_OUT",
-    partnerName: "Exchange to Starbucks",
-    points: -1000,
-    timeText: "Oct 24, 2023",
-    createdAt: "2023-10-24T12:00:00Z",
-  },
-  {
-    id: "tx-uuid-004",
-    type: "EARN",
-    partnerName: "KFC Family Bucket",
-    points: 820,
-    timeText: "Oct 22, 2023",
-    createdAt: "2023-10-22T14:00:00Z",
   },
 ];
 
@@ -185,39 +172,43 @@ export default function DashboardPage() {
             ======================================================== */}
         <div className="md:hidden flex-grow flex flex-col pb-20">
           {/* Top Banner (Gradient Hero) */}
-          <section className="bg-gradient-to-br from-brand-primary to-[#F4A261] pt-6 pb-20 px-5 text-white relative">
+          <section className="pt-6 pb-4 px-5 text-white relative">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/20">
-                  <Coins className="w-4.5 h-4.5" />
-                </div>
-                <span className="font-bold text-base tracking-tight">
+                <span className="font-bold text-base tracking-tight text-primary">
                   LoyaltyHub
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <Avatar name={member?.name} />
-                <button
+              <div className="flex items-center gap-3 text-primary">
+                <Bell className="w-5 h-5 text-brand-primary" />
+                {/* <button
                   onClick={logout}
                   className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                </button>
+                </button> */}
+                <Avatar name={member?.name} />
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 bg-linear-to-br from-brand-primary to-[#F4A261] p-6 rounded-lg">
               <h2 className="text-xl font-bold tracking-tight">
                 {getGreeting()}, {member?.name?.split(" ")[0]} 👋
               </h2>
               <p className="text-xs text-white/80 font-medium">
-                Here is your points balance.
+                Ready to maximize your rewards today?
               </p>
             </div>
           </section>
 
           {/* Overlapping Balances List */}
-          <section className="-mt-12 px-5 z-10">
+          <section className="mt-6 px-5 z-10">
+            <div className="flex justify-between items-center pb-2">
+              <p className="font-semibold text-base">Your wallets</p>
+              <p className="flex items-center text-brand-primary text-xs">
+                View All <ArrowRight height={16} width={16} />
+              </p>
+            </div>
             <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x snap-mandatory">
               {isBalancesLoading ? (
                 Array.from({ length: 2 }).map((_, idx) => (
@@ -232,7 +223,7 @@ export default function DashboardPage() {
               ) : (
                 <>
                   {/* McDonald's Card */}
-                  <div className="flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-l-4 border-l-[#FFC72C] snap-start">
+                  <div className="flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 border-t-[#FFC72C] snap-start">
                     <div className="w-8 h-8 rounded-full bg-yellow-50 text-[#D89F0E] flex items-center justify-center font-bold text-xs mb-2">
                       M
                     </div>
@@ -247,7 +238,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   {/* KFC Card */}
-                  <div className="flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-l-4 border-l-[#C8102E] snap-start">
+                  <div className="flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 border-t-[#C8102E] snap-start">
                     <div className="w-8 h-8 rounded-full bg-red-50 text-[#C8102E] flex items-center justify-center font-bold text-xs mb-2">
                       K
                     </div>
@@ -268,16 +259,16 @@ export default function DashboardPage() {
 
           {/* Actions grid */}
           <section className="px-5 mt-6">
-            <div className="bg-white rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50">
-              <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
+            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50">
+              <h3 className="text-xs font-bold text-black uppercase tracking-wider mb-3">
                 Quick Actions
               </h3>
               <div className="grid grid-cols-3 gap-2">
                 <Link
                   href="/rewards"
-                  className="flex flex-col items-center p-3 rounded-xl hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
                 >
-                  <div className="w-11 h-11 rounded-full bg-orange-50 text-brand-primary flex items-center justify-center shadow-sm border border-orange-100/50 mb-2">
+                  <div className="w-11 h-11 rounded-full bg-brand-primary text-brand-primary-light flex items-center justify-center shadow-sm border border-orange-100/50 mb-2">
                     <Gift className="w-5 h-5" />
                   </div>
                   <span className="text-[13px] font-bold text-neutral-700">
@@ -287,10 +278,10 @@ export default function DashboardPage() {
 
                 <Link
                   href="/exchange"
-                  className="flex flex-col items-center p-3 rounded-xl hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
                 >
-                  <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100/50 mb-2">
-                    <RefreshCw className="w-5 h-5" />
+                  <div className="w-11 h-11 rounded-full bg-brand-primary text-brand-primary-light flex items-center justify-center shadow-sm border border-blue-100/50 mb-2">
+                    <ArrowLeftRight className="w-5 h-5" />
                   </div>
                   <span className="text-[13px] font-bold text-neutral-700">
                     Exchange
@@ -299,10 +290,10 @@ export default function DashboardPage() {
 
                 <Link
                   href="/history"
-                  className="flex flex-col items-center p-3 rounded-xl hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
                 >
-                  <div className="w-11 h-11 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm border border-purple-100/50 mb-2">
-                    <Clock className="w-5 h-5" />
+                  <div className="w-11 h-11 rounded-full bg-gray-600 text-white flex items-center justify-center shadow-sm border border-purple-100/50 mb-2">
+                    <History className="w-5 h-5" />
                   </div>
                   <span className="text-[13px] font-bold text-neutral-700">
                     History
@@ -314,21 +305,20 @@ export default function DashboardPage() {
 
           {/* Activity List */}
           <section className="px-5 mt-6 flex-grow">
-            <div className="bg-white rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50 flex-1 flex flex-col">
+            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-black uppercase tracking-wider">
                   Recent Activity
                 </h3>
                 <Link
                   href="/history"
                   className="text-xs font-semibold text-brand-primary flex items-center gap-0.5 hover:underline"
                 >
-                  View All
-                  <ChevronRight className="w-3 h-3" />
+                  See All
                 </Link>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 bg-gray-100/70 rounded-xl p-2">
                 {isTrxsLoading
                   ? Array.from({ length: 3 }).map((_, idx) => (
                       <div
