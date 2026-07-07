@@ -45,9 +45,9 @@ export function LoginForm() {
     try {
       // In production, the URL is relative or uses an environment variable
       const response = await axios.post("/api/v1/auth/login", data);
-      
+
       const { token, role, user } = response.data;
-      
+
       // Store credentials in localStorage (per AGENTS.md guidelines)
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
@@ -61,11 +61,11 @@ export function LoginForm() {
       }
     } catch (error: any) {
       console.error("Login failed:", error);
-      
+
       // If server is offline / no response, bypass for slicing demo purposes
       if (!error.response) {
         console.warn("Backend offline. Bypassing login with mock credentials.");
-        
+
         const isEmailAdmin = data.email.toLowerCase().includes("admin");
         const mockRole = isEmailAdmin ? "ADMIN" : "MEMBER";
         const mockUser = isEmailAdmin
@@ -82,11 +82,11 @@ export function LoginForm() {
               phone: "081234567890",
               status: "ACTIVE",
             };
-            
+
         localStorage.setItem("token", "mock-jwt-token-for-slicing");
         localStorage.setItem("role", mockRole);
         localStorage.setItem("user", JSON.stringify(mockUser));
-        
+
         if (mockRole === "ADMIN") {
           router.push("/admin");
         } else {
@@ -94,7 +94,7 @@ export function LoginForm() {
         }
         return;
       }
-      
+
       // Follow the Technical Spec error response schema
       if (error.response?.data?.message) {
         setApiError(error.response.data.message);
@@ -137,14 +137,14 @@ export function LoginForm() {
         />
 
         {/* not implemented now */}
-        <div className="flex justify-end">
+        {/* <div className="flex justify-end">
           <Link
             href="/"
             className="text-xs font-semibold text-brand-primary hover:text-brand-primary-dark transition-colors"
           >
             Forgot Password?
           </Link>
-        </div>
+        </div> */}
       </div>
 
       <Button

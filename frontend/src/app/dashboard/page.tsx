@@ -175,7 +175,7 @@ export default function DashboardPage() {
           <section className="pt-6 pb-4 px-5 text-white relative">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight text-primary">
+                <span className="font-bold text-2xl text-brand-primary tracking-wider">
                   LoyaltyHub
                 </span>
               </div>
@@ -559,9 +559,9 @@ export default function DashboardPage() {
             <div className="space-y-6">
               {/* Gold Tier Status Card */}
               <section className="bg-[#8B3D06] rounded-2xl p-5 text-white shadow-sm relative overflow-hidden h-44 flex flex-col justify-between">
-                <div className="absolute right-[-15px] top-[-15px] w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center pointer-events-none">
+                {/* <div className="absolute right-[-15px] top-[-15px] w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center pointer-events-none">
                   <Award className="w-12 h-12 text-white/10" />
-                </div>
+                </div> */}
 
                 <div className="flex justify-between items-start relative z-10">
                   <div className="space-y-1">
