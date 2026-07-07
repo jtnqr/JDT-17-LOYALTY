@@ -11,9 +11,9 @@
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Backend | Spring Boot | 3.3.5 (TSD specifies 4.1.x but that requires Java 24+; 3.3.5 is correct for Java 21 LTS) |
+| Backend | Spring Boot | 4.1.0 |
 | Language | Java | 21 LTS |
-| Database | PostgreSQL | 16 (docker image; 18 not yet on Alpine) |
+| Database | PostgreSQL | 18.4 (postgres:18.4-alpine) |
 | ORM | JPA / Hibernate | — |
 | Migrations | Flyway | — |
 | Auth | JWT (jjwt 0.12.5) | Spring Security |
