@@ -33,7 +33,6 @@ const PARTNER_PROGRAMS = [
     name: "KFC Colonel's Club",
     logoBg: "bg-red-50 text-[#C8102E]",
     logoChar: "K",
-    rateToMcD: 0.8,
   },
   {
     id: "mcd-uuid",
@@ -41,7 +40,13 @@ const PARTNER_PROGRAMS = [
     name: "McDonald's MyRewards",
     logoBg: "bg-yellow-50 text-[#D89F0E]",
     logoChar: "M",
-    rateToKfc: 0.8,
+  },
+  {
+    id: "bk-uuid",
+    code: "BK",
+    name: "Burger King Indonesia",
+    logoBg: "bg-amber-50 text-[#8B4F1D] border-amber-100",
+    logoChar: "B",
   },
 ];
 
@@ -80,14 +85,56 @@ export default function ExchangePointsPage() {
   const mcdBalance =
     balanceData?.find((b) => b.partnerName.toLowerCase().includes("mcd"))
       ?.balance ?? 120;
+  const bkBalance =
+    balanceData?.find((b) => b.partnerName.toLowerCase().includes("burger"))
+      ?.balance ?? 80;
 
   // Active balances based on selection
-  const fromBalance = fromPartner.code === "KFC" ? kfcBalance : mcdBalance;
-  const toBalance = toPartner.code === "KFC" ? kfcBalance : mcdBalance;
+  const fromBalance =
+    fromPartner.code === "KFC"
+      ? kfcBalance
+      : fromPartner.code === "MCD"
+      ? mcdBalance
+      : bkBalance;
+  const toBalance =
+    toPartner.code === "KFC"
+      ? kfcBalance
+      : toPartner.code === "MCD"
+      ? mcdBalance
+      : bkBalance;
 
-  // Conversion rate based on active direction
-  // KFC to McD rate = 0.8, McD to KFC rate = 0.8 (mocked for simplicity)
-  const activeRate = 0.8;
+  // Conversion rate based on active direction loading from admin local storage configurations
+  const activeRate = React.useMemo(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pistos_exchange_rates");
+      if (saved) {
+        try {
+          const parsedRates = JSON.parse(saved);
+          
+          const codeToId: Record<string, string> = {
+            KFC: "660e8400-e29b-41d4-a716-446655440001",
+            MCD: "660e8400-e29b-41d4-a716-446655440002",
+            BK: "660e8400-e29b-41d4-a716-446655440003",
+          };
+          
+          const fromAdminId = codeToId[fromPartner.code] || fromPartner.id;
+          const toAdminId = codeToId[toPartner.code] || toPartner.id;
+          
+          const found = parsedRates.find(
+            (r: any) => r.fromPartnerId === fromAdminId && r.toPartnerId === toAdminId
+          );
+          if (found) return found.rate;
+        } catch (e) {
+          // Fallback
+        }
+      }
+    }
+    
+    // Default fallback rates
+    if (fromPartner.code === "KFC" && toPartner.code === "MCD") return 0.8;
+    if (fromPartner.code === "MCD" && toPartner.code === "KFC") return 0.9;
+    return 1.0;
+  }, [fromPartner, toPartner]);
 
   // Handle swapping the From and To partners
   const handleSwapPartners = () => {

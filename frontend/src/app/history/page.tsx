@@ -94,12 +94,13 @@ export default function HistoryPage() {
     queryKey: ["transactions-history", memberId, activeFilter, currentPage],
     queryFn: async () => {
       const token = localStorage.getItem("token");
-      
+
       // Determine type filter for API
       let typeParam = "";
       if (activeFilter === "EARN") typeParam = "&type=EARN";
       if (activeFilter === "REDEEM") typeParam = "&type=REDEEM";
-      if (activeFilter === "EXCHANGE") typeParam = "&type=EXCHANGE_OUT,EXCHANGE_IN";
+      if (activeFilter === "EXCHANGE")
+        typeParam = "&type=EXCHANGE_OUT,EXCHANGE_IN";
 
       const response = await axios.get(
         `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`,
@@ -127,14 +128,16 @@ export default function HistoryPage() {
   const filteredTransactions = rawTransactions.filter((tx) => {
     const matchesSearch =
       tx.partnerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (tx.detailText && tx.detailText.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (tx.detailText &&
+        tx.detailText.toLowerCase().includes(searchQuery.toLowerCase())) ||
       tx.type.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesFilter =
       activeFilter === "ALL" ||
       (activeFilter === "EARN" && tx.type === "EARN") ||
       (activeFilter === "REDEEM" && tx.type === "REDEEM") ||
-      (activeFilter === "EXCHANGE" && (tx.type === "EXCHANGE_OUT" || tx.type === "EXCHANGE_IN"));
+      (activeFilter === "EXCHANGE" &&
+        (tx.type === "EXCHANGE_OUT" || tx.type === "EXCHANGE_IN"));
 
     return matchesSearch && matchesFilter;
   });
@@ -208,12 +211,13 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
-      
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
         className={cn(
           "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen ? "w-60 border-r border-neutral-200" : "w-0 overflow-hidden border-r-0"
+          isSidebarOpen
+            ? "w-60 border-r border-neutral-200"
+            : "w-0 overflow-hidden border-r-0"
         )}
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
@@ -222,7 +226,6 @@ export default function HistoryPage() {
 
       {/* MAIN CONTENT WRAPPER */}
       <div className="flex-grow flex flex-col min-w-0">
-        
         {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
         <DesktopNavbar
           userName={member?.name || "Budi Santoso"}
@@ -236,12 +239,13 @@ export default function HistoryPage() {
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
         <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200">
-          
           {/* Top Header */}
           <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
             <div className="flex items-center gap-2">
               <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">LoyaltyHub</span>
+              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
+                LoyaltyHub
+              </span>
             </div>
             <button className="text-neutral-700 hover:text-neutral-900">
               <Bell className="w-5 h-5" />
@@ -249,7 +253,9 @@ export default function HistoryPage() {
           </header>
 
           <div className="px-5 pt-6 space-y-5">
-            <h1 className="text-xl font-bold text-neutral-950 tracking-tight">History</h1>
+            <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
+              History
+            </h1>
 
             {/* Filter Chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none select-none">
@@ -279,7 +285,9 @@ export default function HistoryPage() {
               {Object.keys(groupedTransactions).length === 0 ? (
                 <div className="text-center py-12 text-neutral-400 space-y-2">
                   <Calendar className="w-8 h-8 mx-auto text-neutral-300" />
-                  <p className="text-xs font-semibold">No transactions found.</p>
+                  <p className="text-xs font-semibold">
+                    No transactions found.
+                  </p>
                 </div>
               ) : (
                 Object.keys(groupedTransactions).map((dateGroup) => (
@@ -287,17 +295,18 @@ export default function HistoryPage() {
                     <h3 className="text-[10px] font-black text-neutral-400 tracking-wider">
                       {dateGroup}
                     </h3>
-                    
+
                     <div className="space-y-3">
                       {groupedTransactions[dateGroup].map((tx) => {
-                        const isMcD = tx.partnerName.toLowerCase().includes("mcd") || tx.partnerName.toLowerCase() === "mcd";
-                        
+                        const isMcD =
+                          tx.partnerName.toLowerCase().includes("mcd") ||
+                          tx.partnerName.toLowerCase() === "mcd";
+
                         return (
                           <div
                             key={tx.id}
                             className={cn(
-                              "bg-white border border-neutral-200/50 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between border-t-2",
-                              isMcD ? "border-t-[#FFC72C]" : "border-t-neutral-100"
+                              "bg-white border border-neutral-200/50 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between border-t-2"
                             )}
                           >
                             <div className="flex items-center gap-3">
@@ -306,16 +315,40 @@ export default function HistoryPage() {
                                 <p className="text-xs font-black text-neutral-800 leading-none">
                                   {isMcD ? "McD" : tx.partnerName}
                                 </p>
-                                <p className="text-[10px] font-semibold text-neutral-400 mt-1 uppercase leading-none">
-                                  {tx.type === "EARN" && tx.trxAmountIDR
-                                    ? `EARN • Rp ${(tx.trxAmountIDR / 1000).toFixed(3)}`
-                                    : tx.type}
-                                </p>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  <span
+                                    className={cn(
+                                      "inline-block text-[8px] font-black uppercase px-2 py-1 rounded-full leading-none",
+                                      tx.type === "EARN"
+                                        ? "bg-[#E8F5E9] text-[#2E7D32]"
+                                        : tx.type === "REDEEM"
+                                        ? "bg-[#FFEBEE] text-[#C62828]"
+                                        : tx.type.startsWith("EXCHANGE")
+                                        ? "bg-[#E3F2FD] text-[#1565C0]"
+                                        : "bg-[#F5F5F5] text-[#9E9E9E]"
+                                    )}
+                                  >
+                                    {tx.type
+                                      .replace("_OUT", "")
+                                      .replace("_IN", "")}
+                                  </span>
+                                  {tx.type === "EARN" && tx.trxAmountIDR && (
+                                    <span className="text-[9px] font-semibold text-neutral-400">
+                                      Rp {(tx.trxAmountIDR / 1000).toFixed(3)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            
-                            <span className={cn("text-xs font-black shrink-0", getPointsClass(tx.points, tx.type))}>
-                              {tx.points > 0 ? "+" : ""}{tx.points} pts
+
+                            <span
+                              className={cn(
+                                "text-xs font-black shrink-0",
+                                getPointsClass(tx.points, tx.type)
+                              )}
+                            >
+                              {tx.points > 0 ? "+" : ""}
+                              {tx.points} pts
                             </span>
                           </div>
                         );
@@ -334,7 +367,6 @@ export default function HistoryPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          
           <header className="flex justify-between items-start">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
@@ -342,9 +374,12 @@ export default function HistoryPage() {
                 <ChevronRight className="w-3 h-3" />
                 <span className="text-neutral-600">History</span>
               </div>
-              <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">Transaction History</h1>
+              <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
+                Transaction History
+              </h1>
               <p className="text-xs font-semibold text-neutral-400">
-                Track all your point earnings, redemptions, and conversion transfers in one place.
+                Track all your point earnings, redemptions, and conversion
+                transfers in one place.
               </p>
             </div>
 
@@ -393,37 +428,65 @@ export default function HistoryPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">Date</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">Type</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">Partner Program</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Details</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32 text-right">Points</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
+                      Date
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
+                      Type
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
+                      Partner Program
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                      Details
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32 text-right">
+                      Points
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {isLoading && filteredTransactions.length === 0 ? (
                     Array.from({ length: 4 }).map((_, idx) => (
                       <tr key={idx} className="animate-pulse">
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-24" /></td>
-                        <td className="px-6 py-5"><div className="h-5 bg-neutral-200 rounded w-16" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-28" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-48" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-12 ml-auto" /></td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-24" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-5 bg-neutral-200 rounded w-16" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-28" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-48" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-12 ml-auto" />
+                        </td>
                       </tr>
                     ))
                   ) : filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-neutral-400">
-                        <p className="text-sm font-semibold">No transactions found.</p>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-12 text-center text-neutral-400"
+                      >
+                        <p className="text-sm font-semibold">
+                          No transactions found.
+                        </p>
                       </td>
                     </tr>
                   ) : (
                     filteredTransactions.map((tx) => {
                       const isEarn = tx.type === "EARN";
                       const date = new Date(tx.createdAt);
-                      
+
                       return (
-                        <tr key={tx.id} className="hover:bg-neutral-50/20 transition-colors">
+                        <tr
+                          key={tx.id}
+                          className="hover:bg-neutral-50/20 transition-colors"
+                        >
                           <td className="px-6 py-4.5 text-xs text-neutral-600 font-semibold">
                             {date.toLocaleDateString("en-US", {
                               year: "numeric",
@@ -457,13 +520,19 @@ export default function HistoryPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4.5 text-xs text-neutral-500 font-semibold">
-                            {tx.detailText || (isEarn && tx.trxAmountIDR
-                              ? `Completed store purchase of Rp ${tx.trxAmountIDR.toLocaleString()}`
-                              : `Processed cross points transaction`
-                            )}
+                            {tx.detailText ||
+                              (isEarn && tx.trxAmountIDR
+                                ? `Completed store purchase of Rp ${tx.trxAmountIDR.toLocaleString()}`
+                                : `Processed cross points transaction`)}
                           </td>
-                          <td className={cn("px-6 py-4.5 text-xs font-black text-right", getPointsClass(tx.points, tx.type))}>
-                            {tx.points > 0 ? "+" : ""}{tx.points.toLocaleString()} pts
+                          <td
+                            className={cn(
+                              "px-6 py-4.5 text-xs font-black text-right",
+                              getPointsClass(tx.points, tx.type)
+                            )}
+                          >
+                            {tx.points > 0 ? "+" : ""}
+                            {tx.points.toLocaleString()} pts
                           </td>
                         </tr>
                       );
@@ -475,8 +544,10 @@ export default function HistoryPage() {
 
             {/* Pagination Controls */}
             <div className="border-t border-neutral-200/50 px-6 py-4 bg-neutral-50/20 flex items-center justify-between text-xs font-bold text-neutral-500 shrink-0">
-              <span>Showing {filteredTransactions.length} transaction entries</span>
-              
+              <span>
+                Showing {filteredTransactions.length} transaction entries
+              </span>
+
               <div className="flex items-center gap-1 select-none">
                 <button
                   disabled={currentPage === 0}
@@ -497,13 +568,9 @@ export default function HistoryPage() {
                 </button>
               </div>
             </div>
-
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
 }

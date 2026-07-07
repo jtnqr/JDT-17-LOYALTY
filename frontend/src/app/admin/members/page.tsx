@@ -86,7 +86,7 @@ export default function AdminMembersPage() {
       );
       return response.data;
     },
-    enabled: !!localStorage.getItem("token"),
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
     retry: 1,
   });
 
