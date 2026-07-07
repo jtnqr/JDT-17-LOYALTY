@@ -245,7 +245,7 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 - Open PR → teammate reviews → merge → delete branch
 - Commit convention: `feat(earn): POST /transactions`, `fix(auth): token expiry`, `chore(db): V3 seed rates`
 
-### Frontend branches (friend — in progress, not yet merged)
+### Frontend branches (in progress, not yet merged)
 
 | Branch | Coverage |
 |--------|----------|
@@ -257,7 +257,7 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 
 **Frontend still needed:** redeem page, member points balance detail, member profile page.
 
-### Backend branches (you — not started)
+### Backend branches (not started)
 
 | Branch | Endpoint / Feature |
 |--------|--------------------|
