@@ -1,0 +1,29 @@
+services:
+  db-dev:
+    image: postgres:18.4-alpine
+    container_name: loyalty-db-dev
+    restart: unless-stopped
+    env_file: .env.dev-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "0.0.0.0:${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./docs/seed-data.sql:/docker-entrypoint-initdb.d/seed-data.sql:ro
+    networks:
+      - loyalty-dev-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  loyalty-dev-net:
+    driver: bridge
