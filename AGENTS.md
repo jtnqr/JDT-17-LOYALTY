@@ -11,15 +11,15 @@
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Backend | Spring Boot | 4.1.x |
+| Backend | Spring Boot | 4.1.0 |
 | Language | Java | 21 LTS |
-| Database | PostgreSQL | 18 |
+| Database | PostgreSQL | 18.4 (postgres:18.4-alpine) |
 | ORM | JPA / Hibernate | — |
 | Migrations | Flyway | — |
-| Auth | JWT | Spring Security |
+| Auth | JWT (jjwt 0.12.5) | Spring Security |
 | Testing | JUnit 5 + Mockito | — |
 | Frontend | Next.js | 16.x |
-| UI | shadcn/ui + Tailwind | — |
+| UI | shadcn/ui + Tailwind | v4 |
 | State | React Query (TanStack) | — |
 | Deployment | Docker Compose | — |
 
@@ -167,17 +167,24 @@ com.jdt17.loyalty/
 
 ## API Authorization Matrix (Summary)
 
-| Endpoint | Public | MEMBER | ADMIN | PARTNER |
-|----------|--------|--------|-------|---------|
-| `POST /auth/*` | ✓ | — | — | — |
-| `POST /transactions` | — | — | — | ✓ |
-| `GET /members` | — | — | ✓ | — |
-| `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — |
-| `GET /members/{id}/points` | — | ✓ (own) | — | — |
-| `GET /members/{id}/transactions` | — | ✓ (own) | — | — |
-| `POST /exchange` | — | ✓ | — | — |
-| `POST /redeem` | — | ✓ | — | — |
-| `POST /partners` | — | — | ✓ | — |
+| Endpoint | Public | MEMBER | ADMIN | PARTNER | Notes |
+|----------|--------|--------|-------|---------|-------|
+| `POST /auth/register` | ✓ | — | — | — | Returns JWT + member (auto-login) |
+| `POST /auth/login` | ✓ | — | — | — | Returns JWT + role |
+| `POST /auth/partner/token` | ✓ | — | — | — | Validates apiKey, returns PARTNER JWT |
+| `POST /transactions` | ✓ | — | — | — | Simulated partner call — no auth in MVP (FSD §7.6) |
+| `GET /members` | — | — | ✓ | — | Supports `?status=ACTIVE\|INACTIVE` |
+| `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — | — |
+| `PUT /members/{id}` | — | — | ✓ | — | Update name/phone/status |
+| `PUT /members/{id}/status` | — | — | ✓ | — | Toggle ACTIVE/INACTIVE |
+| `GET /members/{id}/points` | — | ✓ (own) | — | — | Privacy: admin blocked |
+| `GET /members/{id}/transactions` | — | ✓ (own) | — | — | Privacy: admin blocked |
+| `POST /exchange` | — | ✓ | — | — | — |
+| `POST /redeem` | — | ✓ | ✓ | — | — |
+| `GET /rewards` | — | ✓ | ✓ | — | Supports `?partnerId={id}` |
+| `GET /partners` | — | ✓ | ✓ | — | — |
+| `POST /partners` | — | — | ✓ | — | Bulk-inits balances for existing members |
+| `PUT /partners/{id}` | — | — | ✓ | — | Update partner config |
 
 **Privacy:** Admin can manage member profiles but cannot view point balances or transaction history.
 
@@ -185,15 +192,45 @@ Full matrix: TSD.md §4
 
 ---
 
-## Implementation Phases (from plan)
+## Branching Strategy
 
-1. **Infrastructure** — Spring Boot scaffold, Flyway migrations, Docker Compose, Next.js init
+Per-feature branches off `main`. Each branch = 1 endpoint or 1 logical feature. Max lifespan 1 day.
+
+**Naming:** `feat/<thing>`, `fix/<thing>`, `chore/<thing>`
+
+**Example branches:**
+```
+feat/auth-register
+feat/auth-login
+feat/flyway-schema
+feat/entities-all
+feat/member-earn-points
+feat/member-exchange-points
+feat/member-redeem-reward
+feat/member-point-expiry-scheduler
+feat/admin-partner-create
+feat/admin-member-list
+feat/frontend-auth
+feat/frontend-dashboard
+feat/frontend-rewards
+feat/frontend-exchange
+feat/frontend-history
+feat/frontend-admin
+```
+
+**Rules:**
+- No direct push to `main`
+- Open PR when done → teammate reviews (lightweight: does it work? any obvious bug? follows conventions?)
+- Merge → delete branch
+- Commit convention: `feat(earn): POST /transactions earn points`, `fix(auth): token expiry`, `chore(db): V2 seed partners`
+
+## Implementation Phases (reference)
+
+1. **Infrastructure** — Spring Boot scaffold, Flyway migrations, Docker Compose, Next.js init — **DONE**
 2. **Backend Core** — Entities, repos, JWT auth, services (TDD)
 3. **Business Logic** — EARN, expiry scheduler, exchange, redemption (TDD)
 4. **Frontend** — Auth pages, member screens 2-6, admin CMS screens 7-8
 5. **Integration** — E2E smoke test, FSD/TSD updates
-
-Current phase: **Phase 1 (not started)**
 
 ---
 
@@ -228,5 +265,5 @@ For implementation blockers:
 
 ---
 
-**Last updated:** 2026-07-03  
+**Last updated:** 2026-07-07
 **Spec version:** 1.0 (locked for implementation)
