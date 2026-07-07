@@ -1,8 +1,8 @@
-# JDT-17-LOYALTY Agent Guidelines
+# PISTOS – Loyalty App | Agent Guidelines
 
-**Project:** Multi-partner loyalty platform (KFC / McDonald's pilot)  
-**Team:** 2-person bootcamp project, AI-assisted implementation  
-**Deadline:** 2026-07-14 (11 days remaining)  
+**Project:** PISTOS (Points Integration System for Transaction-Originated Services)
+**Team:** 2-person Indivara JDT-17 apprenticeship project, AI-assisted implementation
+**Deadline:** 2026-07-14
 **Context:** Backend + Frontend from scratch, demo-ready by deadline
 
 ---
@@ -16,9 +16,9 @@
 | Database | PostgreSQL | 18.4 (postgres:18.4-alpine) |
 | ORM | JPA / Hibernate | — |
 | Migrations | Flyway | — |
-| Auth | JWT (jjwt 0.12.5) | Spring Security |
+| Auth | JWT HS512 (jjwt 0.12.5) | Spring Security |
 | Testing | JUnit 5 + Mockito | — |
-| Frontend | Next.js | 16.x |
+| Frontend | Next.js | 16.x (React 19, App Router) |
 | UI | shadcn/ui + Tailwind | v4 |
 | State | React Query (TanStack) | — |
 | Deployment | Docker Compose | — |
@@ -27,16 +27,18 @@
 
 ## Architecture Rules
 
-1. **JWT for all actors** — MEMBER, ADMIN, PARTNER roles in JWT claim
-2. **Optimistic locking** — `@Version` on `PointBalance` entity (prevents race conditions)
+1. **JWT for all actors** — MEMBER, ADMIN, PARTNER roles in JWT claim (HS512)
+2. **Optimistic locking** — `@Version` on `TRX_POINT_BALANCE` entity (prevents race conditions)
 3. **Bulk SQL for partner creation** — NO `memberRepo.findAll()`, use native INSERT-SELECT
 4. **TDD for services** — Red-Green-Refactor, write test first
 5. **Paginated reads** — All list endpoints use `Pageable`, default page size 20
-6. **Audit trail** — All writes log to `TRX_AUDIT_TRAIL` (actorId, actorType, eventType, payload)
-7. **Partner-scoped balances** — One `TRX_POINT_BALANCE` row per member per partner
-8. **EXPIRED as transaction** — Point expiry creates visible transaction record for members
-9. **Configurable expiry** — `expiryDays` per partner, computed at EARN time
-10. **Error codes** — All error responses include `code` field (see TSD §4)
+6. **Audit trail** — All writes log to `TRX_AUDIT_TRAIL` within same `@Transactional` scope
+7. **Partner-scoped balances** — One `TRX_POINT_BALANCE` row per (memberId, partnerId)
+8. **EXPIRED as transaction** — Point expiry creates visible TRX_TRANSACTION record
+9. **Configurable expiry** — `expiryDays` per partner, `expiresAt = now + expiryDays`, computed at EARN time
+10. **Error codes** — All error responses include `code` field (see TSD)
+11. **Virtual threads** — `spring.threads.virtual.enabled=true` required in application.yml
+12. **MST_ADMIN separate** — Admin credentials live in MST_ADMIN table, not MST_MEMBER; login checks both tables
 
 ---
 
@@ -45,21 +47,20 @@
 ```
 ├── FSD.md                  # Functional spec (use cases, scope, business rules)
 ├── TSD.md                  # Technical spec (ERD, API endpoints, auth matrix)
-├── .hermes/plans/          # Implementation plan (5 phases, task breakdown)
+├── .hermes/plans/          # Implementation plan
 ├── docs/
 │   └── seed-data.sql       # Demo data (1 admin, 2 partners, 11 rewards, 3 members)
-├── .env.example            # Environment variables template
-├── activity.diagram.md     # UC-01 to UC-06 flowcharts
-├── usecase.diagram.md      # Actor-use case relationships
-├── erd.md                  # Entity reference (detailed field specs)
-├── bpmn.md                 # BPMN Level 0-3 process flows
-└── stitch-design-brief.md  # Frontend UI/UX design system
+├── backend/                # Spring Boot 4.1.0 (Maven)
+├── frontend/               # Next.js 16
+├── docker-compose.yml
+├── .env.example
+└── *.diagram.md / erd.md / bpmn.md / stitch-design-brief.md
 ```
 
 **Sources of truth (in priority order):**
-1. Implementation plan (`.hermes/plans/`)
-2. TSD.md (API spec, ERD, conventions)
-3. FSD.md (business rules, scope)
+1. `TSD final.docx` / TSD.md (v1.1, 07-Jul-2026)
+2. `FSD PISTOS LOYALTY APP_backup.docx` / FSD.md
+3. Implementation plan (`.hermes/plans/`)
 4. Diagram files (visual reference only)
 
 ---
@@ -68,30 +69,11 @@
 
 **First time setup:**
 ```bash
-# 1. Copy environment template
 cp .env.example .env
 chmod 600 .env
-
-# 2. Generate JWT secret
-openssl rand -hex 64
-
-# 3. Edit .env with real values (POSTGRES_PASSWORD, JWT_SECRET)
-
-# 4. Start stack
+# Edit .env: set POSTGRES_PASSWORD and JWT_SECRET (openssl rand -hex 64)
 docker-compose up -d
-
-# 5. Verify migrations ran
-docker-compose logs backend | grep Flyway
-
-# 6. Load seed data
-docker-compose exec db psql -U loyalty -d jdt17_loyalty -f /docker-entrypoint-initdb.d/seed-data.sql
-```
-
-**Daily dev:**
-```bash
-docker-compose up        # Start all services
-docker-compose logs -f   # Watch logs
-docker-compose down      # Stop all
+docker-compose logs -f backend   # watch Flyway migrations
 ```
 
 **Seed data credentials:**
@@ -106,7 +88,7 @@ docker-compose down      # Stop all
 
 ```
 com.jdt17.loyalty/
-├── config/           # Spring config (Security, JWT, Flyway)
+├── config/           # Spring config (Security, JWT, virtual threads)
 ├── entity/           # JPA entities (MST_*, TRX_*)
 ├── repository/       # Spring Data JPA repos
 ├── service/          # Business logic (TDD here)
@@ -114,156 +96,179 @@ com.jdt17.loyalty/
 ├── dto/              # Request/Response DTOs
 ├── exception/        # Custom exceptions + @ControllerAdvice
 ├── security/         # JWT filter, UserDetailsService
-└── scheduler/        # @Scheduled jobs (point expiry)
+├── scheduler/        # @Scheduled jobs (point expiry)
+└── audit/            # AuditTrailService
 ```
+
+---
+
+## Database Tables
+
+| Table | Alias | Description |
+|-------|-------|-------------|
+| MST_MEMBER | MEM | Registered member profiles |
+| MST_PARTNER | PTR | Partner config (KFC, McD) |
+| MST_REWARD | RWD | Reward catalog (11 items) |
+| MST_EXCHANGE_RATE | XRT | Directional rates: KFC→McD 0.8, McD→KFC **0.9** |
+| MST_ADMIN | ADM | CMS admin credentials (single admin) |
+| TRX_POINT_BALANCE | BAL | Per member-partner balance + `@Version` |
+| TRX_TRANSACTION | TXN | Immutable point movement log |
+| TRX_AUDIT_TRAIL | AUD | Append-only audit log |
+
+**Exchange rates (final):** KFC→McD = 0.8000, McD→KFC = 0.9000
 
 ---
 
 ## Coding Conventions
 
 **Entity naming:**
-- Master tables: `MST_*` (partners, members, rewards, exchange rates)
-- Transaction tables: `TRX_*` (transactions, point balance, audit trail)
-- JPA entities: PascalCase without prefix (`Member`, `Partner`, `Transaction`)
+- Master tables: `MST_*` — JPA entities PascalCase without prefix
+- Transaction tables: `TRX_*`
 
 **Error handling:**
 - All service exceptions extend `LoyaltyException`
-- `@ControllerAdvice` catches and maps to error codes (TSD §4)
-- Return consistent format: `{status, error, message, code}`
+- `@ControllerAdvice` catches → error codes
+- Format: `{status, error, message, code}`
 
 **API conventions:**
 - Base URL: `/api/v1`
-- Auth endpoints: `/auth/*` (public)
-- Resource endpoints: `/members`, `/partners`, `/rewards`, `/transactions`
-- Action endpoints: `/exchange`, `/redeem`
+- Auth: `/auth/register`, `/auth/login`, `/auth/partner/token`
+- JWT: HS512, member/admin expiry 24h, partner expiry 1h
 
 **Testing:**
 - Service tests: `@ExtendWith(MockitoExtension.class)`, mock repos
 - Controller tests: `@WebMvcTest`, mock services
-- Integration tests: optional, use Testcontainers if time permits
 
 **Frontend:**
-- Route structure: `/dashboard`, `/rewards`, `/exchange`, `/redeem`, `/history`, `/admin`
+- Routes: `/login`, `/register`, `/dashboard`, `/rewards`, `/redeem`, `/exchange`, `/history`, `/admin`, `/admin/members/[id]`
 - Auth guard: `middleware.ts` at root
-- API client: axios with JWT injection interceptor
+- API client: axios + JWT interceptor
 - State: React Query for server state, localStorage for JWT
 
 ---
 
 ## What NOT to Do
 
-1. **NO `findAll()` without pagination** — OOM risk at scale
-2. **NO hardcoded secrets** — use `.env` for all credentials
-3. **NO `@Transactional` on controller methods** — only on service layer
-4. **NO manual balance calculation** — always SUM from transactions or use cached balance
-5. **NO raw SQL in services** — use JPA except for bulk operations (partner creation)
-6. **NO session cookies** — JWT only for all authentication
+1. **NO `findAll()` without pagination** — OOM risk
+2. **NO hardcoded secrets** — use `.env`
+3. **NO `@Transactional` on controllers** — service layer only
+4. **NO manual balance calculation** — use cached TRX_POINT_BALANCE
+5. **NO raw SQL in services** — JPA only except bulk partner init
+6. **NO session cookies** — JWT only
 7. **NO partnerId on member registration** — members are platform-wide
-8. **NO skipping audit trail** — all writes must log to `TRX_AUDIT_TRAIL`
-9. **NO modifying specs during implementation** — specs are locked, raise issues if conflicts found
-10. **NO placeholder bcrypt hash in production** — regenerate with BCryptPasswordEncoder
+8. **NO skipping audit trail** — all writes log to TRX_AUDIT_TRAIL in same transaction
+9. **NO placeholder bcrypt hash in production** — regenerate before deploy
+10. **NO separate PUT /members/{id}/status** — status update merged into `PUT /members/{id}`
 
 ---
 
-## API Authorization Matrix (Summary)
+## API Authorization Matrix
 
 | Endpoint | Public | MEMBER | ADMIN | PARTNER | Notes |
 |----------|--------|--------|-------|---------|-------|
-| `POST /auth/register` | ✓ | — | — | — | Returns JWT + member (auto-login) |
-| `POST /auth/login` | ✓ | — | — | — | Returns JWT + role |
-| `POST /auth/partner/token` | ✓ | — | — | — | Validates apiKey, returns PARTNER JWT |
-| `POST /transactions` | ✓ | — | — | — | Simulated partner call — no auth in MVP (FSD §7.6) |
-| `GET /members` | — | — | ✓ | — | Supports `?status=ACTIVE\|INACTIVE` |
-| `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — | — |
-| `PUT /members/{id}` | — | — | ✓ | — | Update name/phone/status |
-| `PUT /members/{id}/status` | — | — | ✓ | — | Toggle ACTIVE/INACTIVE |
-| `GET /members/{id}/points` | — | ✓ (own) | — | — | Privacy: admin blocked |
-| `GET /members/{id}/transactions` | — | ✓ (own) | — | — | Privacy: admin blocked |
-| `POST /exchange` | — | ✓ | — | — | — |
-| `POST /redeem` | — | ✓ | ✓ | — | — |
-| `GET /rewards` | — | ✓ | ✓ | — | Supports `?partnerId={id}` |
+| `POST /auth/register` | ✓ | — | — | — | Returns JWT + member |
+| `POST /auth/login` | ✓ | — | — | — | Checks MST_MEMBER + MST_ADMIN |
+| `POST /auth/partner/token` | ✓ | — | — | — | Validates apiKey → PARTNER JWT (1h) |
+| `POST /transactions` | — | — | — | ✓ | PARTNER JWT required |
+| `GET /members` | — | — | ✓ | — | `?page&size&status` |
+| `GET /members/{id}` | — | ✓ (own) | ✓ (any) | — | No financial data in response |
+| `PUT /members/{id}` | — | — | ✓ | — | Update name/phone/status (single endpoint) |
+| `GET /members/{id}/points` | — | ✓ (own) | — | — | Admin explicitly forbidden |
+| `GET /members/{id}/transactions` | — | ✓ (own) | — | — | Admin explicitly forbidden |
+| `POST /exchange` | — | ✓ | — | — | memberId from JWT sub |
+| `POST /redeem` | — | ✓ | — | — | MEMBER only |
+| `GET /rewards` | — | ✓ | ✓ | — | `?partnerId={uuid}` |
 | `GET /partners` | — | ✓ | ✓ | — | — |
-| `POST /partners` | — | — | ✓ | — | Bulk-inits balances for existing members |
-| `PUT /partners/{id}` | — | — | ✓ | — | Update partner config |
+| `POST /partners` | — | — | ✓ | — | Bulk-inits balances via native SQL |
+| `PUT /partners/{id}` | — | — | ✓ | — | Update config |
 
-**Privacy:** Admin can manage member profiles but cannot view point balances or transaction history.
+**Privacy:** Admin cannot view member point balances or transaction history (403).
 
-Full matrix: TSD.md §4
+---
+
+## Standard Error Codes
+
+| Code | HTTP | Description |
+|------|------|-------------|
+| MEMBER_NOT_FOUND | 404 | Member does not exist |
+| MEMBER_INACTIVE | 400 | Member status INACTIVE |
+| PARTNER_NOT_FOUND | 404 | Partner does not exist |
+| PARTNER_INACTIVE | 400 | Partner status INACTIVE |
+| REWARD_NOT_FOUND | 404 | Reward does not exist |
+| REWARD_INACTIVE | 404 | Reward not ACTIVE |
+| INSUFFICIENT_BALANCE | 422 | Not enough points |
+| EXCHANGE_RATE_NOT_CONFIGURED | 404 | No rate for partner pair |
+| INVALID_CREDENTIALS | 401 | Wrong email/password or API key |
+| UNAUTHORIZED | 401 | Missing or invalid JWT |
+| FORBIDDEN | 403 | Valid JWT, wrong role |
+| DUPLICATE_EMAIL | 400 | Email already registered |
+| DUPLICATE_PHONE | 400 | Phone already registered |
+| DUPLICATE_PARTNER_CODE | 400 | Partner code already exists |
+
+---
+
+## Audit Events
+
+| Event | Trigger | Actor |
+|-------|---------|-------|
+| MEMBER_REGISTERED | POST /auth/register | SYSTEM |
+| MEMBER_UPDATED | PUT /members/{id} | ADMIN |
+| MEMBER_STATUS_CHANGED | PUT /members/{id} (status change) | ADMIN |
+| PARTNER_CREATED | POST /partners | ADMIN |
+| POINTS_EARNED | POST /transactions | SYSTEM |
+| POINT_EXPIRED | Daily cron | SYSTEM |
+| POINTS_EXCHANGED | POST /exchange | MEMBER |
+| POINTS_REDEEMED | POST /redeem | MEMBER |
+
+Audit writes are **within the same `@Transactional`** as the business op — rollback = no orphan audit entry. No DB triggers.
+
+---
+
+## Scheduler
+
+```java
+@Scheduled(cron = "0 0 17 * * *")  // 17:00 UTC = 00:00 WIB
+```
+
+Per-member try/catch — one member failure does not block others. Idempotent (won't re-expire already-expired points).
 
 ---
 
 ## Branching Strategy
 
-Per-feature branches off `main`. Each branch = 1 endpoint or 1 logical feature. Max lifespan 1 day.
+Per-feature branches off `main`. One branch = one endpoint or feature. Max lifespan 1 day.
 
 **Naming:** `feat/<thing>`, `fix/<thing>`, `chore/<thing>`
 
-**Example branches:**
-```
-feat/auth-register
-feat/auth-login
-feat/flyway-schema
-feat/entities-all
-feat/member-earn-points
-feat/member-exchange-points
-feat/member-redeem-reward
-feat/member-point-expiry-scheduler
-feat/admin-partner-create
-feat/admin-member-list
-feat/frontend-auth
-feat/frontend-dashboard
-feat/frontend-rewards
-feat/frontend-exchange
-feat/frontend-history
-feat/frontend-admin
-```
-
 **Rules:**
 - No direct push to `main`
-- Open PR when done → teammate reviews (lightweight: does it work? any obvious bug? follows conventions?)
-- Merge → delete branch
-- Commit convention: `feat(earn): POST /transactions earn points`, `fix(auth): token expiry`, `chore(db): V2 seed partners`
+- Open PR → teammate reviews → merge → delete branch
+- Commit convention: `feat(earn): POST /transactions`, `fix(auth): token expiry`, `chore(db): V3 seed rates`
+
+---
 
 ## Implementation Phases (reference)
 
-1. **Infrastructure** — Spring Boot scaffold, Flyway migrations, Docker Compose, Next.js init — **DONE**
-2. **Backend Core** — Entities, repos, JWT auth, services (TDD)
-3. **Business Logic** — EARN, expiry scheduler, exchange, redemption (TDD)
-4. **Frontend** — Auth pages, member screens 2-6, admin CMS screens 7-8
-5. **Integration** — E2E smoke test, FSD/TSD updates
+1. **Infrastructure** — Spring Boot scaffold, Flyway, Docker Compose, Next.js — **DONE**
+2. **Backend Core** — Entities (incl. MST_ADMIN), repos, JWT auth, services (TDD)
+3. **Business Logic** — EARN, expiry scheduler (17:00 UTC), exchange, redemption (TDD)
+4. **Frontend** — Auth pages, member screens, admin CMS
+5. **Integration** — E2E smoke test, seed data
 
 ---
 
 ## Known Constraints
 
-- **Deadline:** July 14, 2026 — 11 days remaining
-- **Scope:** 93 story points across 6 use cases (aggressive for 2-person team)
-- **No Jira** — using plan file + commit messages for tracking
-- **Seed data bcrypt hash** — placeholder used, regenerate before deployment
-- **No WCAG compliance audit** — accessibility is best-effort, not formally validated
-- **MVP scope** — membership tiers, point transfer between members, dashboard analytics deferred to post-MVP
-
-**Production Readiness:**
-- Core architecture is production-capable (JWT, optimistic locking, audit trail, TDD)
-- Security hardening required before public deployment (rotate secrets, HTTPS, rate limiting)
-- Performance testing pending (load test, stress test)
-- This is apprenticeship work presented to higher-ups — code quality matters
-
----
-
-## Questions / Issues
-
-If specs conflict or requirements unclear:
-1. Check TSD.md §4 (API spec) and plan file (`.hermes/plans/`)
-2. Refer to FSD.md §7 (assumptions & decisions)
-3. Raise in team chat — do NOT make unilateral spec changes
-
-For implementation blockers:
-- Check `docs/seed-data.sql` for demo credentials
-- Review ERD in `erd.md` for table relationships
-- Check BPMN Level 3 flows in `bpmn.md` for transaction boundaries
+- **Deadline:** July 14, 2026
+- **Seed data bcrypt hash** — placeholder, regenerate before deployment
+- **Partner api_key** — store SHA-256 hash at rest, not plaintext
+- **No JWT revocation in MVP** — max 24h exposure window; use short-lived tokens + refresh in production
+- **Single backend instance** — expiry scheduler not distributed-lock protected; scale carefully
+- **No rate limiting in MVP** — add Bucket4j before public deployment
+- **No reward stock management** — MVP, by design
 
 ---
 
 **Last updated:** 2026-07-07
-**Spec version:** 1.0 (locked for implementation)
+**TSD version:** 1.1 (final.docx, 07-Jul-2026)
+**FSD version:** 1.0.0 (backup.docx, 03-Jul-2026)

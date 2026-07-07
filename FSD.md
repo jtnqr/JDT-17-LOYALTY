@@ -1,303 +1,511 @@
 # Functional Specification Document (FSD)
-## JDT-17-LOYALTY — Loyalty Points Platform
-**Version:** 1.0  
-**Date:** 2 July 2026  
-**Deadline:** 14 July 2026  
-**Author:** Business/System Analyst (AI-assisted)  
-**Source of Truth:** `README.md` in this repository
+# PISTOS – Loyalty App
+
+**Version:** 1.0.0
+**Created By:** Verry Kurniawan
+**Created Date:** 03/07/2026
+**Project:** PISTOS (Points Integration System for Transaction-Originated Services)
 
 ---
 
-## 1. Overview
+## Revision History
 
-JDT-17-LOYALTY is a bootcamp mini-case project that implements a **points-based loyalty platform**. The platform acts as a central loyalty hub that manages points earned through third-party partner transactions (KFC and McDonald's), allows members to redeem points for rewards, and enables point exchange between partners.
-
-This document covers **requirements 1–5** as scoped for the 14 July 2026 deadline.
-
----
-
-## 2. Scope
-
-### 2.1 In Scope (Must Have)
-
-| # | Feature | Description |
-|---|---------|-------------|
-| 1 | **Member Registration** | Register a new loyalty member; no input validation required |
-| 2 | **Partner Master** | Add and manage partner data; supports dynamic partner addition |
-| 3 | **Point Balance & Accumulation** | View member point balance; accumulate points from simulated partner transactions |
-| 4 | **Point Expiry** | Expire points via a scheduled job for points past their expiry date |
-| 5 | **Point Exchange** | Exchange points between partners (KFC ↔ McDonald's) at a configurable rate |
-| 6 | **Point Redemption** | Redeem points for rewards from the catalog; balance validation only (no stock check) |
-| + | **JWT Authentication** | JWT for all actors: Member, Admin, and Partner API calls |
-| + | **Transaction History** | View member transaction and exchange history |
-| + | **Audit Trail** | Log all significant system events (registration, earn, redeem, exchange, expiry, partner creation) |
-| + | **Unit Testing** | Unit tests covering core business logic |
-| + | **Web UI** | Mobile-first member app (6 screens) + desktop admin CMS (2 screens) built with Next.js 16 |
-
-### 2.2 Out of Scope / Future
-
-The following are recognized but **not implemented** in this MVP:
-
-- **Membership Tiering** (Bronze/Silver/Gold) — tier upgrade logic and tier-based benefits
-- **Dashboard Summary** (`GET /dashboard`) — aggregate statistics for CMS admin
-- **Transfer Point Between Members** — peer-to-peer point gifting
-- **Admin UI for Exchange Rate Management** — the rate is configurable in DB/config but no UI CRUD is built
+| Version | Amendment | Updated By | Date |
+|---------|-----------|------------|------|
+| 1.0.0 | Initial Draft | Verry Kurniawan | 03/07/2026 |
 
 ---
 
-## 3. Actors & Roles
+## Glossary
 
-| Actor | Description |
-|-------|-------------|
-| **Member** | A registered loyalty program member who earns, redeems, and exchanges points via the platform API or a future front-end. |
-| **CMS Admin** | An internal operator who can view member profiles, edit member data, and change member status (active/inactive) via the CMS. A single admin role is assumed (see Assumptions §7). |
-| **Partner System** | A simulated third-party system (KFC or McDonald's) that submits transaction events to trigger point accumulation. In MVP, this is simulated by a direct `POST /transactions` API call with dummy data. |
-
----
-
-## 4. Use Cases
-
-### UC-01: Member Registration
-
-**Actor:** Member (or CMS Admin on behalf of member)  
-**Pre-conditions:** None  
-**Trigger:** Member submits registration data
-
-**Main Flow:**
-1. Actor calls `POST /auth/register` with name, email, phone, and password.
-2. System generates a unique internal member ID.
-3. System creates a point balance record (balance = 0) for each active partner.
-4. System writes an audit trail event: `MEMBER_REGISTERED`.
-5. System returns a JWT token and the created member object.
-
-**Post-conditions:** Member record exists in the system; point balance initialized to 0.  
-**Exceptions:** None (no input validation required per scope).
-
----
-
-### UC-02: Partner Master Management
-
-**Actor:** CMS Admin  
-**Pre-conditions:** Admin is authenticated via JWT.  
-**Trigger:** Admin queries partner list or creates a new partner.
-
-**Main Flow (View):**
-1. Admin calls `GET /partners` to retrieve the list of registered partners.
-2. System returns partner ID, name, point conversion rate, and status.
-
-**Main Flow (Create):**
-1. Admin calls `POST /partners` with name, code, and points conversion rate.
-2. System creates a new partner record.
-3. System initializes empty point balances for all existing members for the new partner.
-4. System writes an audit trail event: `PARTNER_CREATED`.
-
-**Post-conditions:** New partner is created, or admin can see all active partners.
-
----
-
-### UC-03: Point Accumulation (via Partner Transaction)
-
-**Actor:** Partner System (simulated)  
-**Pre-conditions:** Member exists; Partner exists and is active  
-**Trigger:** A `POST /transactions` call is made with member identifier (phone or email), partner, and transaction amount
-
-**Main Flow:**
-1. Partner System calls `POST /transactions` with `memberIdentifier`, `partner`, and `trxAmount`.
-2. System resolves the member using the provided identifier (lookup by phone or email).
-3. System validates that the member exists and the partner is active.
-4. System calculates points earned using the conversion formula (see Business Rules §5.1).
-5. System credits the member's point balance for the given partner.
-6. System creates a transaction record (type: `EARN`).
-7. System writes an audit trail event: `POINTS_EARNED`.
-8. System returns the transaction record including points awarded.
-
-**Post-conditions:** Member's point balance is increased; transaction record created.  
-**Exceptions:** Member not found → `404`; Partner not found or inactive → `404`/`400`.
-
----
-
-### UC-04: Point Expiry (Background Process)
-
-**Actor:** System Scheduler  
-**Pre-conditions:** `EARN` transactions exist with an `expiresAt` date in the past.  
-**Trigger:** Scheduled job runs daily.
-
-**Main Flow:**
-1. System queries all `EARN` transactions where `expiresAt <= now()` and points have not been fully consumed/expired.
-2. For each applicable transaction, system calculates remaining unexpired points.
-3. System deducts the expired points from the member's partner point balance.
-4. System creates a transaction record (type: `EXPIRED`).
-5. System writes an audit trail event: `POINT_EXPIRED`.
-
-**Post-conditions:** Member's point balance is reduced by the expired amount; expired transactions are logged.
-
----
-
-### UC-05: Point Exchange Between Partners
-
-**Actor:** Member  
-**Pre-conditions:** Member exists; both source and target partners are active; exchange rate is configured; member has sufficient source-partner balance  
-**Trigger:** Member calls `POST /exchange`
-
-**Main Flow:**
-1. Member calls `POST /exchange` with `memberId`, `fromPartnerId`, `toPartnerId`, and `points`.
-2. System looks up the exchange rate between `fromPartner` → `toPartner` from the ExchangeRate table.
-3. System checks the member's balance for `fromPartner`.
-4. If balance ≥ requested points:
-   - Deduct `points` from `fromPartner` balance.
-   - Calculate target points = `points × exchangeRate`.
-   - Credit target points to `toPartner` balance.
-   - Create two transaction records (type: `EXCHANGE_OUT` and `EXCHANGE_IN`).
-5. System writes an audit trail event: `POINTS_EXCHANGED`.
-6. System returns confirmation with both updated balances.
-
-**Post-conditions:** Source partner balance decreased; target partner balance increased; exchange logged.  
-**Exceptions:**
-- Member not found → `404`
-- Partner not found or inactive → `404`
-- Exchange rate not configured → `404`
-- Insufficient balance → `400`
-
----
-
-
-
----
-
-### UC-07: View Transaction History
-
-**Actor:** Member  
-**Pre-conditions:** Member exists  
-**Trigger:** Caller queries `GET /members/{id}/transactions`
-
-**Main Flow:**
-1. Caller provides member ID.
-2. System returns paginated list of all transaction records (EARN, EXCHANGE_IN, EXCHANGE_OUT, EXPIRED) for that member, sorted by date descending.
-
-**Post-conditions:** Transaction history displayed.
-
----
-
-### UC-08: View Point Balance
-
-**Actor:** Member  
-**Pre-conditions:** Member exists  
-**Trigger:** Caller queries `GET /members/{id}/points`
-
-**Main Flow:**
-1. Caller provides member ID.
-2. System returns point balances broken down by partner.
-
-**Post-conditions:** Current balances returned.
-
----
-
-## 5. Business Rules
-
-### 5.1 Point Accumulation Formula
-
-> **⚠️ ASSUMPTION — easy to override**
->
-> The README does not specify a conversion rate. The following is a proposed default:
->
-> **1 point earned per every IDR 1,000 of transaction amount** (integer division, no rounding up).
->
-> Formula: `pointsEarned = floor(trxAmount / 1000)`
->
-> Example: A KFC transaction of IDR 150,000 earns `floor(150000 / 1000) = 150` points.
->
-> This rate is stored as a configurable field (`pointsPerThousandIDR`) on the `Partner` table, defaulting to `1`. Changing the per-partner rate does not retroactively recalculate existing balances.
-
-### 5.2 Exchange Rate Rules
-
-- Exchange rates are **bidirectional but not symmetric** — the rate from KFC→McD and McD→KFC are stored as separate records in the `ExchangeRate` table.
-- The default seeded rates:
-  - KFC → McDonald's: **1 KFC point = 0.8 McD points** (as noted in README)
-  - McDonald's → KFC: **1 McD point = 1.25 KFC points** (proposed symmetric inverse)
-- Rates are stored in the DB and can be updated directly (no admin API in MVP).
-- Resulting target points are **floor-rounded** to avoid fractional points.
-- Formula: `targetPoints = floor(sourcePoints × exchangeRate)`
-
-### 5.3 Point Expiry Rules
-
-- Points earned have an expiration date (e.g., 1 year from the earn date).
-- Expiry is processed by a background job that deducts the appropriate amount from the member's balance.
-- A transaction of type `EXPIRED` is logged to reflect the point deduction.
-
-### 5.4 Member Status
-
-- A member can be `ACTIVE` or `INACTIVE`.
-- `INACTIVE` members cannot earn, redeem, or exchange points.
-- Status can be changed by a CMS Admin.
-
----
-
-## 6. CMS Features
-
-| Feature | Description |
-|---------|-------------|
-| View Member | List/search members; view individual member profile |
-| Edit Member | Update member name, phone, email, status |
-| Member Status | Toggle ACTIVE / INACTIVE |
-
-CMS features are exposed as admin-facing API endpoints (see TSD for details). A minimal single-admin-role security model is assumed (§7.5).
-
----
-
-## 7. Assumptions & Open Questions
-
-The following items are **not specified in the README**. Each is given a reasonable default assumption for MVP. They should be explicitly reviewed and confirmed or overridden before final implementation.
-
-### 7.1 Member Identity Across Partners
-
-**Question:** Does a member have a single internal ID used for both KFC and McD, or does each partner assign its own member ID linked to the internal member?
-
-**Assumption:** A **single internal member ID** (e.g., `M001`) is used by the loyalty platform. Partner-specific member identifiers are not modelled in MVP. Dummy transactions reference only the internal member ID. Point balances are tracked **per member per partner** within the loyalty system itself — not via a partner-side member mapping.
-
-*Override: If partners send their own member references, a `PartnerMember` mapping table (partnerMemberId → internalMemberId) must be added.*
-
----
-
-### 7.2 Dummy Transaction Data Source
-
-**Question:** Are dummy transactions pre-seeded in the database, or submitted via an API call that simulates a partner webhook?
-
-**Assumption:** Dummy transactions are **submitted via API** (`POST /transactions`) with manually crafted payloads. This is simpler to demo, allows interactive testing, and aligns with the API-first requirement. No automatic seeding of transaction history is done, but seed scripts may insert a handful of sample transactions for demo purposes.
-
-*Override: If a webhook simulation is required, a `POST /partner-webhook/simulate` endpoint can be added that generates multiple dummy transactions for a given partner.*
-
----
-
-### 7.3 Point Expiry
-
-**Question:** Do points expire? The README says "possible for point."
-
-**Assumption:** **Yes.** Points expire based on the `expiresAt` date set when they are earned. A daily background job calculates and deducts expired points. 
-
----
-
-### 7.4 Authentication Strategy
-
-**Question:** How are endpoints secured?
-
-**Decision:** JWT authentication for all actors:
-- **Members:** Obtain JWT via `POST /auth/register` or `POST /auth/login`. Role claim = `MEMBER`.
-- **Admin:** Obtain JWT via `POST /auth/login` (email/password). Role claim = `ADMIN`.
-- **Partners:** Obtain JWT via `POST /auth/partner/token` (API key validation). Role claim = `PARTNER`.
-
-All secured endpoints validate JWT and check role claim. Frontend (Next.js) stores JWT in localStorage and includes it in `Authorization: Bearer <token>` header.
-
-**Privacy constraint:** Admins can manage member profiles (name, email, status) but **cannot view point balances or transaction history** for privacy reasons. Only the member themselves can view their own financial data.
-
----
-
-## 8. Glossary
-
-| Term | Definition |
-|------|------------|
+| Item | Description |
+|------|-------------|
 | Points | The unit of loyalty currency managed by this platform |
 | Partner | A third-party merchant (KFC, McDonald's) whose transactions generate points |
+| Redemption | Exchange of points for a reward item |
 | Exchange | Conversion of points from one partner's balance to another |
 | Audit Trail | A tamper-evident log of every significant action in the system |
-| Dummy Data | Manually injected or seeded test data used to simulate real transactions in MVP |
 | CMS | Content Management System — the internal admin interface |
+
+**Field Status:**
+
+| Abbreviation | Description |
+|---|---|
+| M | Mandatory |
+| O | Optional |
+| D | Display |
+| C | System Calculated |
+
+**Controls Type:**
+
+| Abbreviation | Description |
+|---|---|
+| TSL | Textbox Single Line |
+| DDL | Dropdown List |
+| DPL | Date Pick List |
+| BTN | Button |
+| LBL | Label |
+| TXT | Static Text |
+| LNK | Hyperlink |
+| TBL | Table / Data Grid |
+| CRD | Card |
+| ICO | Icon |
+| IMG | Image |
+
+---
+
+## Introduction
+
+Pistos is a bootcamp mini-case project that implements a points-based loyalty platform. The platform acts as a central loyalty hub that manages points earned through third-party partner transactions (e.g., KFC, McDonald's), allows members to redeem points for rewards, and enables point exchange between partners.
+
+### Purpose
+
+This document describes the functional specifications of the Pistos Loyalty Platform. It serves as the primary reference for designers, developers, testers, and stakeholders during the design, implementation, testing, and acceptance phases.
+
+### Scope
+
+**Limitations:**
+- The system only supports loyalty point management; does not handle payment processing or transaction settlement.
+- Partner transactions are simulated through API requests — not integrated with real-time external partner systems.
+- JWT authentication for API access only. MFA, SSO, and OAuth not included.
+
+---
+
+## High-Level Business Flows
+
+| Business Flow | Description |
+|---------------|-------------|
+| Partner Setup & Configuration | CMS Admin creates a new partner and configures the default point conversion rate. System initializes the partner so it can participate in the loyalty ecosystem. |
+| Member Registration | A new member registers. System creates the account, initializes point balances for every active partner, and records registration in audit trail. |
+| Point Accumulation | Partner System submits a transaction. System validates member and partner, calculates earned points, credits balance, records transaction, writes audit log. |
+| View Point Balance | Members can view their current point balances for each partner. |
+| Point Exchange | Members exchange points from one partner to another using configured exchange rate. System validates balance, converts, updates both balances, records transactions, writes audit log. |
+| Point Redemption | Members redeem available points for rewards. System validates balance, deducts points, records redemption transaction, stores audit trail. |
+| Transaction History | Members can review transaction history including earning, redemption, exchange, and expiration. |
+| Point Expiry Process | Scheduled background job checks expired points, deducts expired balances, creates expiration transactions, records audit trail. |
+| Audit Trail | Every critical business event is recorded for traceability and accountability. |
+
+---
+
+## Module Index
+
+| Module Name | Function |
+|-------------|----------|
+| Authentication Management | AUT.1 Authentication |
+| Member Management | MEM.1 Manage Member |
+| Partner Management | PAR.1 Manage Partner |
+| Point Management | PNT.1 Manage Point |
+| Exchange Management | EXC.1 Exchange Point |
+| Audit Management | AUD.1 Audit Trail |
+
+---
+
+## AUT.1 — Authentication
+
+### Use Cases
+
+**UC: Member Registration**
+- Actor: New Member
+- Pre-condition: User not registered; Registration page accessible
+- Normal Flow: Member fills form → system validates → creates account → initializes balances → issues JWT → redirects to dashboard
+- Alternate Flow 1: Mandatory field missing → show field error
+- Alternate Flow 2: Email or phone already registered → show error
+- Alternate Flow 3: Password confirmation mismatch → show error
+- Post-condition: Account created; point balances initialized for all active partners; JWT issued; audit trail recorded; member redirected to dashboard
+
+**UC: Member Login**
+- Actor: Member
+- Pre-condition: Account registered and ACTIVE; Login page accessible
+- Normal Flow: Member submits credentials → system validates → issues JWT → redirects to dashboard
+- Alternate Flow 1: Mandatory field missing → show error
+- Alternate Flow 2: Invalid credentials → show error
+- Alternate Flow 3: Inactive member → show error
+- Post-condition: JWT Access Token issued; login recorded in audit trail; redirected to dashboard
+
+**UC: CMS Admin Login**
+- Actor: CMS Admin
+- Pre-condition: Admin account registered and ACTIVE
+- Normal Flow: Admin submits credentials → system validates → issues JWT → redirects to CMS dashboard
+- Alternate Flow 1: Mandatory field missing → show error
+- Alternate Flow 2: Invalid credentials → show error
+- Post-condition: JWT issued; login recorded in audit trail; redirected to CMS
+
+**UC: Partner Authentication**
+- Actor: Partner System
+- Pre-condition: Partner API Key registered; Partner ACTIVE
+- Normal Flow: Partner sends partnerId + apiKey → system validates → issues PARTNER JWT (1h)
+- Alternate Flow 1: Invalid API key → 401
+- Alternate Flow 2: Partner inactive → 400
+- Post-condition: JWT issued; partner system can access POST /transactions
+
+### Business Rules
+
+| Business Rule | Description |
+|---------------|-------------|
+| Member Registration | Email and phone number must be unique |
+| Point Initialization | System auto-initializes point balances for all ACTIVE partners after member registration |
+| Automatic Authentication | After registration, system generates JWT for the member |
+| Login Authorization | Only ACTIVE status users can authenticate |
+| Token Generation | New JWT issued after successful authentication |
+| Audit Trail | Every successful registration and login recorded in Audit Trail |
+
+### Validation Rules
+
+| Field | Validation Rule | Error Message |
+|-------|----------------|---------------|
+| Full Name | Mandatory | Full Name is required. |
+| Email | Mandatory | Email is required. |
+| Email | Valid format | Invalid email format. |
+| Email | Unique | Email is already registered. |
+| Phone Number | Mandatory | Phone Number is required. |
+| Phone Number | Unique | Phone Number is already registered. |
+| Password | Mandatory | Password is required. |
+| Confirm Password | Must match Password | Password confirmation does not match. |
+| Login Email | Mandatory | Email is required. |
+| Login Password | Mandatory | Password is required. |
+| Login Credentials | Match existing account | Invalid email or password. |
+| Account Status | Must be ACTIVE | Your account is inactive. Please contact the administrator. |
+
+### Field Description — Member Login
+
+| # | Display Name | Required | Read Only | Display Type | Max Length | Remarks |
+|---|---|---|---|---|---|---|
+| 1 | Email Address | Yes | No | Text Box | 100 | Must match standard email format |
+| 2 | Password | Yes | No | Text Box (Password) | 32 | Input masked |
+| 3 | Show/Hide Password | N/A | N/A | Icon Button | N/A | Toggle password visibility |
+| 4 | Forgot Password? | N/A | N/A | Link | N/A | Redirect to password reset |
+| 5 | Create Account | N/A | N/A | Link | N/A | Redirect to Registration page |
+
+### Field Description — Member Registration
+
+| # | Display Name | Required | Default | Display Type | Max Length | Remarks |
+|---|---|---|---|---|---|---|
+| 1 | Full Name | Yes | — | Text Box | 100 | Alphabetical characters and spaces only |
+| 2 | Email | Yes | — | Text Box | 100 | Active email for registration |
+| 3 | Country Code | Yes | +62 | Drop Down | 5 | Default +62 |
+| 4 | Phone Number | Yes | — | Text Box | 15 | Numeric, excluding leading zero |
+| 5 | Password | Yes | — | Text Box (Password) | 32 | Masked input |
+| 6 | Confirm Password | Yes | — | Text Box (Password) | 32 | Must match Password |
+| 7 | Terms & Privacy Checkbox | Yes | Unchecked | Checkbox | N/A | Must be checked to register |
+
+**Expected Performance:**
+- Login/registration page full load: < 2 seconds (4G/Wi-Fi)
+- Authentication + DB query: < 3 seconds
+
+---
+
+## MEM.1 — Manage Member
+
+### Use Cases
+
+**UC: View Member (Admin)**
+- Post-condition: Member list displayed; Admin can select member for further action
+
+**UC: View Member Detail (Admin)**
+- Post-condition: Member profile displayed
+
+**UC: Edit Member (Admin)**
+- Normal Flow: Admin edits fields → validates unique constraints → saves → audit trail written
+- Alternate Flow 1: Mandatory field missing
+- Alternate Flow 2: Duplicate email or phone
+- Post-condition: Member profile updated; Audit Trail recorded
+
+**UC: Update Member Status (Admin)**
+- Normal Flow: Admin selects status → applies → audit trail written
+- Alternate Flow: Member not found
+- Post-condition: Member status updated; Audit Trail recorded
+
+### Business Rules
+
+| Business Rule | Description |
+|---------------|-------------|
+| Member Visibility | Admin can view list of all registered members |
+| Search Member | Admin can search by Full Name, Email, or Phone Number |
+| Unique Member Information | Email and phone number must remain unique |
+| Member Status | Admin can change status between ACTIVE and INACTIVE |
+| Inactive Member Restriction | INACTIVE members cannot login or perform transactions |
+| Historical Data Preservation | Updating member info/status does not modify point balances or transaction history |
+| Audit Trail | Every update and status change recorded in Audit Trail |
+
+### Validation Rules
+
+| Screen | Field | Validation | Error Message |
+|--------|-------|------------|---------------|
+| View Member | Search Criteria | Optional | Display matching records |
+| View Member | Search Result | No matching data | "No member found." |
+| Edit Member | Full Name | Required | Display validation message |
+| Edit Member | Email | Required; valid format; unique | Display validation message or "Email is already registered." |
+| Edit Member | Phone Number | Required; unique | "Phone number is already registered." |
+| Edit Member | Member Record | Member does not exist | "Member not found." |
+| Update Member Status | Member Record | Member does not exist | "Member not found." |
+| Update Member Status | Status | ACTIVE or INACTIVE only | Display validation message |
+
+### Screen — Member List
+
+| # | Display Name | Type | Remarks |
+|---|---|---|---|
+| 1 | Search Input | Text Box | Placeholder: "Search members by name, email or phone..." |
+| 2 | Status Filter | Dropdown | Values: All Status, ACTIVE, INACTIVE |
+| 3 | # (index) | Text | Row index / pagination counter |
+| 4 | Member Name | Text/Link | Click → Member Detail view |
+| 5 | Email | Text | Primary registered email |
+| 6 | Phone | Text | Country code + phone |
+| 7 | Registered Date | Text | Format: DD/MM/YYYY |
+| 8 | Status | Badge | Color-coded: ACTIVE / INACTIVE |
+
+### Screen — Member Detail
+
+| # | Display Name | Required | Read Only | Type | Remarks |
+|---|---|---|---|---|---|
+| 1 | Full Name | Yes | Default | Text Box | Editable when edit mode active |
+| 2 | Email Address | Yes | Default | Text Box | Editable when edit mode active |
+| 3 | Phone Number | Yes | Default | Text Box | Editable when edit mode active |
+| 4 | Member ID | N/A | Yes | Text Box | UUID |
+| 5 | Registered Date | N/A | Yes | Text Box | Creation date |
+| 6 | Last Activity | N/A | Yes | Text Box | Last action timestamp |
+| 7 | Current Status | Yes | No | Dropdown | ACTIVE / INACTIVE |
+
+**Expected Performance:**
+- Member list full load + filtering: < 1.5 seconds
+- Filter query refresh: < 1.0 second
+- Pagination navigation: < 1.0 second
+- Member detail page: < 1.5 seconds
+- Data mutation + audit log: < 2.0 seconds
+
+---
+
+## PAR.1 — Manage Partner
+
+### Use Cases
+
+**UC: View Partner (Admin)**
+- Post-condition: Partner list displayed
+
+**UC: Add Partner (Admin)**
+- Normal Flow: Admin fills form → validates unique code → creates partner → bulk-inits balances for all existing members → audit trail
+- Alternate Flow 1: Mandatory field missing
+- Alternate Flow 2: Duplicate partner code
+- Post-condition: Partner created; point balances initialized for all existing members; Audit Trail recorded
+
+**UC: Edit Partner (Admin)**
+- Normal Flow: Admin edits name / conversion rate → saves → audit trail
+- Post-condition: Partner info updated; Audit Trail recorded
+
+**UC: Update Partner Status (Admin)**
+- Post-condition: Partner status updated; Audit Trail recorded
+
+### Business Rules
+
+| Business Rule | Description |
+|---------------|-------------|
+| Partner Visibility | Admin can view all registered partners |
+| Search Partner | Admin can search by name or code |
+| Create Partner | System creates partner after all required info validated |
+| Unique Partner Code | Each partner must have a unique Partner Code |
+| Point Balance Initialization | After new partner created, system auto-initializes point balances for all existing members via native SQL (no findAll()) |
+| Update Partner | Admin can update partner info without affecting existing member balances or history |
+| Partner Status | Admin can toggle ACTIVE / INACTIVE |
+| Inactive Partner Restriction | INACTIVE partner cannot participate in new earn, redeem, or exchange transactions |
+| Audit Trail | Every partner creation, modification, and status update recorded |
+
+### Validation Rules
+
+| Screen | Field | Validation | Error Message |
+|--------|-------|------------|---------------|
+| Add Partner | Partner Name | Required | Display validation message |
+| Add Partner | Partner Code | Required; unique | "Partner code already exists." |
+| Add Partner | Point Conversion Rate | Required; > 0 | Display validation message |
+| Edit Partner | Partner Name | Required | Display validation message |
+| Edit Partner | Conversion Rate | Required; > 0 | Display validation message |
+| Edit Partner | Partner Record | Partner not found | "Partner not found." |
+| Update Partner Status | Status | ACTIVE or INACTIVE only | Display validation message |
+
+### Screen — Add New Partner
+
+| # | Display Name | Required | Display Type | Max Length | Remarks |
+|---|---|---|---|---|---|
+| 1 | Partner Name | Yes | Text Box | 100 | Complete partner entity name |
+| 2 | Partner Code | Yes | Text Box | 30 | Unique uppercase key; locked after creation |
+| 3 | Point Conversion Rate | Yes | Text Box (Decimal) | 10 | Points generated per IDR 1,000 spent |
+
+**Expected Performance:**
+- Partner list load + filter: < 1.2 seconds
+- Save Partner (including bulk balance init): < 2.5 seconds (async)
+- Status mutation: < 1.5 seconds
+
+---
+
+## PNT.1 — Manage Point
+
+### Use Cases
+
+**UC: Earn Point (Partner System)**
+- Actor: Partner System
+- Pre-condition: Member exists and ACTIVE; Partner exists and ACTIVE; Partner System authenticated (PARTNER JWT)
+- Normal Flow: Partner submits transaction → system validates → calculates points (floor(trxAmount / 1000) × pointsPerThousandIDR) → credits balance → creates EARN transaction → writes audit trail
+- Alternate Flow 1: Member not found → 404
+- Alternate Flow 2: Partner not found or inactive → 404/400
+- Post-condition: Member point balance updated; EARN transaction recorded; Audit Trail recorded
+
+**UC: View Point Balance (Member)**
+- Actor: Member
+- Pre-condition: Member authenticated and ACTIVE
+- Post-condition: Current point balances displayed per partner
+
+**UC: Point Expiry (System Scheduler)**
+- Actor: System Scheduler
+- Schedule: Daily at 00:00 WIB (17:00 UTC) — cron `0 0 17 * * *`
+- Pre-condition: Expired points exist; Scheduler running
+- Normal Flow: Query EARN transactions where `expires_at <= now()` → deduct from balance → create EXPIRED transaction → write audit trail
+- Alternate Flow: No expired points → complete job without changes
+- Post-condition: Expired points deducted; EXPIRED transactions recorded; Audit Trail recorded
+
+**UC: Redeem Point (Member)**
+- Actor: Member
+- Pre-condition: Member authenticated and ACTIVE; Partner of reward is ACTIVE; Sufficient points balance
+- Normal Flow: Member selects reward → system validates balance → deducts points → creates REDEEM transaction → writes audit trail
+- Alternate Flow 1: Insufficient balance → 422
+- Alternate Flow 2: Inactive partner or reward → 400/404
+- Post-condition: Partner point balance deducted; REDEEM transaction created; Audit Trail recorded
+
+### Business Rules
+
+| Business Rule | Description |
+|---------------|-------------|
+| Point Accumulation | Points = floor(trxAmountIDR / 1000) × pointsPerThousandIDR |
+| Partner Eligibility | Only ACTIVE partners may accumulate points |
+| Member Eligibility | Only existing and ACTIVE members may earn, view, or redeem points |
+| Partner-Based Balance | Member balances maintained separately per partner |
+| Earn Transaction | Every accumulation creates EARN transaction record |
+| Point Expiry | System auto-deducts expired points via scheduled expiry process |
+| Expired Transaction | Every expiry creates EXPIRED transaction record |
+| Point Redemption | Members may redeem only when balance >= reward cost for that partner |
+| Redeem Transaction | Redemption deducts points + creates REDEEM transaction record |
+| Historical Data | Point transactions are immutable; never modified or deleted |
+| Audit Trail | Every earn, expiry, and redemption recorded in Audit Trail |
+
+### Validation Rules
+
+| Screen | Field | Validation | Error Message |
+|--------|-------|------------|---------------|
+| Earn Point | Member Identifier | Member must exist | "Member not found." |
+| Earn Point | Member Status | ACTIVE | "Member account is inactive." |
+| Earn Point | Partner | Exist and ACTIVE | "Partner not found or inactive." |
+| Earn Point | Transaction Amount | Required; > 0 | Display validation message |
+| View Point Balance | Member | Must exist | "Member not found." |
+| Redeem Point | Member Status | ACTIVE | Display validation message |
+| Redeem Point | Partner | ACTIVE | "Reward or partner is inactive." |
+| Redeem Point | Reward | ACTIVE | "Reward or partner is inactive." |
+| Redeem Point | Point Balance | Balance >= reward point cost | "Not enough points." |
+
+**Expected Performance:**
+- Point balance page full load: < 1.2 seconds
+- Backend query across partner ledgers: < 800ms
+- Navigation transitions: < 300ms
+
+---
+
+## EXC.1 — Exchange Point
+
+### Use Case
+
+**UC: Exchange Points Between Partners (Member)**
+- Actor: Member
+- Pre-condition: Member authenticated and ACTIVE; Source and Destination partners ACTIVE; Exchange rate configured
+- Normal Flow: Member selects source/destination partner + amount → system validates balance → calculates target points (floor(sourcePoints × rate)) → deducts source balance → credits destination balance → creates EXCHANGE_OUT and EXCHANGE_IN transactions → writes audit trail → shows success
+- Alternate Flow 1: Insufficient balance → error
+- Alternate Flow 2: Exchange rate not configured → error
+- Alternate Flow 3: Partner inactive → error
+- Post-condition: Source balance reduced; Destination balance increased; Both transactions recorded; Audit Trail recorded
+
+### Business Rules
+
+| Business Rule | Description |
+|---------------|-------------|
+| Exchange Eligibility | Only ACTIVE members may exchange |
+| Partner Eligibility | Both source and destination partners must be ACTIVE |
+| Exchange Rate | Uses configured rate for the source-destination partner pair |
+| Sufficient Balance | Source balance must be sufficient |
+| Point Conversion | Destination = floor(sourcePoints × exchangeRate) |
+| Atomic Transaction | Deduction + credit in single @Transactional; rollback on failure |
+| Transaction History | Creates both EXCHANGE_OUT and EXCHANGE_IN records |
+| Historical Data | Exchange does not modify existing transactions |
+| Audit Trail | Every exchange recorded in Audit Trail |
+| Source ≠ Destination | Source and destination partner cannot be the same |
+
+### Validation Rules
+
+| Field | Validation | Error Message |
+|-------|------------|---------------|
+| Source Partner | Must exist and be ACTIVE | "Selected partner is inactive." |
+| Destination Partner | Must exist and be ACTIVE | "Selected partner is inactive." |
+| Exchange Amount | Required; > 0 | Display validation message |
+| Point Balance | Source balance >= exchange amount | "Insufficient point balance." |
+| Exchange Rate | Must be configured | "Exchange rate not configured." |
+| Source ≠ Destination | Cannot be the same | Display validation message |
+
+### Exchange Screen Fields
+
+| # | Display Name | Required | Type | Remarks |
+|---|---|---|---|---|
+| 1 | From Partner | Yes | Dropdown | Shows logo, name, current balance |
+| 2 | Points to Exchange | Yes | Numeric Input | Amount of source points to exchange |
+| 3 | To Partner | Yes | Dropdown | Shows logo, name, current balance |
+| 4 | Exchange Rate Banner | N/A | Text/Banner | Shows "1 KFC pt = 0.8 McD pts"; hidden if rate not configured |
+| 5 | You send | N/A | Text (Calculated) | Mirrors input |
+| 6 | You receive | N/A | Text (Calculated) | Auto-calculated: floor(input × rate) |
+
+**Expected Performance:**
+- Real-time "You receive" calculation: < 200ms (client-side, pre-fetched rate)
+- Validation response: immediate, before backend call
+- Confirm Exchange backend processing: < 2.0 seconds
+
+---
+
+## AUD.1 — Audit Management
+
+The system automatically logs all critical business actions. Each row contains: actorId, actorType, eventType, entityType, entityId, payload (JSONB), createdAt.
+
+### Audit Events
+
+| Action | When | Payload Example |
+|--------|------|----------------|
+| PARTNER_CREATED | Admin creates partner | `{"partnerCode":"KFC","partnerName":"KFC Indonesia","conversionRate":1.00}` |
+| PARTNER_UPDATED | Admin edits partner | `{"changes":{"pointConversionRate":{"before":1.00,"after":1.50}}}` |
+| PARTNER_STATUS_CHANGED | Admin toggles partner status | `{"previousStatus":"ACTIVE","newStatus":"INACTIVE"}` |
+| POINTS_EARNED | Partner earn API called | `{"memberIdentifier":"081234567890","partnerCode":"KFC","trxAmount":50000,"pointsEarned":50}` |
+| POINT_EXPIRED | Daily scheduler runs | `{"jobId":"EXP-20260704","totalExpiredRecords":10,"totalPointsDeducted":500}` |
+| POINTS_EXCHANGED (OUT) | Member exchanges points | `{"memberId":"...","sourcePartner":"KFC","amountDeducted":100,"exchangeRate":"1:0.8"}` |
+| POINTS_EXCHANGED (IN) | Member exchange credited | `{"memberId":"...","destinationPartner":"MCD","amountCredited":80}` |
+
+---
+
+## Appendix
+
+### Exchange Rates (Final)
+
+| From | To | Rate | Meaning |
+|------|----|------|---------|
+| KFC | McDonald's | 0.8000 | 100 KFC pts → 80 McD pts |
+| McDonald's | KFC | 0.9000 | 100 McD pts → 90 KFC pts |
+
+### Seed Rewards
+
+**KFC:**
+| Name | Point Cost |
+|------|------------|
+| KFC Original Recipe Chicken 1pc | 250 |
+| KFC French Fries Regular | 150 |
+| KFC Zinger Burger | 400 |
+| KFC Family Bucket (9pc) | 1200 |
+| KFC Pepsi Regular | 100 |
+
+**McDonald's:**
+| Name | Point Cost |
+|------|------------|
+| Big Mac Burger | 350 |
+| McNuggets 6pcs | 200 |
+| McFlurry Oreo | 250 |
+| French Fries Large | 150 |
+| McCafe Latte | 180 |
+| McValue Meal (Burger + Fries + Drink) | 500 |
