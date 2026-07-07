@@ -17,6 +17,7 @@ import {
   CheckCircle,
   X,
   AlertCircle,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,87 @@ export default function AdminPartnersPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // Local form state for Create Partner modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createCode, setCreateCode] = useState("");
+  const [createPointsRate, setCreatePointsRate] = useState<number>(1);
+  const [createExpiryDays, setCreateExpiryDays] = useState<number>(365);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
+  const [createApiError, setCreateApiError] = useState<string | null>(null);
+
+  const handleCreatePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+    setCreateApiError(null);
+
+    const token = localStorage.getItem("token");
+    const payload = {
+      name: createName,
+      code: createCode,
+      pointsPerThousandIDR: createPointsRate,
+      expiryDays: createExpiryDays,
+    };
+
+    try {
+      await axios.post("/api/v1/partners", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setCreateSuccess(true);
+      setTimeout(() => {
+        setIsCreating(false);
+        setIsCreateModalOpen(false);
+        setCreateSuccess(false);
+        setCreateName("");
+        setCreateCode("");
+        setCreatePointsRate(1);
+        setCreateExpiryDays(365);
+        refetch();
+      }, 1000);
+    } catch (error: any) {
+      console.error("Failed to create partner:", error);
+
+      if (!error.response) {
+        console.warn("Backend offline. Simulating local partner creation.");
+
+        const newPartner = {
+          id: `partner-mock-${Math.random().toString(36).substr(2, 9)}`,
+          name: createName,
+          code: createCode.toUpperCase(),
+          pointsPerThousandIDR: createPointsRate,
+          expiryDays: createExpiryDays,
+          status: "ACTIVE",
+          targetPartnerName: "KFC",
+          exchangeRate: 1.0,
+        };
+
+        MOCK_PARTNERS.push(newPartner);
+
+        setCreateSuccess(true);
+        setTimeout(() => {
+          setIsCreating(false);
+          setIsCreateModalOpen(false);
+          setCreateSuccess(false);
+          setCreateName("");
+          setCreateCode("");
+          setCreatePointsRate(1);
+          setCreateExpiryDays(365);
+          refetch();
+        }, 1000);
+        return;
+      }
+
+      if (error.response?.data?.message) {
+        setCreateApiError(error.response.data.message);
+      } else {
+        setCreateApiError("Failed to create partner. Please try again.");
+      }
+      setIsCreating(false);
+    }
+  };
 
   // Fetch Partner List via React Query
   const { data: partnerData, isLoading, refetch } = useQuery({
@@ -237,11 +319,20 @@ export default function AdminPartnersPage() {
 
         {/* Content Body */}
         <div className="p-8 flex-grow flex flex-col space-y-6">
-          <section className="space-y-1">
-            <h1 className="text-xl font-bold text-neutral-950 tracking-tight">Merchants & Exchange Configurations</h1>
-            <p className="text-xs font-semibold text-neutral-400">
-              Manage points accumulation rates, expiry periods, and cross-merchant point exchange rates for active loyalty partners.
-            </p>
+          <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold text-neutral-950 tracking-tight">Merchants & Exchange Configurations</h1>
+              <p className="text-xs font-semibold text-neutral-400">
+                Manage points accumulation rates, expiry periods, and cross-merchant point exchange rates for active loyalty partners.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl text-xs font-bold cursor-pointer shadow-md shadow-[#8B3D06]/10 active:translate-y-px transition-all shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Create Partner
+            </button>
           </section>
 
           {/* Partners Table */}
@@ -254,7 +345,6 @@ export default function AdminPartnersPage() {
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28">Code</th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">Accumulation Rate</th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36">Expiry Days</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-48">Exchange Rate</th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">Status</th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 text-center">Edit</th>
                   </tr>
@@ -267,14 +357,13 @@ export default function AdminPartnersPage() {
                         <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-12" /></td>
                         <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-24" /></td>
                         <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-16" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-32" /></td>
                         <td className="px-6 py-5"><div className="h-6 bg-neutral-200 rounded w-20" /></td>
                         <td className="px-6 py-5"><div className="h-6 bg-neutral-200 rounded w-8 mx-auto" /></td>
                       </tr>
                     ))
                   ) : filteredPartners.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-neutral-400">
+                      <td colSpan={6} className="px-6 py-12 text-center text-neutral-400">
                         <p className="text-sm font-semibold">No partners found.</p>
                       </td>
                     </tr>
@@ -297,12 +386,6 @@ export default function AdminPartnersPage() {
                         </td>
                         <td className="px-6 py-5 text-xs text-neutral-600 font-semibold">
                           {partner.expiryDays} days
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-1 text-xs text-neutral-600 font-semibold">
-                            <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
-                            <span>1 {partner.code} pt = {partner.exchangeRate} {partner.code === "KFC" ? "MCD" : "KFC"} pts</span>
-                          </div>
                         </td>
                         <td className="px-6 py-5">{getStatusBadge(partner.status)}</td>
                         <td className="px-6 py-5">
@@ -430,27 +513,6 @@ export default function AdminPartnersPage() {
                   />
                 </div>
 
-                {/* 4. Exchange Rate */}
-                <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold flex items-center gap-1">
-                    <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
-                    Outbound Exchange Rate (to {editingPartner.targetPartnerName})
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-neutral-400 text-xs">1 pt =</span>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.1"
-                      max="5.0"
-                      value={formExchangeRate}
-                      onChange={(e) => setFormExchangeRate(Number(e.target.value))}
-                      className="flex-1 bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
-                    />
-                    <span className="text-neutral-400 text-xs">{editingPartner.code === "KFC" ? "MCD" : "KFC"} pts</span>
-                  </div>
-                </div>
-
                 {/* Submit buttons */}
                 <div className="flex gap-3 pt-3">
                   <button
@@ -467,6 +529,149 @@ export default function AdminPartnersPage() {
                   <button
                     type="button"
                     onClick={closeEditModal}
+                    className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================
+          CREATE PARTNER MODAL
+          ======================================================== */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div onClick={() => setIsCreateModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
+          
+          {/* Modal Card */}
+          <form
+            onSubmit={handleCreatePartner}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col gap-4 animate-in zoom-in-95 duration-200 select-none"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3.5">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#8B3D06]" />
+                <h2 className="text-base font-extrabold text-neutral-900 font-sans">
+                  Create New Partner
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {createSuccess ? (
+              // Success Screen inside Modal
+              <div className="text-center py-8 space-y-4 animate-in zoom-in-95 duration-200 font-sans">
+                <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900">Partner Created!</h3>
+                  <p className="text-[11px] text-neutral-500 mt-1">
+                    The new loyalty partner program has been added and configured successfully.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              // Configuration Inputs
+              <div className="space-y-4 text-xs font-semibold text-neutral-700 font-sans">
+                {createApiError && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium">
+                    <AlertCircle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-red-600" />
+                    <span>{createApiError}</span>
+                  </div>
+                )}
+
+                {/* Name */}
+                <div className="flex flex-col">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Partner Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Starbucks Indonesia"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
+                  />
+                </div>
+
+                {/* Code */}
+                <div className="flex flex-col">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Partner Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={10}
+                    placeholder="e.g. SBUX"
+                    value={createCode}
+                    onChange={(e) => setCreateCode(e.target.value.toUpperCase())}
+                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
+                  />
+                </div>
+
+                {/* Points accumulation Rate */}
+                <div className="flex flex-col">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-neutral-400" />
+                    Points Rate (per Rp 1.000 spent)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={createPointsRate}
+                    onChange={(e) => setCreatePointsRate(Number(e.target.value))}
+                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
+                  />
+                </div>
+
+                {/* Point Expiry Days */}
+                <div className="flex flex-col">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                    Point Expiry Days
+                  </label>
+                  <input
+                    type="number"
+                    min="30"
+                    max="730"
+                    value={createExpiryDays}
+                    onChange={(e) => setCreateExpiryDays(Number(e.target.value))}
+                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
+                  />
+                </div>
+
+                {/* Submit buttons */}
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white font-bold rounded-xl py-3 text-xs cursor-pointer shadow-md active:translate-y-px transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {isCreating ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      "Create Partner"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
                     className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors"
                   >
                     Cancel
