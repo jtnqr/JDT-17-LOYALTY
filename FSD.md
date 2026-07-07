@@ -470,6 +470,9 @@ The system automatically logs all critical business actions. Each row contains: 
 
 | Action | When | Payload Example |
 |--------|------|----------------|
+| MEMBER_REGISTERED | Member self-registers | `{"name":"Budi Santoso","email":"budi.santoso@example.com"}` |
+| MEMBER_UPDATED | Admin edits member | `{"changes":{"name":{"before":"Budi","after":"Budi S."}}}` |
+| MEMBER_STATUS_CHANGED | Admin toggles member status | `{"previousStatus":"ACTIVE","newStatus":"INACTIVE"}` |
 | PARTNER_CREATED | Admin creates partner | `{"partnerCode":"KFC","partnerName":"KFC Indonesia","conversionRate":1.00}` |
 | PARTNER_UPDATED | Admin edits partner | `{"changes":{"pointConversionRate":{"before":1.00,"after":1.50}}}` |
 | PARTNER_STATUS_CHANGED | Admin toggles partner status | `{"previousStatus":"ACTIVE","newStatus":"INACTIVE"}` |
