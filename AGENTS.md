@@ -264,7 +264,13 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 | `feat/frontend-rewards` | Member rewards catalog + modal, admin rewards view |
 | `feat/frontend-history` | Transaction history with filters |
 
-**Frontend still needed:** redeem page, member points balance detail, member profile page.
+**Frontend still needed:**
+
+| Branch | Coverage |
+|--------|----------|
+| `feat/frontend-redeem` | Redeem rewards page (connects to POST /redeem + GET /rewards) |
+| `feat/frontend-points` | Member points balance detail page (connects to GET /members/{id}/points) |
+| `feat/frontend-profile` | Member profile page (connects to GET /members/{id}) |
 
 ### Backend branches (not started)
 
