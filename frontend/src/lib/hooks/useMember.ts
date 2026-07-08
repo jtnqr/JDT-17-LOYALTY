@@ -2,14 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MemberUser } from "@/types";
 
-export interface MemberUser {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
-}
 
 export function useMember() {
   const router = useRouter();

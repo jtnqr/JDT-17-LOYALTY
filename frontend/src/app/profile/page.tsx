@@ -11,16 +11,7 @@ import { LogOut, ChevronRight, User, Building2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-interface PointBalance {
-  partnerId: string;
-  partnerName: string;
-  balance: number;
-}
-
-const MOCK_BALANCES: PointBalance[] = [
-  { partnerId: "kfc-uuid", partnerName: "KFC Colonel's Club", balance: 12450 },
-  { partnerId: "mcd-uuid", partnerName: "McDonald's MyRewards", balance: 4850 },
-];
+import { PointBalance, PROFILE_MOCK_BALANCES } from "@/lib/mocks";
 
 export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -48,7 +39,7 @@ export default function ProfilePage() {
     );
   }
 
-  const balances = balanceData || MOCK_BALANCES;
+  const balances = balanceData || PROFILE_MOCK_BALANCES;
 
   // Available Points = sum of all balances or fallback mockup value
   const totalPoints = balanceData

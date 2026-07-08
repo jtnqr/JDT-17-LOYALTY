@@ -7,37 +7,7 @@ import axios from "axios";
 import { ChevronRight, ShieldAlert, Search, Clock, Bell } from "lucide-react";
 import Link from "next/link";
 
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  createdAt: string;
-}
-
-const MOCK_MEMBERS: Member[] = [
-  {
-    id: "550e8400-e29b-41d4-a716-446655440001",
-    name: "Budi Santoso",
-    email: "budi.santoso@example.com",
-    phone: "081234567890",
-    createdAt: "2026-07-02T10:00:00Z",
-  },
-  {
-    id: "550e8400-e29b-41d4-a716-446655440002",
-    name: "Jane Doe",
-    email: "jane.doe@example.com",
-    phone: "081298765432",
-    createdAt: "2026-07-03T11:15:00Z",
-  },
-  {
-    id: "550e8400-e29b-41d4-a716-446655440003",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    phone: "085612345678",
-    createdAt: "2026-07-04T09:30:00Z",
-  },
-];
+import { Member, MOCK_MEMBERS } from "@/lib/mocks";
 
 export default function AdminTransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
