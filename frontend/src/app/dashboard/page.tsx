@@ -441,62 +441,6 @@ export default function DashboardPage() {
 
               {/* Bottom split: Recent Activity & Exclusive Offers */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Recent Activity Card */}
-                <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-[360px]">
-                  <div>
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
-                      <h3 className="text-sm font-bold text-neutral-900">
-                        Recent Activity
-                      </h3>
-                      <Link
-                        href="/history"
-                        className="text-xs font-bold text-brand-primary hover:underline"
-                      >
-                        See all
-                      </Link>
-                    </div>
-
-                    <div className="space-y-4">
-                      {transactions.map((tx) => {
-                        const isEarn = tx.type === "EARN";
-                        return (
-                          <div
-                            key={tx.id}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center">
-                                {isEarn ? (
-                                  <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-                                ) : (
-                                  <ArrowUpRight className="w-4 h-4 text-red-500" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-[13px] font-bold text-neutral-800 leading-tight">
-                                  {tx.partnerName}
-                                </p>
-                                <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 block">
-                                  {tx.timeText || "Transaction"}
-                                </span>
-                              </div>
-                            </div>
-                            <span
-                              className={cn(
-                                "text-xs font-extrabold",
-                                isEarn ? "text-emerald-600" : "text-red-500"
-                              )}
-                            >
-                              {isEarn ? "+" : ""}
-                              {tx.points.toLocaleString()} pts
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </section>
-
                 {/* Exclusive Offers Card */}
                 <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-[360px]">
                   <div>
@@ -555,11 +499,7 @@ export default function DashboardPage() {
             {/* Right Sidebar Area */}
             <div className="space-y-6">
               {/* Gold Tier Status Card */}
-              <section className="bg-[#8B3D06] rounded-2xl p-5 text-white shadow-sm relative overflow-hidden h-44 flex flex-col justify-between">
-                {/* <div className="absolute right-[-15px] top-[-15px] w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center pointer-events-none">
-                  <Award className="w-12 h-12 text-white/10" />
-                </div> */}
-
+              {/* <section className="bg-[#8B3D06] rounded-2xl p-5 text-white shadow-sm relative overflow-hidden h-44 flex flex-col justify-between">
                 <div className="flex justify-between items-start relative z-10">
                   <div className="space-y-1">
                     <h3 className="text-base font-black tracking-tight">
@@ -586,10 +526,10 @@ export default function DashboardPage() {
                     Only 1,200 pts to Platinum Status
                   </p>
                 </div>
-              </section>
+              </section> */}
 
               {/* Points Value Calculator */}
-              <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm space-y-4">
+              {/* <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm space-y-4">
                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
                   Points Value
                 </h3>
@@ -620,7 +560,7 @@ export default function DashboardPage() {
                   <Wallet className="w-4 h-4" />
                   Cash Out to Wallet
                 </button>
-              </section>
+              </section> */}
 
               {/* Sponsored Card */}
               <section className="bg-white rounded-2xl border border-neutral-200/50 shadow-sm overflow-hidden flex flex-col justify-between group cursor-pointer">
@@ -650,6 +590,62 @@ export default function DashboardPage() {
                     Link Account
                     <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
+                </div>
+              </section>
+
+              {/* Recent Activity Card */}
+              <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-[360px]">
+                <div>
+                  <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
+                    <h3 className="text-sm font-bold text-neutral-900">
+                      Recent Activity
+                    </h3>
+                    <Link
+                      href="/history"
+                      className="text-xs font-bold text-brand-primary hover:underline"
+                    >
+                      See all
+                    </Link>
+                  </div>
+
+                  <div className="space-y-4">
+                    {transactions.map((tx) => {
+                      const isEarn = tx.type === "EARN";
+                      return (
+                        <div
+                          key={tx.id}
+                          className="flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center">
+                              {isEarn ? (
+                                <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+                              ) : (
+                                <ArrowUpRight className="w-4 h-4 text-red-500" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-bold text-neutral-800 leading-tight">
+                                {tx.partnerName}
+                              </p>
+                              <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 block">
+                                {tx.timeText || "Transaction"}
+                              </span>
+                            </div>
+                          </div>
+                          <span
+                            className={cn(
+                              "text-xs font-extrabold",
+                              isEarn ? "text-emerald-600" : "text-red-500"
+                            )}
+                          >
+                            {isEarn ? "+" : ""}
+                            {tx.points.toLocaleString()} pts
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </section>
             </div>
