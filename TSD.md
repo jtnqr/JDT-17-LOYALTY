@@ -2,8 +2,8 @@
 # PISTOS – Loyalty App
 
 **Author:** Julius (JDT-17 Apprentice)
-**Version:** 1.1
-**Last Update:** 07/Jul/2026
+**Version:** 1.2
+**Last Update:** 08/Jul/2026
 **Project:** PISTOS (Points Integration System for Transaction-Originated Services)
 
 ---
@@ -14,6 +14,7 @@
 |---------|------|----|----------------|
 | 1.0 | 03/Jul/2026 | Julius | Initial document |
 | 1.1 | 07/Jul/2026 | Julius | Corrected login request schema; fixed McD→KFC rate to 0.9; moved Point Exchange to member-scoped POST /api/v1/exchange; corrected metadata |
+| 1.2 | 08/Jul/2026 | Julius | memberId resolved from JWT in /redeem; phone UNIQUE + V6 migration; register response aligned to login shape; audit trail documented as DB-only; exchange-rate REST endpoints; reward catalog scope note; CORS config; PUT /partners/{id} explicit fields; Actuator note |
 
 ---
 
@@ -135,7 +136,7 @@ com.jdt17.loyalty/
 | id | UUID | N | PK | 990e8400-e29b-41d4-a716-446655440001 |
 | name | VARCHAR(255) | N | | Budi Santoso |
 | email | VARCHAR(255) | N | UNIQUE | budi.santoso@example.com |
-| phone | VARCHAR(20) | Y | | 081234567890 |
+| phone | VARCHAR(20) | Y | UNIQUE | 081234567890 |
 | password_hash | VARCHAR(255) | N | | $2a$10$... (bcrypt) |
 | status | VARCHAR(20) | N | CHECK (ACTIVE, INACTIVE) | ACTIVE |
 | created_by | UUID | Y | FK → MST_ADMIN.id | NULL |
@@ -322,6 +323,7 @@ CREATE INDEX idx_audit_created ON trx_audit_trail(created_at DESC);
 | V3__seed_exchange_rates.sql | Insert KFC→McD (0.8) and McD→KFC (0.9) |
 | V4__seed_rewards.sql | Insert 11 rewards (5 KFC + 6 McDonald's) |
 | V5__seed_demo_members.sql | Insert 1 admin + 3 demo members + initial balances |
+| V6__add_phone_unique_constraint.sql | Add UNIQUE constraint to mst_member.phone |
 
 ---
 
@@ -346,7 +348,8 @@ Access: Public
 ```json
 {
   "token": "eyJhbG...",
-  "member": {
+  "role": "MEMBER",
+  "user": {
     "id": "990e8400-e29b-41d4-a716-446655440001",
     "name": "Budi Santoso",
     "email": "budi.santoso@example.com",
@@ -361,15 +364,18 @@ Access: Public
 ```json
 { "status": 400, "error": "BAD_REQUEST", "message": "Email already registered", "code": "DUPLICATE_EMAIL" }
 ```
+```json
+{ "status": 400, "error": "BAD_REQUEST", "message": "Phone number already registered", "code": "DUPLICATE_PHONE" }
+```
 
 **Backend Logic:**
-1. Validate payload; verify email uniqueness
+1. Validate payload; verify email uniqueness (DUPLICATE_EMAIL 400) and phone uniqueness (DUPLICATE_PHONE 400)
 2. BCrypt hash password (cost factor 10)
 3. Insert into MST_MEMBER (status = ACTIVE)
 4. Bulk-seed TRX_POINT_BALANCE for all active partners (balance = 0)
 5. Write MEMBER_REGISTERED to TRX_AUDIT_TRAIL (actorType = SYSTEM)
 6. Issue JWT: `{ sub: memberId, role: MEMBER, exp: now+24h }`
-7. Return 201 with token + member
+7. Return 201 with token + role + user
 
 ---
 
@@ -609,7 +615,33 @@ Access: ADMIN only
 #### PUT /api/v1/partners/{id}
 Access: ADMIN only
 
-Updates partner name, conversion rate, status. Partner code immutable after creation.
+Note: Partner code immutable after creation.
+
+**Request:**
+```json
+{ "name": "KFC Indonesia Updated", "pointsPerThousandIDR": 2, "expiryDays": 180, "status": "ACTIVE" }
+```
+
+Updatable fields: `name`, `pointsPerThousandIDR`, `expiryDays`, `status`. All fields optional; omitted fields unchanged.
+
+**Success (200):**
+```json
+{
+  "id": "660e8400-...001",
+  "name": "KFC Indonesia Updated",
+  "code": "KFC",
+  "pointsPerThousandIDR": 2,
+  "expiryDays": 180,
+  "status": "ACTIVE"
+}
+```
+
+**Backend Logic:**
+1. Verify ADMIN JWT
+2. Query partner by id (404 PARTNER_NOT_FOUND if missing)
+3. Apply provided field updates; skip code field (immutable)
+4. Write PARTNER_UPDATED to audit trail
+5. Return updated partner object
 
 ---
 
@@ -692,6 +724,76 @@ Example: 100 KFC pts × 0.8 = 80 McD pts
 
 ---
 
+### Exchange Rate Management
+
+#### GET /api/v1/exchange-rates
+Access: ADMIN or MEMBER
+
+Returns the currently active rate for every from/to partner pair. Active rate selection: `WHERE effective_from <= now() ORDER BY effective_from DESC LIMIT 1`, per pair.
+
+**Success (200):**
+```json
+{
+  "data": [
+    {
+      "fromPartnerId": "660e8400-...001",
+      "fromPartner": "KFC Indonesia",
+      "toPartnerId": "660e8400-...002",
+      "toPartner": "McDonald's Indonesia",
+      "rate": 0.8,
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /api/v1/exchange-rates
+Access: ADMIN only
+
+**Request:**
+```json
+{
+  "fromPartnerId": "660e8400-...001",
+  "toPartnerId": "660e8400-...002",
+  "rate": 0.85,
+  "effectiveFrom": "2026-08-01T00:00:00Z"
+}
+```
+
+`effectiveFrom` is optional; defaults to `now()`.
+
+**Success (201):**
+```json
+{
+  "id": "uuid",
+  "fromPartnerId": "660e8400-...001",
+  "fromPartner": "KFC Indonesia",
+  "toPartnerId": "660e8400-...002",
+  "toPartner": "McDonald's Indonesia",
+  "rate": 0.85,
+  "effectiveFrom": "2026-08-01T00:00:00Z",
+  "createdAt": "2026-07-08T10:00:00Z"
+}
+```
+
+**Backend Logic:**
+1. Verify ADMIN JWT
+2. Validate `fromPartnerId != toPartnerId` (400 INVALID_EXCHANGE_RATE_PAIR)
+3. Validate both partners exist (404 PARTNER_NOT_FOUND) and `rate > 0`
+4. Insert a new row — existing rows are never updated in place; follows the versioning pattern implied by `effective_from` and the `UNIQUE(from_partner_id, to_partner_id, effective_from)` constraint
+5. Set `created_by` from the ADMIN JWT `sub`
+6. Write EXCHANGE_RATE_CREATED to audit trail (payload: fromPartnerId, toPartnerId, rate, previousRate, effectiveFrom)
+7. Return 201 with created rate object
+
+**Errors:**
+- 404 PARTNER_NOT_FOUND
+- 400 INVALID_EXCHANGE_RATE_PAIR
+- 409 DUPLICATE_EXCHANGE_RATE (same pair + same effectiveFrom already exists)
+
+---
+
 ### Redemption
 
 #### GET /api/v1/rewards
@@ -716,11 +818,11 @@ Access: Any authenticated user (MEMBER or ADMIN)
 ---
 
 #### POST /api/v1/redeem
-Access: **MEMBER only**
+Access: MEMBER only (memberId resolved from JWT sub)
 
 **Request:**
 ```json
-{ "memberId": "990e8400-...", "rewardId": "880e8400-...001" }
+{ "rewardId": "880e8400-...001" }
 ```
 
 **Success (200):**
@@ -746,6 +848,13 @@ Access: **MEMBER only**
 - 404 REWARD_INACTIVE
 - 422 INSUFFICIENT_BALANCE
 
+**Backend Logic:**
+1. Verify MEMBER JWT; resolve memberId from JWT `sub` claim
+2. Load reward by rewardId (404 REWARD_NOT_FOUND, 404 REWARD_INACTIVE)
+3. Load member's TRX_POINT_BALANCE for reward's partner (422 INSUFFICIENT_BALANCE if balance < pointCost)
+4. Deduct points; insert TRX_TRANSACTION (type=REDEEM); write POINTS_REDEEMED to audit trail
+5. Return 200 with redeem summary
+
 ---
 
 ## Authorization Matrix
@@ -767,6 +876,8 @@ Access: **MEMBER only**
 | GET /partners | — | ✓ | ✓ | — |
 | POST /partners | — | — | ✓ | — |
 | PUT /partners/{id} | — | — | ✓ | — |
+| GET /exchange-rates | — | ✓ | ✓ | — |
+| POST /exchange-rates | — | — | ✓ | — |
 
 Legend: ✓ = allowed, — = forbidden (403 if JWT valid, 401 if no JWT)
 
@@ -815,6 +926,18 @@ Partner expiry: 1 hour
 | 9 | Audit | Tamper-evident | TRX_AUDIT_TRAIL append-only; no UPDATE/DELETE |
 | 10 | API keys | Hashed | Partner API keys stored as SHA-256 hash |
 
+### CORS Configuration
+
+Spring Security must allow the Next.js frontend origin for all API routes:
+
+- Allowed origins: `http://localhost:3000`
+- Allowed paths: `/api/v1/**`
+- Allowed methods: `GET`, `POST`, `PUT`, `DELETE`
+- Allowed headers: `Authorization`, `Content-Type`
+- Allow credentials: `true`
+
+Configure via `CorsConfigurationSource` bean in `SecurityConfig`. Do not rely on `@CrossOrigin` annotations on controllers.
+
 ---
 
 ## Audit Trail
@@ -831,6 +954,7 @@ Partner expiry: 1 hour
 | POINT_EXPIRED | Expiry Cron Job | SYSTEM |
 | POINTS_EXCHANGED | POST /exchange | MEMBER |
 | POINTS_REDEEMED | POST /redeem | MEMBER |
+| EXCHANGE_RATE_CREATED | POST /exchange-rates | ADMIN |
 
 ### Payload Examples
 
@@ -886,10 +1010,22 @@ Partner expiry: 1 hour
 }
 ```
 
+**EXCHANGE_RATE_CREATED:**
+```json
+{
+  "fromPartnerId": "660e8400-...-001",
+  "toPartnerId": "660e8400-...-002",
+  "rate": 0.85,
+  "previousRate": 0.8,
+  "effectiveFrom": "2026-08-01T00:00:00Z"
+}
+```
+
 ### Implementation Notes
 
 - Audit writes are **within the same `@Transactional`** — if business op rolls back, audit entry also rolls back (consistent state)
 - No DB triggers — all in service layer for testability
+- TRX_AUDIT_TRAIL is a write-only compliance log with no REST read API in this MVP; access is via direct DB query. This is a deliberate scope decision, not a gap.
 
 ---
 
@@ -925,6 +1061,7 @@ public class PointExpiryScheduler {
 | spring.jpa.hibernate.ddl-auto | validate | Flyway manages schema |
 | spring.threads.virtual.enabled | true | Java 21 virtual threads (Loom) |
 | jwt.secret | (env var) | HS512 signing key |
+| cors.allowed-origins | http://localhost:3000 | Allowed frontend origin(s) |
 
 ---
 
@@ -988,6 +1125,8 @@ public class PointExpiryScheduler {
 | DUPLICATE_EMAIL | 400 | Email address already registered |
 | DUPLICATE_PHONE | 400 | Phone number already registered |
 | DUPLICATE_PARTNER_CODE | 400 | Partner code already exists |
+| INVALID_EXCHANGE_RATE_PAIR | 400 | fromPartnerId equals toPartnerId |
+| DUPLICATE_EXCHANGE_RATE | 409 | Exchange rate for same pair + effectiveFrom already exists |
 
 ---
 
@@ -1004,6 +1143,8 @@ public class PointExpiryScheduler {
 | L-7 | DUPLICATE_EMAIL error enables account enumeration | Attacker confirms registered emails | Generic error messaging |
 | L-8 | No reward stock limits (MVP by design) | Unlimited redemptions | Add stock tracking in future release |
 | L-9 | Partner api_key stored as SHA-256 hash | Plaintext DB exposure enables impersonation | Already hashed; add rotation endpoint post-MVP |
+| L-10 | No REST endpoints to manage MST_REWARD | Reward catalog (add/edit/deactivate) is migration-only in this MVP | Add admin CRUD endpoints post-MVP if catalog needs to change without a deploy |
+| L-11 | Spring Boot Actuator health endpoint not yet exposed | No /actuator/health for liveness/readiness probes | Optional, low priority; enable Actuator and expose only health endpoint when needed |
 
 ---
 

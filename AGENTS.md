@@ -39,6 +39,10 @@
 10. **Error codes** — All error responses include `code` field (see TSD)
 11. **Virtual threads** — `spring.threads.virtual.enabled=true` required in application.yml
 12. **MST_ADMIN separate** — Admin credentials live in MST_ADMIN table, not MST_MEMBER; login checks both tables
+13. **memberId from JWT** — POST /redeem and POST /exchange resolve memberId from JWT `sub`; never accept memberId in request body from MEMBER role
+14. **phone uniqueness** — MST_MEMBER.phone has UNIQUE constraint (V6 migration); check at register → DUPLICATE_PHONE (400)
+15. **CORS** — `CorsConfigurationSource` bean in `SecurityConfig`; allow `http://localhost:3000` for `/api/v1/**`; do not use `@CrossOrigin` on controllers
+16. **Exchange rates append-only** — POST /exchange-rates inserts new rows only; never UPDATE existing rows (versioning via effective_from + UNIQUE constraint)
 
 ---
 
@@ -58,7 +62,7 @@
 ```
 
 **Sources of truth (in priority order):**
-1. `TSD final.docx` / TSD.md (v1.1, 07-Jul-2026)
+1. `TSD final.docx` / TSD.md (v1.2, 08-Jul-2026)
 2. `FSD PISTOS LOYALTY APP_backup.docx` / FSD.md
 3. Implementation plan (`.hermes/plans/`)
 4. Diagram files (visual reference only)
@@ -166,7 +170,7 @@ com.jdt17.loyalty/
 
 | Endpoint | Public | MEMBER | ADMIN | PARTNER | Notes |
 |----------|--------|--------|-------|---------|-------|
-| `POST /auth/register` | ✓ | — | — | — | Returns JWT + member |
+| `POST /auth/register` | ✓ | — | — | — | Returns JWT + role + user |
 | `POST /auth/login` | ✓ | — | — | — | Checks MST_MEMBER + MST_ADMIN |
 | `POST /auth/partner/token` | ✓ | — | — | — | Validates apiKey → PARTNER JWT (1h) |
 | `POST /transactions` | — | — | — | ✓ | PARTNER JWT required |
@@ -176,11 +180,13 @@ com.jdt17.loyalty/
 | `GET /members/{id}/points` | — | ✓ (own) | — | — | Admin explicitly forbidden |
 | `GET /members/{id}/transactions` | — | ✓ (own) | — | — | Admin explicitly forbidden |
 | `POST /exchange` | — | ✓ | — | — | memberId from JWT sub |
-| `POST /redeem` | — | ✓ | — | — | MEMBER only |
+| `POST /redeem` | — | ✓ | — | — | memberId from JWT sub |
 | `GET /rewards` | — | ✓ | ✓ | — | `?partnerId={uuid}` |
 | `GET /partners` | — | ✓ | ✓ | — | — |
 | `POST /partners` | — | — | ✓ | — | Bulk-inits balances via native SQL |
-| `PUT /partners/{id}` | — | — | ✓ | — | Update config |
+| `PUT /partners/{id}` | — | — | ✓ | — | name/pointsPerThousandIDR/expiryDays/status; code immutable |
+| `GET /exchange-rates` | — | ✓ | ✓ | — | Active rate per pair |
+| `POST /exchange-rates` | — | — | ✓ | — | Inserts new row; append-only |
 
 **Privacy:** Admin cannot view member point balances or transaction history (403).
 
@@ -204,6 +210,8 @@ com.jdt17.loyalty/
 | DUPLICATE_EMAIL | 400 | Email already registered |
 | DUPLICATE_PHONE | 400 | Phone already registered |
 | DUPLICATE_PARTNER_CODE | 400 | Partner code already exists |
+| INVALID_EXCHANGE_RATE_PAIR | 400 | fromPartnerId equals toPartnerId |
+| DUPLICATE_EXCHANGE_RATE | 409 | Same pair + effectiveFrom already exists |
 
 ---
 
@@ -219,6 +227,7 @@ com.jdt17.loyalty/
 | POINT_EXPIRED | Daily cron | SYSTEM |
 | POINTS_EXCHANGED | POST /exchange | MEMBER |
 | POINTS_REDEEMED | POST /redeem | MEMBER |
+| EXCHANGE_RATE_CREATED | POST /exchange-rates | ADMIN |
 
 Audit writes are **within the same `@Transactional`** as the business op — rollback = no orphan audit entry. No DB triggers.
 
@@ -255,13 +264,7 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 | `feat/frontend-rewards` | Member rewards catalog + modal, admin rewards view |
 | `feat/frontend-history` | Transaction history with filters |
 
-**Frontend still needed:**
-
-| Branch | Coverage |
-|--------|----------|
-| `feat/frontend-redeem` | Redeem rewards page (connects to POST /redeem + GET /rewards) |
-| `feat/frontend-points` | Member points balance detail page (connects to GET /members/{id}/points) |
-| `feat/frontend-profile` | Member profile page (connects to GET /members/{id}) |
+**Frontend still needed:** redeem page, member points balance detail, member profile page.
 
 ### Backend branches (not started)
 
@@ -269,6 +272,7 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 |--------|--------------------|
 | `feat/flyway-schema` | V1 migration: all 8 tables |
 | `feat/flyway-seed` | V2–V5: partners, rates, rewards, admin + demo members |
+| `feat/flyway-phone-unique` | V6: UNIQUE constraint on mst_member.phone |
 | `feat/entities` | All JPA entities (MST_* + TRX_*) |
 | `feat/auth-register` | POST /auth/register |
 | `feat/auth-login` | POST /auth/login (checks MST_MEMBER + MST_ADMIN) |
@@ -280,6 +284,7 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 | `feat/partner-crud` | GET /partners, POST /partners, PUT /partners/{id} |
 | `feat/earn-points` | POST /transactions (PARTNER JWT) |
 | `feat/exchange-points` | POST /exchange |
+| `feat/exchange-rates` | GET /exchange-rates, POST /exchange-rates |
 | `feat/redeem-points` | POST /redeem + GET /rewards |
 | `feat/expiry-scheduler` | @Scheduled cron 0 0 17 * * * |
 | `feat/audit-trail` | AuditTrailService wired to all endpoints |
@@ -305,9 +310,11 @@ Per-feature branches off `main`. One branch = one endpoint or feature. Max lifes
 - **Single backend instance** — expiry scheduler not distributed-lock protected; scale carefully
 - **No rate limiting in MVP** — add Bucket4j before public deployment
 - **No reward stock management** — MVP, by design
+- **No audit REST API** — TRX_AUDIT_TRAIL is DB-query only; deliberate scope decision
+- **No Actuator health endpoint** — optional; low priority for MVP
 
 ---
 
-**Last updated:** 2026-07-07
-**TSD version:** 1.1 (final.docx, 07-Jul-2026)
+**Last updated:** 2026-07-08
+**TSD version:** 1.2 (08-Jul-2026)
 **FSD version:** 1.0.0 (backup.docx, 03-Jul-2026)
