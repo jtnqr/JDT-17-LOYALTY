@@ -110,18 +110,19 @@ export default function ExchangePointsPage() {
       if (saved) {
         try {
           const parsedRates = JSON.parse(saved);
-          
+
           const codeToId: Record<string, string> = {
             KFC: "660e8400-e29b-41d4-a716-446655440001",
             MCD: "660e8400-e29b-41d4-a716-446655440002",
             BK: "660e8400-e29b-41d4-a716-446655440003",
           };
-          
+
           const fromAdminId = codeToId[fromPartner.code] || fromPartner.id;
           const toAdminId = codeToId[toPartner.code] || toPartner.id;
-          
+
           const found = parsedRates.find(
-            (r: any) => r.fromPartnerId === fromAdminId && r.toPartnerId === toAdminId
+            (r: any) =>
+              r.fromPartnerId === fromAdminId && r.toPartnerId === toAdminId
           );
           if (found) return found.rate;
         } catch (e) {
@@ -129,7 +130,7 @@ export default function ExchangePointsPage() {
         }
       }
     }
-    
+
     // Default fallback rates
     if (fromPartner.code === "KFC" && toPartner.code === "MCD") return 0.8;
     if (fromPartner.code === "MCD" && toPartner.code === "KFC") return 0.9;
@@ -418,9 +419,6 @@ export default function ExchangePointsPage() {
                   <h2 className="text-sm font-bold text-neutral-900">
                     Transfer Details
                   </h2>
-                  <span className="text-[10px] font-black uppercase text-[#8B3D06] bg-[#FCF5F1] px-2 py-0.5 rounded">
-                    No Fee
-                  </span>
                 </div>
 
                 <div className="space-y-5 relative">

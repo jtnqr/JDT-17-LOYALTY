@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Save,
   RotateCcw,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -75,9 +76,11 @@ const DEFAULT_RATES: ExchangeRate[] = [
 
 export default function AdminExchangePage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
+    null
+  );
   const [rates, setRates] = useState<ExchangeRate[]>([]);
-  
+
   // Local input states for rates [fromId_toId]: string
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
   // Save notification states [targetPartnerId]: boolean
@@ -105,8 +108,12 @@ export default function AdminExchangePage() {
 
     const mapped = apiPartners.map((p) => {
       let logoBg = "bg-neutral-50 text-neutral-800 border-neutral-100";
-      let logoChar = p.name ? p.name.charAt(0) : p.code ? p.code.charAt(0) : "P";
-      
+      let logoChar = p.name
+        ? p.name.charAt(0)
+        : p.code
+        ? p.code.charAt(0)
+        : "P";
+
       if (p.code === "KFC") {
         logoBg = "bg-red-50 text-[#C8102E] border-red-100";
         logoChar = "K";
@@ -114,7 +121,7 @@ export default function AdminExchangePage() {
         logoBg = "bg-yellow-50 text-[#D89F0E] border-yellow-100";
         logoChar = "M";
       }
-      
+
       return {
         id: p.id,
         name: p.name,
@@ -157,14 +164,17 @@ export default function AdminExchangePage() {
       }
     } else {
       setRates(DEFAULT_RATES);
-      localStorage.setItem("pistos_exchange_rates", JSON.stringify(DEFAULT_RATES));
+      localStorage.setItem(
+        "pistos_exchange_rates",
+        JSON.stringify(DEFAULT_RATES)
+      );
     }
   }, []);
 
   // 3. Initialize rate input fields when selected partner or rates change
   useEffect(() => {
     if (!selectedPartnerId) return;
-    
+
     const inputs: Record<string, string> = {};
     const selected = partners.find((p) => p.id === selectedPartnerId);
     if (!selected) return;
@@ -173,12 +183,22 @@ export default function AdminExchangePage() {
       if (other.id === selectedPartnerId) return;
 
       // Rate: Selected -> Other
-      const outRate = rates.find((r) => r.fromPartnerId === selectedPartnerId && r.toPartnerId === other.id);
-      inputs[`${selectedPartnerId}_${other.id}`] = outRate ? outRate.rate.toString() : "1.0";
+      const outRate = rates.find(
+        (r) =>
+          r.fromPartnerId === selectedPartnerId && r.toPartnerId === other.id
+      );
+      inputs[`${selectedPartnerId}_${other.id}`] = outRate
+        ? outRate.rate.toString()
+        : "1.0";
 
       // Rate: Other -> Selected
-      const inRate = rates.find((r) => r.fromPartnerId === other.id && r.toPartnerId === selectedPartnerId);
-      inputs[`${other.id}_${selectedPartnerId}`] = inRate ? inRate.rate.toString() : "1.0";
+      const inRate = rates.find(
+        (r) =>
+          r.fromPartnerId === other.id && r.toPartnerId === selectedPartnerId
+      );
+      inputs[`${other.id}_${selectedPartnerId}`] = inRate
+        ? inRate.rate.toString()
+        : "1.0";
     });
 
     setRateInputs(inputs);
@@ -186,7 +206,9 @@ export default function AdminExchangePage() {
 
   // Get active rate helper
   const getRateValue = (fromId: string, toId: string): number => {
-    const found = rates.find((r) => r.fromPartnerId === fromId && r.toPartnerId === toId);
+    const found = rates.find(
+      (r) => r.fromPartnerId === fromId && r.toPartnerId === toId
+    );
     return found ? found.rate : 1.0;
   };
 
@@ -212,8 +234,10 @@ export default function AdminExchangePage() {
     const outKey = `${selectedPartnerId}_${otherPartnerId}`;
     const inKey = `${otherPartnerId}_${selectedPartnerId}`;
 
-    const rawOut = rateInputs[outKey] !== undefined ? parseFloat(rateInputs[outKey]) : 1.0;
-    const rawIn = rateInputs[inKey] !== undefined ? parseFloat(rateInputs[inKey]) : 1.0;
+    const rawOut =
+      rateInputs[outKey] !== undefined ? parseFloat(rateInputs[outKey]) : 1.0;
+    const rawIn =
+      rateInputs[inKey] !== undefined ? parseFloat(rateInputs[inKey]) : 1.0;
 
     const outRate = isNaN(rawOut) || rawOut <= 0 ? 1.0 : rawOut;
     const inRate = isNaN(rawIn) || rawIn <= 0 ? 1.0 : rawIn;
@@ -221,8 +245,14 @@ export default function AdminExchangePage() {
     // Filter out existing entries for these directions
     let updatedRates = rates.filter(
       (r) =>
-        !(r.fromPartnerId === selectedPartnerId && r.toPartnerId === otherPartnerId) &&
-        !(r.fromPartnerId === otherPartnerId && r.toPartnerId === selectedPartnerId)
+        !(
+          r.fromPartnerId === selectedPartnerId &&
+          r.toPartnerId === otherPartnerId
+        ) &&
+        !(
+          r.fromPartnerId === otherPartnerId &&
+          r.toPartnerId === selectedPartnerId
+        )
     );
 
     // Append updated ones
@@ -282,8 +312,14 @@ export default function AdminExchangePage() {
     // Filter and update
     let updatedRates = rates.filter(
       (r) =>
-        !(r.fromPartnerId === selectedPartnerId && r.toPartnerId === otherPartnerId) &&
-        !(r.fromPartnerId === otherPartnerId && r.toPartnerId === selectedPartnerId)
+        !(
+          r.fromPartnerId === selectedPartnerId &&
+          r.toPartnerId === otherPartnerId
+        ) &&
+        !(
+          r.fromPartnerId === otherPartnerId &&
+          r.toPartnerId === selectedPartnerId
+        )
     );
 
     updatedRates.push(
@@ -339,12 +375,16 @@ export default function AdminExchangePage() {
               {selectedPartner && (
                 <>
                   <ChevronRight className="w-3 h-3 text-neutral-300" />
-                  <span className="text-neutral-700 font-bold">{selectedPartner.name}</span>
+                  <span className="text-neutral-700 font-bold">
+                    {selectedPartner.name}
+                  </span>
                 </>
               )}
             </div>
             <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
-              {selectedPartner ? `${selectedPartner.name} Relations` : "Points Exchange Configuration"}
+              {selectedPartner
+                ? `${selectedPartner.name} Relations`
+                : "Points Exchange Configuration"}
             </h2>
           </div>
 
@@ -361,15 +401,15 @@ export default function AdminExchangePage() {
                 />
               </div>
             )}
-            <span className="text-xs font-bold bg-[#FCF5F1] text-[#8B3D06] px-3 py-1 rounded-full border border-[#8B3D06]/10">
-              CMS Portal
-            </span>
+            <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
+            </button>
           </div>
         </header>
 
         {/* Content Body */}
         <div className="p-8 flex-grow flex flex-col space-y-6">
-          
           {/* ========================================================
               VIEW 1: PARTNERS LIST TABLE
               ======================================================== */}
@@ -379,30 +419,59 @@ export default function AdminExchangePage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-16">#</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">Merchant Name</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24">Code</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">Status</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Outbound Rates Mappings</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36 text-center">Actions</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-16">
+                        #
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">
+                        Merchant Name
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24">
+                        Code
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                        Outbound Rates Mappings
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36 text-center">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
                     {filteredPartners.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-neutral-400">
-                          <p className="text-sm font-semibold">No partners found.</p>
+                        <td
+                          colSpan={6}
+                          className="px-6 py-12 text-center text-neutral-400"
+                        >
+                          <p className="text-sm font-semibold">
+                            No partners found.
+                          </p>
                         </td>
                       </tr>
                     ) : (
                       filteredPartners.map((partner, index) => {
-                        const relations = partners.filter((o) => o.id !== partner.id);
+                        const relations = partners.filter(
+                          (o) => o.id !== partner.id
+                        );
                         return (
-                          <tr key={partner.id} className="hover:bg-neutral-50/20 transition-colors">
-                            <td className="px-6 py-5 text-sm text-neutral-500 font-bold">{index + 1}</td>
+                          <tr
+                            key={partner.id}
+                            className="hover:bg-neutral-50/20 transition-colors"
+                          >
+                            <td className="px-6 py-5 text-sm text-neutral-500 font-bold">
+                              {index + 1}
+                            </td>
                             <td className="px-6 py-5">
                               <div className="flex items-center gap-3">
-                                <div className={cn("w-8 h-8 rounded-full font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0", partner.logoBg)}>
+                                <div
+                                  className={cn(
+                                    "w-8 h-8 rounded-full font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0",
+                                    partner.logoBg
+                                  )}
+                                >
                                   {partner.logoChar}
                                 </div>
                                 <span className="text-sm font-extrabold text-neutral-800">
@@ -410,18 +479,28 @@ export default function AdminExchangePage() {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-6 py-5 text-sm font-extrabold text-[#8B3D06]">{partner.code}</td>
-                            <td className="px-6 py-5">{getStatusBadge(partner.status)}</td>
+                            <td className="px-6 py-5 text-sm font-extrabold text-[#8B3D06]">
+                              {partner.code}
+                            </td>
+                            <td className="px-6 py-5">
+                              {getStatusBadge(partner.status)}
+                            </td>
                             <td className="px-6 py-5">
                               <div className="flex flex-wrap gap-2">
                                 {relations.map((other) => {
-                                  const rate = getRateValue(partner.id, other.id);
+                                  const rate = getRateValue(
+                                    partner.id,
+                                    other.id
+                                  );
                                   return (
                                     <span
                                       key={other.id}
                                       className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-50 border border-neutral-200/50 rounded-lg text-xs font-semibold text-neutral-600"
                                     >
-                                      {partner.code} &rarr; {other.code}: <span className="text-neutral-800 font-black">{rate.toFixed(2)}</span>
+                                      {partner.code} &rarr; {other.code}:{" "}
+                                      <span className="text-neutral-800 font-black">
+                                        {rate.toFixed(2)}
+                                      </span>
                                     </span>
                                   );
                                 })}
@@ -432,7 +511,7 @@ export default function AdminExchangePage() {
                                 onClick={() => setSelectedPartnerId(partner.id)}
                                 className="px-3.5 py-1.5 bg-[#FCF5F1] hover:bg-[#F3E5DC] text-[#8B3D06] font-bold rounded-xl text-xs transition-colors cursor-pointer border border-[#8B3D06]/10 animate-fade-in"
                               >
-                                Configure Mappings
+                                Configure
                               </button>
                             </td>
                           </tr>
@@ -443,7 +522,8 @@ export default function AdminExchangePage() {
                 </table>
               </div>
               <div className="border-t border-neutral-100 px-6 py-4 bg-neutral-50/20 text-xs font-bold text-neutral-400">
-                Total {filteredPartners.length} loyalty partner exchange configurations available.
+                Total {filteredPartners.length} loyalty partner exchange
+                configurations available.
               </div>
             </section>
           )}
@@ -463,8 +543,15 @@ export default function AdminExchangePage() {
                   Back to Directory
                 </button>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-neutral-400">Active merchant:</span>
-                  <span className={cn("px-3 py-1 rounded-lg border text-xs font-black flex items-center gap-1.5 shadow-sm", selectedPartner.logoBg)}>
+                  <span className="text-xs font-bold text-neutral-400">
+                    Active merchant:
+                  </span>
+                  <span
+                    className={cn(
+                      "px-3 py-1 rounded-lg border text-xs font-black flex items-center gap-1.5 shadow-sm",
+                      selectedPartner.logoBg
+                    )}
+                  >
                     <span>{selectedPartner.logoChar}</span>
                     <span>{selectedPartner.name}</span>
                   </span>
@@ -477,10 +564,20 @@ export default function AdminExchangePage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">Target Partner</th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Outbound Conversion Rate ({selectedPartner.code} &rarr; Target)</th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Inbound Conversion Rate (Target &rarr; {selectedPartner.code})</th>
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52 text-center">Actions</th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">
+                          Target Partner
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                          Outbound Conversion Rate ({selectedPartner.code}{" "}
+                          &rarr; Target)
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                          Inbound Conversion Rate (Target &rarr;{" "}
+                          {selectedPartner.code})
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52 text-center">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -492,16 +589,28 @@ export default function AdminExchangePage() {
                           const isSaved = saveStatus[other.id] || false;
 
                           return (
-                            <tr key={other.id} className="hover:bg-neutral-50/10 transition-colors">
+                            <tr
+                              key={other.id}
+                              className="hover:bg-neutral-50/10 transition-colors"
+                            >
                               {/* Target Partner Info */}
                               <td className="px-6 py-6 align-middle">
                                 <div className="flex items-center gap-3">
-                                  <div className={cn("w-8 h-8 rounded-full font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0", other.logoBg)}>
+                                  <div
+                                    className={cn(
+                                      "w-8 h-8 rounded-full font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0",
+                                      other.logoBg
+                                    )}
+                                  >
                                     {other.logoChar}
                                   </div>
                                   <div>
-                                    <p className="text-sm font-extrabold text-neutral-800">{other.name}</p>
-                                    <p className="text-[10px] font-bold text-neutral-400 tracking-wider uppercase mt-0.5">Code: {other.code}</p>
+                                    <p className="text-sm font-extrabold text-neutral-800">
+                                      {other.name}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-neutral-400 tracking-wider uppercase mt-0.5">
+                                      Code: {other.code}
+                                    </p>
                                   </div>
                                 </div>
                               </td>
@@ -509,34 +618,54 @@ export default function AdminExchangePage() {
                               {/* Outbound input */}
                               <td className="px-6 py-6 align-middle">
                                 <div className="flex items-center gap-2 max-w-[240px]">
-                                  <span className="text-neutral-400 text-xs font-bold shrink-0">1 {selectedPartner.code} =</span>
+                                  <span className="text-neutral-400 text-xs font-bold shrink-0">
+                                    1 {selectedPartner.code} =
+                                  </span>
                                   <input
                                     type="number"
                                     step="0.01"
                                     min="0.01"
                                     max="5.0"
                                     value={rateInputs[outKey] || "1.0"}
-                                    onChange={(e) => handleInputChange(selectedPartner.id, other.id, e.target.value)}
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        selectedPartner.id,
+                                        other.id,
+                                        e.target.value
+                                      )
+                                    }
                                     className="w-24 bg-[#F9F9F9] border border-neutral-200 rounded-xl px-3 py-2 text-sm font-black text-neutral-800 outline-none focus:border-[#8B3D06] focus:bg-white text-center"
                                   />
-                                  <span className="text-neutral-400 text-xs font-bold shrink-0">{other.code} pts</span>
+                                  <span className="text-neutral-400 text-xs font-bold shrink-0">
+                                    {other.code} pts
+                                  </span>
                                 </div>
                               </td>
 
                               {/* Inbound input */}
                               <td className="px-6 py-6 align-middle">
                                 <div className="flex items-center gap-2 max-w-[240px]">
-                                  <span className="text-neutral-400 text-xs font-bold shrink-0">1 {other.code} =</span>
+                                  <span className="text-neutral-400 text-xs font-bold shrink-0">
+                                    1 {other.code} =
+                                  </span>
                                   <input
                                     type="number"
                                     step="0.01"
                                     min="0.01"
                                     max="5.0"
                                     value={rateInputs[inKey] || "1.0"}
-                                    onChange={(e) => handleInputChange(other.id, selectedPartner.id, e.target.value)}
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        other.id,
+                                        selectedPartner.id,
+                                        e.target.value
+                                      )
+                                    }
                                     className="w-24 bg-[#F9F9F9] border border-neutral-200 rounded-xl px-3 py-2 text-sm font-black text-neutral-800 outline-none focus:border-[#8B3D06] focus:bg-white text-center"
                                   />
-                                  <span className="text-neutral-400 text-xs font-bold shrink-0">{selectedPartner.code} pts</span>
+                                  <span className="text-neutral-400 text-xs font-bold shrink-0">
+                                    {selectedPartner.code} pts
+                                  </span>
                                 </div>
                               </td>
 
@@ -544,7 +673,9 @@ export default function AdminExchangePage() {
                               <td className="px-6 py-6 align-middle text-center">
                                 <div className="flex items-center justify-center gap-2">
                                   <button
-                                    onClick={() => handleSavePairRates(other.id)}
+                                    onClick={() =>
+                                      handleSavePairRates(other.id)
+                                    }
                                     className={cn(
                                       "inline-flex items-center gap-1.5 px-3 py-1.5 font-bold rounded-xl text-xs cursor-pointer shadow-sm transition-all border",
                                       isSaved
@@ -556,7 +687,9 @@ export default function AdminExchangePage() {
                                     {isSaved ? "Saved!" : "Save"}
                                   </button>
                                   <button
-                                    onClick={() => handleResetPairRates(other.id)}
+                                    onClick={() =>
+                                      handleResetPairRates(other.id)
+                                    }
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold border border-neutral-200 rounded-xl text-xs cursor-pointer transition-colors"
                                     title="Reset connection to default values"
                                   >
@@ -574,7 +707,6 @@ export default function AdminExchangePage() {
               </section>
             </div>
           )}
-
         </div>
       </main>
     </div>

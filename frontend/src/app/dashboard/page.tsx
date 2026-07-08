@@ -370,9 +370,6 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
               Good afternoon, {member?.name?.split(" ")[0] || "Budi"}!
             </h1>
-            <p className="text-sm font-medium text-neutral-500">
-              You're 240 points away from your next reward at Starbucks.
-            </p>
           </section>
 
           {/* Main Layout Grid */}
