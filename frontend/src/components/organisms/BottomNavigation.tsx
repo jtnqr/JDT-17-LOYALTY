@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Gift, RefreshCw, Clock } from "lucide-react";
+import { Home, Gift, RefreshCw, Clock, CircleUser } from "lucide-react";
 
 interface NavItemProps {
   href: string;
@@ -24,7 +24,12 @@ function NavItem({ href, label, icon, active }: NavItemProps) {
           : "text-neutral-400 hover:text-neutral-500"
       )}
     >
-      <div className={cn("transition-transform duration-200", active && "scale-110")}>
+      <div
+        className={cn(
+          "transition-transform duration-200",
+          active && "scale-110"
+        )}
+      >
         {icon}
       </div>
       <span className="text-[11px] mt-1 tracking-tight">{label}</span>
@@ -55,6 +60,11 @@ export function BottomNavigation() {
       href: "/history",
       label: "History",
       icon: <Clock className="w-5.5 h-5.5" />,
+    },
+    {
+      href: "/profile",
+      label: "Profile",
+      icon: <CircleUser className="w-5.5 h-5.5" />,
     },
   ];
 

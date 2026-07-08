@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar } from "../atoms/Avatar";
-import { Home, Gift, RefreshCw, Clock } from "lucide-react";
+import { Home, Gift, RefreshCw, Clock, User } from "lucide-react";
 
 interface SidebarItemProps {
   href: string;
@@ -40,7 +40,7 @@ function SidebarItem({ href, label, icon, active }: SidebarItemProps) {
 
 interface MemberSidebarProps {
   className?: string;
-  activeTab?: "home" | "rewards" | "exchange" | "history";
+  activeTab?: "home" | "rewards" | "exchange" | "history" | "profile";
   userName?: string;
   userTier?: string;
 }
@@ -82,6 +82,12 @@ export function MemberSidebar({
       href: "/history",
       label: "History",
       icon: <Clock className="w-5 h-5" />,
+    },
+    {
+      tab: "profile",
+      href: "/profile",
+      label: "Profile",
+      icon: <User className="w-5 h-5" />,
     },
   ];
 
