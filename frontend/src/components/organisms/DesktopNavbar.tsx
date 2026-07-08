@@ -19,6 +19,22 @@ export function DesktopNavbar({
   onToggleMenu,
   showBrand = true,
 }: DesktopNavbarProps) {
+  const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setIsPopoverOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <header className="hidden md:flex h-16 border-b border-neutral-200/50 bg-white px-8 items-center justify-between sticky top-0 z-50 shadow-sm">
       {/* Left: Brand Logo & Hamburger Menu */}
@@ -31,7 +47,9 @@ export function DesktopNavbar({
         </button>
         {showBrand && (
           <div className="flex items-center gap-2 text-brand-primary animate-in fade-in duration-300">
-            <span className="font-extrabold text-xl tracking-tight">LoyaltyHub</span>
+            <span className="font-extrabold text-xl tracking-tight">
+              Pistos APP
+            </span>
           </div>
         )}
       </div>
@@ -57,24 +75,48 @@ export function DesktopNavbar({
 
         <div className="w-[1.5px] h-6 bg-neutral-200" />
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs font-bold text-neutral-900 leading-none">{userName}</p>
-            <span className="text-[10px] text-neutral-400 font-semibold mt-1 block">
-              {userTier}
-            </span>
-          </div>
-          <Avatar name={userName} className="w-9 h-9" />
-        </div>
-        
-        {onLogout && (
+        <div className="relative" ref={popoverRef}>
           <button
-            onClick={onLogout}
-            className="text-xs font-bold text-neutral-400 hover:text-brand-primary transition-colors cursor-pointer ml-1"
+            onClick={() => setIsPopoverOpen((prev) => !prev)}
+            className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-all focus:outline-none"
+            aria-expanded={isPopoverOpen}
+            aria-haspopup="true"
           >
-            Logout
+            <div className="text-right">
+              <p className="text-xs font-bold text-neutral-900 leading-none">
+                {userName}
+              </p>
+              <span className="text-[10px] text-neutral-400 font-semibold mt-1 block">
+                {userTier}
+              </span>
+            </div>
+            <Avatar name={userName} className="w-9 h-9" />
           </button>
-        )}
+
+          {/* User Actions Popover */}
+          {isPopoverOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200/60 rounded-2xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-4 py-2 border-b border-neutral-100 mb-1">
+                <p className="text-xs font-bold text-neutral-800 truncate">{userName}</p>
+                <p className="text-[10px] text-neutral-400 font-semibold truncate mt-0.5">{userTier}</p>
+              </div>
+              {onLogout && (
+                <button
+                  onClick={() => {
+                    setIsPopoverOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

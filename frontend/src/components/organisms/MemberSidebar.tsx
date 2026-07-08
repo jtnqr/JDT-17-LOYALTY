@@ -5,12 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar } from "../atoms/Avatar";
-import {
-  Home,
-  Gift,
-  RefreshCw,
-  Clock,
-} from "lucide-react";
+import { Home, Gift, RefreshCw, Clock } from "lucide-react";
 
 interface SidebarItemProps {
   href: string;
@@ -30,7 +25,12 @@ function SidebarItem({ href, label, icon, active }: SidebarItemProps) {
           : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/50 border-l-transparent"
       )}
     >
-      <div className={cn("w-5 h-5 flex items-center justify-center shrink-0", active ? "text-[#8B3D06]" : "text-neutral-400")}>
+      <div
+        className={cn(
+          "w-5 h-5 flex items-center justify-center shrink-0",
+          active ? "text-[#8B3D06]" : "text-neutral-400"
+        )}
+      >
         {icon}
       </div>
       <span>{label}</span>
@@ -98,7 +98,7 @@ export function MemberSidebar({
           <div className="px-6 pt-8 pb-10">
             <Link href="/dashboard" className="inline-block">
               <h1 className="text-2xl font-black text-[#8B3D06] leading-none tracking-tight">
-                LoyaltyHub
+                Pistos APP
               </h1>
             </Link>
           </div>
