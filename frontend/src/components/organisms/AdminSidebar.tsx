@@ -108,11 +108,8 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
         <div className="px-6 pt-8 pb-10">
           <Link href="/admin/members" className="inline-block group">
             <h1 className="text-2xl font-black text-[#8B3D06] leading-none tracking-tight">
-              LoyaltyHub
+              Pistos CMS
             </h1>
-            <h2 className="text-2xl font-black text-[#8B3D06] leading-none tracking-tight mt-1">
-              CMS
-            </h2>
           </Link>
         </div>
 

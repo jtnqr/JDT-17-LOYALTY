@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Filter,
   AlertCircle,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -219,7 +220,9 @@ export default function AdminMembersPage() {
           }
 
           // Simulate updating mock members
-          const index = MOCK_MEMBERS.findIndex((m) => m.id === selectedMember.id);
+          const index = MOCK_MEMBERS.findIndex(
+            (m) => m.id === selectedMember.id
+          );
           if (index !== -1) {
             MOCK_MEMBERS[index] = {
               ...MOCK_MEMBERS[index],
@@ -399,16 +402,22 @@ export default function AdminMembersPage() {
               </h2>
             </div>
 
-            <div className="flex items-center gap-4">
-              <span className="text-xs font-bold bg-[#FCF5F1] text-[#8B3D06] px-3 py-1 rounded-full border border-[#8B3D06]/10">
-                CMS Portal
-              </span>
-              <Link
-                href="/login"
-                className="text-xs font-semibold text-neutral-400 hover:text-neutral-600 transition-colors"
-              >
-                Sign Out
-              </Link>
+            <div className="flex items-center gap-6">
+              {/* Search Bar in Header */}
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search members by name, email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#F1F3F4] text-neutral-700 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 transition-colors font-medium placeholder:text-neutral-400"
+                />
+              </div>
+              <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
+              </button>
             </div>
           </header>
 
@@ -416,20 +425,8 @@ export default function AdminMembersPage() {
           <div className="p-8 flex-grow flex flex-col space-y-6">
             {/* Toolbar Control Row */}
             <section className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
-              {/* Left: Search & Filter Inputs */}
-              <div className="flex flex-1 max-w-xl gap-3">
-                {/* Search Box */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, email, phone..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors placeholder:text-neutral-400 font-medium"
-                  />
-                </div>
-
+              {/* Left: Filter Inputs */}
+              <div className="flex items-center gap-3">
                 {/* Status Filter */}
                 <div className="relative">
                   <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
@@ -453,7 +450,7 @@ export default function AdminMembersPage() {
                   onClick={() => setIsAddOpen(true)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl text-xs font-bold cursor-pointer shadow-md shadow-[#8B3D06]/10 active:translate-y-px transition-all"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4.5 h-4.5" />
                   Add Member
                 </button>
               </div>
@@ -655,14 +652,27 @@ export default function AdminMembersPage() {
                 onClick={() => setIsEditOpen(false)}
                 className="text-neutral-400 hover:text-neutral-600 p-1.5 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="p-6 space-y-4">
+            <form
+              onSubmit={handleSubmitEdit(onSubmitEdit)}
+              className="p-6 space-y-4"
+            >
               {errorsEdit.root?.message && (
                 <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -705,7 +715,9 @@ export default function AdminMembersPage() {
                   <select
                     className={cn(
                       "w-full px-4 py-3 text-[15px] font-medium text-neutral-900 bg-neutral-50/50 border border-neutral-200 outline-none rounded-[10px] appearance-none focus:border-[#8B3D06] focus:ring-1 focus:ring-[#8B3D06] cursor-pointer",
-                      errorsEdit.status ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" : ""
+                      errorsEdit.status
+                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        : ""
                     )}
                     disabled={isSubmittingEdit}
                     {...registerEdit("status")}
@@ -776,14 +788,27 @@ export default function AdminMembersPage() {
                 onClick={() => setIsAddOpen(false)}
                 className="text-neutral-400 hover:text-neutral-600 p-1.5 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmitAdd(onSubmitAdd)} className="p-6 space-y-4">
+            <form
+              onSubmit={handleSubmitAdd(onSubmitAdd)}
+              className="p-6 space-y-4"
+            >
               {errorsAdd.root?.message && (
                 <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
