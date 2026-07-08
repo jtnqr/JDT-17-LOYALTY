@@ -91,16 +91,6 @@ export default function AdminDashboardPage() {
               Overview Dashboard
             </h2>
           </div>
-
-          <div className="flex items-center gap-4">
-            <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors p-1.5 hover:bg-neutral-50 rounded-lg">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
-            </button>
-            <span className="text-xs font-bold bg-[#FCF5F1] text-[#8B3D06] px-3 py-1 rounded-full border border-[#8B3D06]/10">
-              CMS Portal
-            </span>
-          </div>
         </header>
 
         {/* Content Body */}
@@ -137,7 +127,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-
             {/* Metric 2: Active Pilot Merchants */}
             <div className="bg-white border border-neutral-200/50 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex justify-between items-center">
@@ -160,7 +149,6 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
             </div>
-
             {/* Metric 3: Point Exchange Operations */}
             <div className="bg-white border border-neutral-200/50 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex justify-between items-center">
@@ -183,7 +171,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-
             {/* Metric 4: Redemptions Count */}
             <div className="bg-white border border-neutral-200/50 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex justify-between items-center">
@@ -212,71 +199,6 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             {/* Left Area (2 columns): Partner Merchant Overview */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5">
-                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                  <h3 className="text-sm font-bold text-neutral-950">
-                    Active Pilots Configurations
-                  </h3>
-                  <Link
-                    href="/admin/partners"
-                    className="text-xs font-bold text-brand-primary flex items-center gap-0.5 hover:underline"
-                  >
-                    Manage Partners
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* KFC Config Overview */}
-                  <div className="border border-neutral-100 rounded-xl p-4 bg-neutral-50/30 flex flex-col justify-between h-36">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-neutral-800">
-                          KFC Colonel's Club
-                        </span>
-                        <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/50">
-                          ACTIVE
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
-                        Points Rate: 1 pt / Rp 1.000
-                      </p>
-                      <p className="text-[10px] text-neutral-400 font-semibold">
-                        Expiry: 365 Days
-                      </p>
-                    </div>
-                    <div className="border-t border-neutral-100 pt-2.5 flex items-center gap-1.5 text-xs text-neutral-500 font-bold">
-                      <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Exchange: 1 KFC pt &rarr; 0.8 MCD pt</span>
-                    </div>
-                  </div>
-
-                  {/* McDonald's Config Overview */}
-                  <div className="border border-neutral-100 rounded-xl p-4 bg-neutral-50/30 flex flex-col justify-between h-36">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-neutral-800">
-                          McDonald's MyRewards
-                        </span>
-                        <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/50">
-                          ACTIVE
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-neutral-400 mt-1 font-semibold">
-                        Points Rate: 1 pt / Rp 1.000
-                      </p>
-                      <p className="text-[10px] text-neutral-400 font-semibold">
-                        Expiry: 365 Days
-                      </p>
-                    </div>
-                    <div className="border-t border-neutral-100 pt-2.5 flex items-center gap-1.5 text-xs text-neutral-500 font-bold">
-                      <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Exchange: 1 MCD pt &rarr; 0.8 KFC pt</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Conversion Statistics Flow Indicator */}
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-4">
                 <h3 className="text-xs font-black text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
@@ -312,41 +234,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-
-            {/* Right Area (1 column): Recent System Activity log (Audit Trail) */}
-            {/* <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col h-[400px]">
-              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                <div className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-[#8B3D06]" />
-                  <h3 className="text-sm font-bold text-neutral-950">System Audit Trail</h3>
-                </div>
-                <span className="text-[9px] font-black uppercase text-neutral-400 bg-neutral-50 px-2 py-0.5 rounded">
-                  TRX_LOG
-                </span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-                {AUDIT_LOGS.map((log) => {
-                  const time = new Date(log.timestamp).toLocaleTimeString("en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-                  return (
-                    <div key={log.id} className="space-y-1 border-b border-neutral-50 pb-3 last:border-0 last:pb-0 text-left">
-                      <div className="flex items-center justify-between">
-                        <span className="inline-block text-[8px] font-black uppercase px-2 py-0.5 rounded-md border bg-neutral-50 text-neutral-700 border-neutral-200/50">
-                          {log.eventType.replace("_", " ")}
-                        </span>
-                        <span className="text-[10px] text-neutral-400 font-semibold">{time}</span>
-                      </div>
-                      <p className="text-[11px] text-neutral-600 leading-snug font-medium">
-                        {log.payload}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div> */}
           </div>
         </div>
       </main>
