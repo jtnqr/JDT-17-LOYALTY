@@ -94,16 +94,16 @@ jobs:
           # Parse instruction coverage percentage from CSV (more reliable)
           CSV=backend/target/site/jacoco/jacoco.csv
           if [ -f "$CSV" ]; then
-            INSTR_MISSED=$(awk -F',' 'NR>1{m+=$5}END{print m}' "$CSV")
-            INSTR_COVERED=$(awk -F',' 'NR>1{c+=$6}END{print c}' "$CSV")
+            INSTR_MISSED=$(awk -F',' 'NR>1{m+=$4}END{print m}' "$CSV")
+            INSTR_COVERED=$(awk -F',' 'NR>1{c+=$5}END{print c}' "$CSV")
             INSTR_TOTAL=$((INSTR_MISSED + INSTR_COVERED))
             if [ "$INSTR_TOTAL" -gt 0 ]; then
               PCT=$(awk "BEGIN{printf \"%.1f\", ($INSTR_COVERED/$INSTR_TOTAL)*100}")
             else
               PCT="N/A"
             fi
-            BRANCH_MISSED=$(awk -F',' 'NR>1{m+=$7}END{print m}' "$CSV")
-            BRANCH_COVERED=$(awk -F',' 'NR>1{c+=$8}END{print c}' "$CSV")
+            BRANCH_MISSED=$(awk -F',' 'NR>1{m+=$6}END{print m}' "$CSV")
+            BRANCH_COVERED=$(awk -F',' 'NR>1{c+=$7}END{print c}' "$CSV")
             BRANCH_TOTAL=$((BRANCH_MISSED + BRANCH_COVERED))
             if [ "$BRANCH_TOTAL" -gt 0 ]; then
               BPCT=$(awk "BEGIN{printf \"%.1f\", ($BRANCH_COVERED/$BRANCH_TOTAL)*100}")
@@ -129,12 +129,12 @@ jobs:
           if [ ! -f "$CSV" ]; then
             BODY="### Backend Coverage (JaCoCo)\nNo coverage report generated — tests may have failed."
           else
-            INSTR_MISSED=$(awk -F',' 'NR>1{m+=$5}END{print m}' "$CSV")
-            INSTR_COVERED=$(awk -F',' 'NR>1{c+=$6}END{print c}' "$CSV")
+            INSTR_MISSED=$(awk -F',' 'NR>1{m+=$4}END{print m}' "$CSV")
+            INSTR_COVERED=$(awk -F',' 'NR>1{c+=$5}END{print c}' "$CSV")
             INSTR_TOTAL=$((INSTR_MISSED + INSTR_COVERED))
             PCT=$([ "$INSTR_TOTAL" -gt 0 ] && awk "BEGIN{printf \"%.1f\", ($INSTR_COVERED/$INSTR_TOTAL)*100}" || echo "N/A")
-            BRANCH_MISSED=$(awk -F',' 'NR>1{m+=$7}END{print m}' "$CSV")
-            BRANCH_COVERED=$(awk -F',' 'NR>1{c+=$8}END{print c}' "$CSV")
+            BRANCH_MISSED=$(awk -F',' 'NR>1{m+=$6}END{print m}' "$CSV")
+            BRANCH_COVERED=$(awk -F',' 'NR>1{c+=$7}END{print c}' "$CSV")
             BRANCH_TOTAL=$((BRANCH_MISSED + BRANCH_COVERED))
             BPCT=$([ "$BRANCH_TOTAL" -gt 0 ] && awk "BEGIN{printf \"%.1f\", ($BRANCH_COVERED/$BRANCH_TOTAL)*100}" || echo "N/A")
             BODY="### Backend Coverage (JaCoCo)
