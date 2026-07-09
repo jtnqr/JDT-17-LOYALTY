@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
+      - "chore/**"
+  pull_request:
+    branches:
+      - main
+      - "feat/**"
+      - "fix/**"
+      - "chore/**"
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Backend: Maven + JaCoCo
+  # ─────────────────────────────────────────────
+  backend:
+    name: Backend Tests (Java 21)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18.4-alpine
+        env:
+          POSTGRES_DB: loyalty_test
+          POSTGRES_USER: loyalty
+          POSTGRES_PASSWORD: loyalty_test_pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U loyalty"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/loyalty_test
+      SPRING_DATASOURCE_USERNAME: loyalty
+      SPRING_DATASOURCE_PASSWORD: loyalty_test_pw
+      JWT_SECRET: ci_test_secret_do_not_use_in_production_at_all
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Run tests + generate JaCoCo report
+        working-directory: backend
+        run: ./mvnw verify -B
+
+      - name: Upload JaCoCo HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────
+  # Frontend: Vitest coverage
+  # ─────────────────────────────────────────────
+  frontend:
+    name: Frontend Tests (Node 20)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/yarn.lock', 'frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Vitest coverage
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Upload Vitest coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage-report
+          path: frontend/coverage/
+          retention-days: 14
