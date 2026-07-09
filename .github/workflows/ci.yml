@@ -66,6 +66,74 @@ jobs:
           path: backend/target/site/jacoco/
           retention-days: 14
 
+      - name: JaCoCo coverage summary
+        if: always()
+        run: |
+          REPORT=backend/target/site/jacoco/index.html
+          if [ ! -f "$REPORT" ]; then
+            echo "## Backend Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "No JaCoCo report generated." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          MISSED=$(grep -oP 'Total[^%]+?<td class="ctr2">\K[^<]+' "$REPORT" | head -1)
+          COVERED=$(grep -oP '<td class="ctr1">\K[0-9]+' "$REPORT" | awk '{s+=$1}END{print s}')
+          TOTAL=$(grep -oP '<td class="ctr2">\K[0-9]+' "$REPORT" | awk '{s+=$1}END{print s}')
+          # Parse instruction coverage percentage from CSV (more reliable)
+          CSV=backend/target/site/jacoco/jacoco.csv
+          if [ -f "$CSV" ]; then
+            INSTR_MISSED=$(awk -F',' 'NR>1{m+=$5}END{print m}' "$CSV")
+            INSTR_COVERED=$(awk -F',' 'NR>1{c+=$6}END{print c}' "$CSV")
+            INSTR_TOTAL=$((INSTR_MISSED + INSTR_COVERED))
+            if [ "$INSTR_TOTAL" -gt 0 ]; then
+              PCT=$(awk "BEGIN{printf \"%.1f\", ($INSTR_COVERED/$INSTR_TOTAL)*100}")
+            else
+              PCT="N/A"
+            fi
+            BRANCH_MISSED=$(awk -F',' 'NR>1{m+=$7}END{print m}' "$CSV")
+            BRANCH_COVERED=$(awk -F',' 'NR>1{c+=$8}END{print c}' "$CSV")
+            BRANCH_TOTAL=$((BRANCH_MISSED + BRANCH_COVERED))
+            if [ "$BRANCH_TOTAL" -gt 0 ]; then
+              BPCT=$(awk "BEGIN{printf \"%.1f\", ($BRANCH_COVERED/$BRANCH_TOTAL)*100}")
+            else
+              BPCT="N/A"
+            fi
+          fi
+          {
+            echo "## Backend Coverage (JaCoCo)"
+            echo "| Metric | Covered | Missed | Total | % |"
+            echo "|--------|---------|--------|-------|---|"
+            echo "| Instructions | $INSTR_COVERED | $INSTR_MISSED | $INSTR_TOTAL | $PCT% |"
+            echo "| Branches | $BRANCH_COVERED | $BRANCH_MISSED | $BRANCH_TOTAL | $BPCT% |"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Post JaCoCo comment on PR
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          CSV=backend/target/site/jacoco/jacoco.csv
+          if [ ! -f "$CSV" ]; then
+            BODY="### Backend Coverage (JaCoCo)\nNo coverage report generated — tests may have failed."
+          else
+            INSTR_MISSED=$(awk -F',' 'NR>1{m+=$5}END{print m}' "$CSV")
+            INSTR_COVERED=$(awk -F',' 'NR>1{c+=$6}END{print c}' "$CSV")
+            INSTR_TOTAL=$((INSTR_MISSED + INSTR_COVERED))
+            PCT=$([ "$INSTR_TOTAL" -gt 0 ] && awk "BEGIN{printf \"%.1f\", ($INSTR_COVERED/$INSTR_TOTAL)*100}" || echo "N/A")
+            BRANCH_MISSED=$(awk -F',' 'NR>1{m+=$7}END{print m}' "$CSV")
+            BRANCH_COVERED=$(awk -F',' 'NR>1{c+=$8}END{print c}' "$CSV")
+            BRANCH_TOTAL=$((BRANCH_MISSED + BRANCH_COVERED))
+            BPCT=$([ "$BRANCH_TOTAL" -gt 0 ] && awk "BEGIN{printf \"%.1f\", ($BRANCH_COVERED/$BRANCH_TOTAL)*100}" || echo "N/A")
+            BODY="### Backend Coverage (JaCoCo)
+          | Metric | Covered | Missed | Total | % |
+          |--------|---------|--------|-------|---|
+          | Instructions | $INSTR_COVERED | $INSTR_MISSED | $INSTR_TOTAL | ${PCT}% |
+          | Branches | $BRANCH_COVERED | $BRANCH_MISSED | $BRANCH_TOTAL | ${BPCT}% |
+
+          Full report: [Download artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          fi
+          gh pr comment "$PR_NUMBER" --body "$BODY"
+
   # ─────────────────────────────────────────────
   # Frontend: Vitest coverage
   # ─────────────────────────────────────────────
@@ -86,7 +154,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/yarn.lock', 'frontend/pnpm-lock.yaml') }}
+          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: |
             node-modules-${{ runner.os }}-
 
@@ -105,3 +173,52 @@ jobs:
           name: vitest-coverage-report
           path: frontend/coverage/
           retention-days: 14
+
+      - name: Vitest coverage summary
+        if: always()
+        run: |
+          SUMMARY=frontend/coverage/coverage-summary.json
+          if [ ! -f "$SUMMARY" ]; then
+            echo "## Frontend Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "No Vitest coverage report generated (no tests yet)." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          LINES=$(jq '.total.lines.pct' "$SUMMARY")
+          STMTS=$(jq '.total.statements.pct' "$SUMMARY")
+          FUNCS=$(jq '.total.functions.pct' "$SUMMARY")
+          BRANCH=$(jq '.total.branches.pct' "$SUMMARY")
+          {
+            echo "## Frontend Coverage (Vitest)"
+            echo "| Metric | % |"
+            echo "|--------|---|"
+            echo "| Statements | ${STMTS}% |"
+            echo "| Branches | ${BRANCH}% |"
+            echo "| Functions | ${FUNCS}% |"
+            echo "| Lines | ${LINES}% |"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Post Vitest comment on PR
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          SUMMARY=frontend/coverage/coverage-summary.json
+          if [ ! -f "$SUMMARY" ]; then
+            BODY="### Frontend Coverage (Vitest)\nNo coverage report generated — no tests yet."
+          else
+            LINES=$(jq '.total.lines.pct' "$SUMMARY")
+            STMTS=$(jq '.total.statements.pct' "$SUMMARY")
+            FUNCS=$(jq '.total.functions.pct' "$SUMMARY")
+            BRANCH=$(jq '.total.branches.pct' "$SUMMARY")
+            BODY="### Frontend Coverage (Vitest)
+          | Metric | % |
+          |--------|---|
+          | Statements | ${STMTS}% |
+          | Branches | ${BRANCH}% |
+          | Functions | ${FUNCS}% |
+          | Lines | ${LINES}% |
+
+          Full report: [Download artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          fi
+          gh pr comment "$PR_NUMBER" --body "$BODY"
