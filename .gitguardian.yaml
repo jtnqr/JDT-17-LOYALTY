@@ -1,0 +1,12 @@
+version: 1
+
+# Exclude test files/directories from GitGuardian scans
+# Reference: https://docs.gitguardian.com/ggshield-cli/reference/configuration
+
+secret:
+  ignored-paths:
+    - '**/test/**'
+    - '**/tests/**'
+    - '**/mock/**'
+    - '**/mocks/**'
+    - 'backend/src/test/resources/application.properties'
