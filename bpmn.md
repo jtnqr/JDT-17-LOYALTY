@@ -470,7 +470,7 @@ sequenceDiagram
     participant Service as Redemption Service
     participant DB as PostgreSQL Database
 
-    Member->>API: POST /redeem {memberId, rewardId}
+    Member->>API: POST /redeem {rewardId}
     API->>Service: redeemReward(dto)
 
     Service->>DB: SELECT * FROM MEMBER WHERE id = memberId AND status = ACTIVE
@@ -518,7 +518,7 @@ sequenceDiagram
     participant Service as Exchange Service
     participant DB as PostgreSQL Database
 
-    Member->>API: POST /exchange {memberId, fromPartnerId, toPartnerId, points}
+    Member->>API: POST /exchange {fromPartnerId, toPartnerId, points}
     API->>Service: exchangePoints(dto)
 
     Service->>DB: SELECT * FROM MEMBER WHERE id = memberId AND status = ACTIVE

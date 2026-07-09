@@ -58,7 +58,7 @@
 
 - **Request:** `POST /members`
 - **Request Body:** `{ "name": "string", "email": "string", "phone": "string" }`
-- **Success Response:** `201 Created` — member object `{ memberId, name, email, phone, status }`
+- **Success Response:** `201 Created` — `{ token, role: "MEMBER", user: { id, name, email, phone, status } }`
 - **Error Responses:** None defined in MVP
 
 ---
@@ -199,7 +199,7 @@
 ### API Mapping
 
 - **Request:** `POST /redeem`
-- **Request Body:** `{ "memberId": "string", "rewardId": "string" }`
+- **Request Body:** `{ "rewardId": "string" }` — memberId resolved from JWT sub
 - **Success Response:** `200 OK` — `{ redemptionId, rewardName, pointsUsed, remainingBalance }`
 - **Error Responses:**
   - `400 Bad Request` — insufficient points balance
@@ -259,7 +259,7 @@
 ### API Mapping
 
 - **Request:** `POST /exchange`
-- **Request Body:** `{ "memberId": "string", "fromPartnerId": "string", "toPartnerId": "string", "points": number }`
+- **Request Body:** `{ "fromPartnerId": "string", "toPartnerId": "string", "points": number }` — memberId resolved from JWT sub
 - **Success Response:** `200 OK` — `{ fromPartnerBalance, toPartnerBalance, pointsExchanged, pointsReceived }`
 - **Error Responses:**
   - `400 Bad Request` — insufficient points balance
