@@ -1,6 +1,8 @@
 package com.jdt17.loyalty.repository;
 
 import com.jdt17.loyalty.entity.Member;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -11,4 +13,5 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
     Optional<Member> findByPhone(String phone);
     boolean existsByEmail(String email);
     boolean existsByPhone(String phone);
+    Page<Member> findByStatus(String status, Pageable pageable);
 }

@@ -2,6 +2,9 @@ package com.jdt17.loyalty.service;
 
 import com.jdt17.loyalty.dto.login.LoginRequest;
 import com.jdt17.loyalty.dto.login.LoginResponse;
+import com.jdt17.loyalty.dto.member.MemberResponse;
+import com.jdt17.loyalty.dto.member.PagedMemberResponse;
+import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
 import com.jdt17.loyalty.dto.register.RegisterRequest;
 import com.jdt17.loyalty.dto.register.RegisterResponse;
 import com.jdt17.loyalty.entity.*;
@@ -10,12 +13,19 @@ import com.jdt17.loyalty.repository.*;
 import com.jdt17.loyalty.security.JWTService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -77,7 +87,7 @@ public class MemberService {
                 .build();
         auditTrailRepository.save(auditTrail);
 
-        String token = jwtService.generateToken(savedMember.getEmail(), "MEMBER");
+        String token = jwtService.generateToken(savedMember.getId().toString(), "MEMBER");
 
         // object response (RegisterResponse)
         RegisterResponse.UserDetails userDetails = RegisterResponse.UserDetails.builder()
@@ -110,7 +120,7 @@ public class MemberService {
                 throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Member status is INACTIVE", "MEMBER_INACTIVE");
             }
 
-            String token =jwtService.generateToken(member.getEmail(), "MEMBER");
+            String token = jwtService.generateToken(member.getId().toString(), "MEMBER");
 
             return LoginResponse.builder()
                     .token(token) // token will be generated
@@ -135,7 +145,7 @@ public class MemberService {
                 throw new LoyaltyException(HttpStatus.UNAUTHORIZED, "Admin status is INACTIVE", "INVALID_CREDENTIALS");
             }
 
-            String token = jwtService.generateToken(admin.getEmail(), "ADMIN");
+            String token = jwtService.generateToken(admin.getId().toString(), "ADMIN");
 
             return LoginResponse.builder()
                     .token(token) // token will be generated
@@ -152,5 +162,116 @@ public class MemberService {
         }
 
         throw new LoyaltyException(HttpStatus.UNAUTHORIZED, "Invalid email or password", "INVALID_CREDENTIALS");
+    }
+
+    // ============================================================
+    // MEMBER MANAGEMENT METHODS (RESTORED)
+    // ============================================================
+
+    public PagedMemberResponse getAllMembers(int page, int size, String status) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Member> memberPage;
+
+        if (status != null && !status.trim().isEmpty()) {
+            memberPage = memberRepository.findByStatus(status.toUpperCase(), pageable);
+        } else {
+            memberPage = memberRepository.findAll(pageable);
+        }
+
+        List<MemberResponse> data = memberPage.getContent().stream()
+                .map(m -> MemberResponse.builder()
+                        .id(m.getId())
+                        .name(m.getName())
+                        .email(m.getEmail())
+                        .phone(m.getPhone())
+                        .status(m.getStatus())
+                        .createdAt(m.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return PagedMemberResponse.builder()
+                .data(data)
+                .page(memberPage.getNumber())
+                .size(memberPage.getSize())
+                .total(memberPage.getTotalElements())
+                .build();
+    }
+
+    public MemberResponse getMemberById(UUID id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = authentication.getName(); // sub = UUID String
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !id.toString().equals(currentUserId)) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        }
+
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Member does not exist", "MEMBER_NOT_FOUND"));
+
+        return MemberResponse.builder()
+                .id(member.getId())
+                .name(member.getName())
+                .email(member.getEmail())
+                .phone(member.getPhone())
+                .status(member.getStatus())
+                .createdAt(member.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public MemberResponse updateMember(UUID id, UpdateMemberRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String adminIdStr = authentication.getName(); // sub = UUID Admin
+        UUID adminId = UUID.fromString(adminIdStr);
+
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Member does not exist", "MEMBER_NOT_FOUND"));
+
+        if (!request.getPhone().equals(member.getPhone())) {
+            if (memberRepository.existsByPhone(request.getPhone())) {
+                throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Phone number already registered", "DUPLICATE_PHONE");
+            }
+        }
+
+        String oldStatus = member.getStatus();
+        boolean statusChanged = !request.getStatus().equalsIgnoreCase(oldStatus);
+
+        member.setName(request.getName());
+        member.setPhone(request.getPhone());
+        member.setStatus(request.getStatus().toUpperCase());
+        Member updatedMember = memberRepository.save(member);
+
+        AuditTrail updateAudit = AuditTrail.builder()
+                .eventType("MEMBER_UPDATED")
+                .actorId(adminId)
+                .actorType("ADMIN")
+                .entityType("MEMBER")
+                .entityId(updatedMember.getId())
+                .payload(null)
+                .build();
+        auditTrailRepository.save(updateAudit);
+
+        if (statusChanged) {
+            AuditTrail statusAudit = AuditTrail.builder()
+                    .eventType("MEMBER_STATUS_CHANGED")
+                    .actorId(adminId)
+                    .actorType("ADMIN")
+                    .entityType("MEMBER")
+                    .entityId(updatedMember.getId())
+                    .payload(null)
+                    .build();
+            auditTrailRepository.save(statusAudit);
+        }
+
+        return MemberResponse.builder()
+                .id(updatedMember.getId())
+                .name(updatedMember.getName())
+                .email(updatedMember.getEmail())
+                .phone(updatedMember.getPhone())
+                .status(updatedMember.getStatus())
+                .createdAt(updatedMember.getCreatedAt())
+                .build();
     }
 }

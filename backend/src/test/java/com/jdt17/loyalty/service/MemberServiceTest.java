@@ -2,9 +2,13 @@ package com.jdt17.loyalty.service;
 
 import com.jdt17.loyalty.dto.login.LoginRequest;
 import com.jdt17.loyalty.dto.login.LoginResponse;
+import com.jdt17.loyalty.dto.member.MemberResponse;
+import com.jdt17.loyalty.dto.member.PagedMemberResponse;
+import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
 import com.jdt17.loyalty.dto.register.RegisterRequest;
 import com.jdt17.loyalty.dto.register.RegisterResponse;
 import com.jdt17.loyalty.entity.Admin;
+import java.time.OffsetDateTime;
 import com.jdt17.loyalty.entity.Member;
 import com.jdt17.loyalty.entity.Partner;
 import com.jdt17.loyalty.exception.LoyaltyException;
@@ -405,5 +409,367 @@ class MemberServiceTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
         assertEquals("INVALID_CREDENTIALS", exception.getCode());
+    }
+
+    // ============================================================
+    // MEMBER MANAGEMENT TESTS
+    // ============================================================
+
+    @Test
+    void testGetAllMembers_NoFilter() {
+        // Arrange
+        Member member1 = Member.builder().id(UUID.randomUUID()).name("Budi").status("ACTIVE").build();
+        Member member2 = Member.builder().id(UUID.randomUUID()).name("Siti").status("INACTIVE").build();
+        Page<Member> pageResult = new PageImpl<>(List.of(member1, member2), PageRequest.of(0, 20), 2);
+
+        when(memberRepository.findAll(any(Pageable.class)))
+                .thenReturn(pageResult);
+
+        // Act
+        PagedMemberResponse response = memberService.getAllMembers(0, 20, null);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(2, response.getData().size());
+        assertEquals(2, response.getTotal());
+        assertEquals(0, response.getPage());
+        assertEquals(20, response.getSize());
+        assertEquals("Budi", response.getData().get(0).getName());
+        assertEquals("Siti", response.getData().get(1).getName());
+    }
+
+    @Test
+    void testGetAllMembers_WithStatusFilter() {
+        // Arrange
+        Member member1 = Member.builder().id(UUID.randomUUID()).name("Budi").status("ACTIVE").build();
+        Page<Member> pageResult = new PageImpl<>(List.of(member1), PageRequest.of(0, 20), 1);
+
+        when(memberRepository.findByStatus(eq("ACTIVE"), any(Pageable.class)))
+                .thenReturn(pageResult);
+
+        // Act
+        PagedMemberResponse response = memberService.getAllMembers(0, 20, "ACTIVE");
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1, response.getData().size());
+        assertEquals(1, response.getTotal());
+        assertEquals("ACTIVE", response.getData().get(0).getStatus());
+    }
+
+    @Test
+    void testGetMemberById_AdminAccessAnyMember() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .email("budi.santoso@example.com")
+                .status("ACTIVE")
+                .build();
+
+        // Mock Security Context as ADMIN
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(UUID.randomUUID().toString()); // Different ID
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.of(member));
+
+        // Act
+        MemberResponse response = memberService.getMemberById(memberId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("Budi Santoso", response.getName());
+        assertEquals("ACTIVE", response.getStatus());
+
+        // Clear security context
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberById_MemberAccessOwn() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .email("budi.santoso@example.com")
+                .status("ACTIVE")
+                .build();
+
+        // Mock Security Context as MEMBER owning the data
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString()); // Own ID matches
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.of(member));
+
+        // Act
+        MemberResponse response = memberService.getMemberById(memberId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("Budi Santoso", response.getName());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberById_MemberAccessOther_Forbidden() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+
+        // Mock Security Context as MEMBER accessing someone else's data
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(UUID.randomUUID().toString()); // ID mismatch
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberById(memberId)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        assertEquals("FORBIDDEN", exception.getCode());
+
+        verify(memberRepository, never()).findById(any());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberById_NotFound() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+
+        // Mock Security Context as ADMIN
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberById(memberId)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("MEMBER_NOT_FOUND", exception.getCode());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdateMember_Success() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UpdateMemberRequest request = UpdateMemberRequest.builder()
+                .name("Budi S.")
+                .phone("089876543210")
+                .status("INACTIVE")
+                .build();
+
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .phone("081234567890")
+                .status("ACTIVE")
+                .createdAt(OffsetDateTime.now())
+                .build();
+
+        // Mock Security Context as ADMIN with specific adminId
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(adminId.toString());
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.of(member));
+
+        when(memberRepository.existsByPhone(request.getPhone()))
+                .thenReturn(false);
+
+        when(memberRepository.save(any(Member.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        MemberResponse response = memberService.updateMember(memberId, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("Budi S.", response.getName());
+        assertEquals("089876543210", response.getPhone());
+        assertEquals("INACTIVE", response.getStatus());
+
+        // Verify audit trails (two records saved because status changed from ACTIVE to INACTIVE)
+        verify(auditTrailRepository, times(2)).save(any());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdateMember_DuplicatePhone() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UpdateMemberRequest request = UpdateMemberRequest.builder()
+                .name("Budi S.")
+                .phone("089876543210")
+                .status("ACTIVE")
+                .build();
+
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .phone("081234567890")
+                .status("ACTIVE")
+                .build();
+
+        // Mock Security Context as ADMIN
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(adminId.toString());
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.of(member));
+
+        when(memberRepository.existsByPhone(request.getPhone()))
+                .thenReturn(true);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.updateMember(memberId, request)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals("DUPLICATE_PHONE", exception.getCode());
+
+        verify(memberRepository, never()).save(any());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdateMember_NotFound() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UpdateMemberRequest request = UpdateMemberRequest.builder()
+                .name("Budi S.")
+                .phone("089876543210")
+                .status("INACTIVE")
+                .build();
+
+        // Mock Security Context as ADMIN
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(adminId.toString());
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.updateMember(memberId, request)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("MEMBER_NOT_FOUND", exception.getCode());
+
+        verify(memberRepository, never()).save(any());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdateMember_PhoneAndStatusUnchanged() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UpdateMemberRequest request = UpdateMemberRequest.builder()
+                .name("Budi New Name")
+                .phone("081234567890") // Same phone
+                .status("ACTIVE")      // Same status
+                .build();
+
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .phone("081234567890")
+                .status("ACTIVE")
+                .createdAt(OffsetDateTime.now())
+                .build();
+
+        // Mock Security Context as ADMIN
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(adminId.toString());
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId))
+                .thenReturn(Optional.of(member));
+
+        when(memberRepository.save(any(Member.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        MemberResponse response = memberService.updateMember(memberId, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("Budi New Name", response.getName());
+        assertEquals("081234567890", response.getPhone());
+        assertEquals("ACTIVE", response.getStatus());
+
+        // Verify existsByPhone is never called because phone was not changed
+        verify(memberRepository, never()).existsByPhone(anyString());
+
+        // Verify only 1 audit trail is saved (MEMBER_UPDATED)
+        verify(auditTrailRepository, times(1)).save(any());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetAllMembers_EmptyStatusFilter() {
+        // Arrange
+        Member member = Member.builder().id(UUID.randomUUID()).name("Budi").status("ACTIVE").build();
+        Page<Member> pageResult = new PageImpl<>(List.of(member), PageRequest.of(0, 20), 1);
+
+        when(memberRepository.findAll(any(Pageable.class)))
+                .thenReturn(pageResult);
+
+        // Act - Call with empty string status
+        PagedMemberResponse response = memberService.getAllMembers(0, 20, "   ");
+
+        // Assert - Verify it falls back to findAll
+        assertNotNull(response);
+        assertEquals(1, response.getData().size());
+        verify(memberRepository, times(1)).findAll(any(Pageable.class));
+        verify(memberRepository, never()).findByStatus(anyString(), any(Pageable.class));
     }
 }
