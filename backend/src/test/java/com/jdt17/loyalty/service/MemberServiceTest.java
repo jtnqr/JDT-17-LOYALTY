@@ -53,7 +53,7 @@ class MemberServiceTest {
     private PointBalanceRepository pointBalanceRepository;
 
     @Mock
-    private AuditTrailRepository auditTrailRepository;
+    private AuditTrailService auditTrailService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -127,7 +127,7 @@ class MemberServiceTest {
         verify(pointBalanceRepository, times(2)).save(any());
 
         // Menyimpan audit trail
-        verify(auditTrailRepository).save(any());
+        verify(auditTrailService).logEvent(eq("MEMBER_REGISTERED"), eq(null), eq("SYSTEM"), eq("MEMBER"), any(), eq(null));
     }
 
     @Test
@@ -621,7 +621,8 @@ class MemberServiceTest {
         assertEquals("INACTIVE", response.getStatus());
 
         // Verify audit trails (two records saved because status changed from ACTIVE to INACTIVE)
-        verify(auditTrailRepository, times(2)).save(any());
+        verify(auditTrailService).logEvent(eq("MEMBER_UPDATED"), eq(adminId), eq("ADMIN"), eq("MEMBER"), any(), eq(null));
+        verify(auditTrailService).logEvent(eq("MEMBER_STATUS_CHANGED"), eq(adminId), eq("ADMIN"), eq("MEMBER"), any(), eq(null));
 
         SecurityContextHolder.clearContext();
     }
@@ -749,7 +750,7 @@ class MemberServiceTest {
         verify(memberRepository, never()).existsByPhone(anyString());
 
         // Verify only 1 audit trail is saved (MEMBER_UPDATED)
-        verify(auditTrailRepository, times(1)).save(any());
+        verify(auditTrailService).logEvent(eq("MEMBER_UPDATED"), eq(adminId), eq("ADMIN"), eq("MEMBER"), any(), eq(null));
 
         SecurityContextHolder.clearContext();
     }

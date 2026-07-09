@@ -35,7 +35,7 @@ public class MemberService {
     private final AdminRepository adminRepository;
     private final PartnerRepository partnerRepository;
     private final PointBalanceRepository pointBalanceRepository;
-    private final AuditTrailRepository auditTrailRepository;
+    private final AuditTrailService auditTrailService;
     private final PasswordEncoder passwordEncoder;
     private final JWTService jwtService;
 
@@ -77,15 +77,7 @@ public class MemberService {
         }
 
         // audit trails to TRX_AUDIT_TRAIL
-        AuditTrail auditTrail = AuditTrail.builder()
-                .eventType("MEMBER_REGISTERED")
-                .actorId(null) // actor for SYSTEM
-                .actorType("SYSTEM")
-                .entityType("MEMBER")
-                .entityId(savedMember.getId())
-                .payload(null)
-                .build();
-        auditTrailRepository.save(auditTrail);
+        auditTrailService.logEvent("MEMBER_REGISTERED", null, "SYSTEM", "MEMBER", savedMember.getId(), null);
 
         String token = jwtService.generateToken(savedMember.getId().toString(), "MEMBER");
 
@@ -243,26 +235,10 @@ public class MemberService {
         member.setStatus(request.getStatus().toUpperCase());
         Member updatedMember = memberRepository.save(member);
 
-        AuditTrail updateAudit = AuditTrail.builder()
-                .eventType("MEMBER_UPDATED")
-                .actorId(adminId)
-                .actorType("ADMIN")
-                .entityType("MEMBER")
-                .entityId(updatedMember.getId())
-                .payload(null)
-                .build();
-        auditTrailRepository.save(updateAudit);
+        auditTrailService.logEvent("MEMBER_UPDATED", adminId, "ADMIN", "MEMBER", updatedMember.getId(), null);
 
         if (statusChanged) {
-            AuditTrail statusAudit = AuditTrail.builder()
-                    .eventType("MEMBER_STATUS_CHANGED")
-                    .actorId(adminId)
-                    .actorType("ADMIN")
-                    .entityType("MEMBER")
-                    .entityId(updatedMember.getId())
-                    .payload(null)
-                    .build();
-            auditTrailRepository.save(statusAudit);
+            auditTrailService.logEvent("MEMBER_STATUS_CHANGED", adminId, "ADMIN", "MEMBER", updatedMember.getId(), null);
         }
 
         return MemberResponse.builder()
