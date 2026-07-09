@@ -15,8 +15,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.OffsetDateTime;
 
 import java.util.List;
 import java.util.Optional;
@@ -323,6 +330,72 @@ class MemberServiceTest {
 
         when(adminRepository.findByEmail(request.getEmail()))
                 .thenReturn(Optional.empty());
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.login(request)
+        );
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        assertEquals("INVALID_CREDENTIALS", exception.getCode());
+    }
+
+    @Test
+    void testLogin_InvalidCredentials_AdminPasswordMismatch() {
+        // Arrange
+        LoginRequest request = LoginRequest.builder()
+                .email("admin@jdt17loyalty.com")
+                .password("WrongPassword")
+                .build();
+
+        Admin admin = Admin.builder()
+                .email("admin@jdt17loyalty.com")
+                .passwordHash("encodedPassword")
+                .status("ACTIVE")
+                .build();
+
+        when(memberRepository.findByEmail(request.getEmail()))
+                .thenReturn(Optional.empty());
+
+        when(adminRepository.findByEmail(request.getEmail()))
+                .thenReturn(Optional.of(admin));
+
+        when(passwordEncoder.matches(request.getPassword(), admin.getPasswordHash()))
+                .thenReturn(false);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.login(request)
+        );
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        assertEquals("INVALID_CREDENTIALS", exception.getCode());
+    }
+
+    @Test
+    void testLogin_AdminInactive() {
+        // Arrange
+        LoginRequest request = LoginRequest.builder()
+                .email("admin@jdt17loyalty.com")
+                .password("Admin123!")
+                .build();
+
+        Admin admin = Admin.builder()
+                .email("admin@jdt17loyalty.com")
+                .passwordHash("encodedPassword")
+                .status("INACTIVE")
+                .build();
+
+        when(memberRepository.findByEmail(request.getEmail()))
+                .thenReturn(Optional.empty());
+
+        when(adminRepository.findByEmail(request.getEmail()))
+                .thenReturn(Optional.of(admin));
+
+        when(passwordEncoder.matches(request.getPassword(), admin.getPasswordHash()))
+                .thenReturn(true);
 
         // Act & Assert
         LoyaltyException exception = assertThrows(
