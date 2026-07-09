@@ -1,0 +1,20 @@
+# Codecov configuration
+# Reference: https://docs.codecov.com/docs/codecovyml-reference
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto      # coverage should not decrease from base branch (main)
+        threshold: 0.5%   # allow 0.5% drop before failing check
+        only_pulls: true  # only run status checks on pull requests
+    patch:
+      default:
+        target: auto      # lines changed in the PR must have coverage
+        threshold: 0%     # no drop allowed on the patched lines
+        only_pulls: true
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default       # update comment on each commit instead of posting new ones
+  require_changes: false  # post comment even if coverage doesn't change
