@@ -70,6 +70,15 @@ jobs:
           path: backend/target/site/jacoco/
           retention-days: 14
 
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/target/site/jacoco/jacoco.xml
+          flags: backend
+          fail_ci_if_error: false
+
       - name: JaCoCo coverage summary
         if: always()
         run: |
@@ -177,6 +186,15 @@ jobs:
           name: vitest-coverage-report
           path: frontend/coverage/
           retention-days: 14
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: frontend/coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false
 
       - name: Vitest coverage summary
         if: always()
