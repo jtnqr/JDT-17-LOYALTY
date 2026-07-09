@@ -1,0 +1,25 @@
+# Local dev profile — points to shared dev DB on the server.
+# Usage: set env var SPRING_PROFILES_ACTIVE=local
+# Or in IDE run config: -Dspring.profiles.active=local
+#
+# Set these env vars (or add to your shell rc / IDE env):
+#   DEV_DB_HOST=<server-ip>
+#   DEV_DB_PASSWORD=<from .env.dev-db>
+#   JWT_SECRET=<same secret the team uses>
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:change_me_dev}
+
+  flyway:
+    enabled: true
+
+  jpa:
+    show-sql: true        # helpful locally
+
+logging:
+  level:
+    com.jdt17.loyalty: DEBUG
+    org.springframework.security: DEBUG

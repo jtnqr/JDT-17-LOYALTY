@@ -9,5 +9,4 @@ public class LoyaltyPlatformApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(LoyaltyPlatformApplication.class, args);
 	}
-
 }
