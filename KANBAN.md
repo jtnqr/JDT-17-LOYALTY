@@ -26,7 +26,7 @@
 - `POST /redeem` (Redeem points for partner rewards) 🔴
 
 ## 3. Partner & Rates
-- `GET /partners` (List partners) 🔴
+- `GET /partners` (List partners) 🟢
 - `POST /partners` (Add partner + bulk init zero point balances) 🔴
 - `PUT /partners/{id}` (Admin update partner configs) 🔴
 - `GET /exchange-rates` (List directional exchange rates) 🔴
