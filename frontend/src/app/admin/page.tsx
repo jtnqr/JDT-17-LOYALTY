@@ -2,6 +2,7 @@
 
 import React from "react";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { useAdmin } from "@/lib/hooks/useAdmin";
 import Link from "next/link";
 import {
   Users,
@@ -57,6 +58,8 @@ const AUDIT_LOGS = [
 ];
 
 export default function AdminDashboardPage() {
+  const { isLoaded } = useAdmin();
+
   const getEventBadge = (type: string) => {
     switch (type) {
       case "MEMBER_REGISTERED":
@@ -71,6 +74,14 @@ export default function AdminDashboardPage() {
         return "bg-emerald-50 text-emerald-700 border-emerald-200/50";
     }
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 flex font-sans">
