@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PointBalanceRepository extends JpaRepository<PointBalance, UUID> {
     List<PointBalance> findByMemberId(UUID memberId);
+    Optional<PointBalance> findByMemberIdAndPartnerId(UUID memberId, UUID partnerId);
 
     @Modifying
     @Query(value = "INSERT INTO trx_point_balance (id, member_id, partner_id, balance, version, updated_at) " +
