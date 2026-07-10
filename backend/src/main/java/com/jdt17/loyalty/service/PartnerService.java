@@ -1,5 +1,7 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.dto.partner.ListPartnerResponse;
+import com.jdt17.loyalty.dto.partner.PartnerResponse;
 import com.jdt17.loyalty.dto.partner.PartnerTokenRequest;
 import com.jdt17.loyalty.dto.partner.PartnerTokenResponse;
 import com.jdt17.loyalty.entity.Partner;
@@ -8,11 +10,15 @@ import com.jdt17.loyalty.repository.PartnerRepository;
 import com.jdt17.loyalty.security.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -68,5 +74,34 @@ public class PartnerService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 algorithm not found", e);
         }
+    }
+
+    public ListPartnerResponse getAllPartners() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isAuthorized = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority()
+                        .equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MEMBER"));
+
+        if(!isAuthorized) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        }
+
+        List<Partner> partners = partnerRepository.findAll();
+
+        List<PartnerResponse> partnerResponses = partners.stream()
+                .map(p -> PartnerResponse.builder()
+                        .id(p.getId())
+                        .name(p.getName())
+                        .code(p.getCode())
+                        .pointsPerThousandIDR(p.getPointPerThousandIdr())
+                        .expiryDays(p.getExpiryDays())
+                        .status(p.getStatus())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ListPartnerResponse.builder()
+                .data(partnerResponses)
+                .build();
     }
 }
