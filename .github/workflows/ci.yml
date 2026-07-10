@@ -11,12 +11,20 @@ on:
       - "feat/**"
       - "fix/**"
       - "chore/**"
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches:
       - main
       - "feat/**"
       - "fix/**"
       - "chore/**"
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/ci.yml"
 
 jobs:
   # ─────────────────────────────────────────────
@@ -51,7 +59,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check for backend changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+
       - name: Set up Java 21
+        if: steps.filter.outputs.backend == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: "21"
@@ -59,11 +77,12 @@ jobs:
           cache: maven
 
       - name: Run tests + generate JaCoCo report
+        if: steps.filter.outputs.backend == 'true'
         working-directory: backend
         run: ./mvnw verify -B
 
       - name: Upload JaCoCo HTML report
-        if: always()
+        if: steps.filter.outputs.backend == 'true' && always()
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
@@ -71,7 +90,7 @@ jobs:
           retention-days: 14
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: steps.filter.outputs.backend == 'true' && always()
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -80,7 +99,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: JaCoCo coverage summary
-        if: always()
+        if: steps.filter.outputs.backend == 'true' && always()
         run: |
           REPORT=backend/target/site/jacoco/index.html
           if [ ! -f "$REPORT" ]; then
@@ -120,7 +139,7 @@ jobs:
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Post JaCoCo comment on PR
-        if: github.event_name == 'pull_request' && always()
+        if: steps.filter.outputs.backend == 'true' && github.event_name == 'pull_request' && always()
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -158,12 +177,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check for frontend changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
       - name: Set up Node 20
+        if: steps.filter.outputs.frontend == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Cache node_modules
+        if: steps.filter.outputs.frontend == 'true'
         uses: actions/cache@v4
         with:
           path: frontend/node_modules
@@ -172,15 +202,17 @@ jobs:
             node-modules-${{ runner.os }}-
 
       - name: Install dependencies
+        if: steps.filter.outputs.frontend == 'true'
         working-directory: frontend
         run: npm ci
 
       - name: Run Vitest coverage
+        if: steps.filter.outputs.frontend == 'true'
         working-directory: frontend
         run: npm run test:coverage
 
       - name: Upload Vitest coverage report
-        if: always()
+        if: steps.filter.outputs.frontend == 'true' && always()
         uses: actions/upload-artifact@v4
         with:
           name: vitest-coverage-report
@@ -188,7 +220,7 @@ jobs:
           retention-days: 14
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: steps.filter.outputs.frontend == 'true' && always()
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -197,7 +229,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Vitest coverage summary
-        if: always()
+        if: steps.filter.outputs.frontend == 'true' && always()
         run: |
           SUMMARY=frontend/coverage/coverage-summary.json
           if [ ! -f "$SUMMARY" ]; then
@@ -220,7 +252,7 @@ jobs:
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Post Vitest comment on PR
-        if: github.event_name == 'pull_request' && always()
+        if: steps.filter.outputs.frontend == 'true' && github.event_name == 'pull_request' && always()
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
