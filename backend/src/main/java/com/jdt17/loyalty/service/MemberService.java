@@ -314,22 +314,33 @@ public class MemberService {
             if (!List.of("EARN", "REDEEM", "EXCHANGE_IN", "EXCHANGE_OUT", "EXPIRED").contains(typeUpper)) {
                 throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Invalid transaction type", "INVALID_TRANSACTION_TYPE");
             }
+            type = typeUpper;
+        } else {
+            type = null;
         }
 
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
-        org.springframework.data.domain.Page<Transaction> txPage = transactionRepository.findByMemberIdAndType(id, (type != null && !type.trim().isEmpty()) ? type.trim().toUpperCase() : null, pageable);
+        org.springframework.data.domain.Page<Transaction> txPage = transactionRepository.findByMemberIdAndType(id, type, pageable);
 
         List<MemberTransactionDetail> details = txPage.getContent().stream()
-                .map(t -> MemberTransactionDetail.builder()
-                        .id(t.getId())
-                        .type(t.getType())
-                        .partnerId(t.getPartner().getId())
-                        .partnerName(t.getPartner().getName())
-                        .points(t.getPoints())
-                        .trxAmountIDR(t.getTrxAmountIdr())
-                        .expiresAt(t.getExpiresAt())
-                        .createdAt(t.getCreatedAt())
-                        .build())
+                .map(t -> {
+                    UUID partnerId = null;
+                    String partnerName = null;
+                    if (t.getPartner() != null) {
+                        partnerId = t.getPartner().getId();
+                        partnerName = t.getPartner().getName();
+                    }
+                    return MemberTransactionDetail.builder()
+                            .id(t.getId())
+                            .type(t.getType())
+                            .partnerId(partnerId)
+                            .partnerName(partnerName)
+                            .points(t.getPoints())
+                            .trxAmountIDR(t.getTrxAmountIdr())
+                            .expiresAt(t.getExpiresAt())
+                            .createdAt(t.getCreatedAt())
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return MemberTransactionHistoryResponse.builder()
