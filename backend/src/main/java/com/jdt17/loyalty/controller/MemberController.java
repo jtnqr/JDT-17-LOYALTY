@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.controller;
 
+import com.jdt17.loyalty.dto.member.MemberPointsResponse;
 import com.jdt17.loyalty.dto.member.MemberResponse;
 import com.jdt17.loyalty.dto.member.PagedMemberResponse;
 import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
@@ -41,6 +42,14 @@ public class MemberController {
     ) {
         MemberResponse response = memberService.updateMember(id, request);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/points")
+    public ResponseEntity<MemberPointsResponse> getMemberPoitnts(
+            @PathVariable UUID id
+    ) {
+        MemberPointsResponse response = memberService.getMemberPoints(id);
         return ResponseEntity.ok(response);
     }
 }

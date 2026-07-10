@@ -1,6 +1,7 @@
 package com.jdt17.loyalty.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jdt17.loyalty.dto.member.MemberPointsResponse;
 import com.jdt17.loyalty.dto.member.MemberResponse;
 import com.jdt17.loyalty.dto.member.PagedMemberResponse;
 import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
@@ -120,5 +121,41 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.id").value(memberId.toString()))
                 .andExpect(jsonPath("$.name").value("Budi S."))
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    @Test
+    void testGetMemberPoints_Success() throws Exception {
+        UUID memberId = UUID.randomUUID();
+        UUID partnerId1 = UUID.randomUUID();
+        UUID partnerId2 = UUID.randomUUID();
+
+        MemberPointsResponse.PointBalanceDetail detail1 = MemberPointsResponse.PointBalanceDetail.builder()
+                .partnerId(partnerId1)
+                .partnerName("KFC Indonesia")
+                .balance(500L)
+                .build();
+
+        MemberPointsResponse.PointBalanceDetail detail2 = MemberPointsResponse.PointBalanceDetail.builder()
+                .partnerId(partnerId2)
+                .partnerName("McDonald's Indonesia")
+                .balance(300L)
+                .build();
+
+        MemberPointsResponse response = MemberPointsResponse.builder()
+                .memberId(memberId)
+                .memberName("Budi Santoso")
+                .balances(List.of(detail1, detail2))
+                .build();
+
+        when(memberService.getMemberPoints(memberId)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/members/{id}/points", memberId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberId").value(memberId.toString()))
+                .andExpect(jsonPath("$.memberName").value("Budi Santoso"))
+                .andExpect(jsonPath("$.balances[0].partnerName").value("KFC Indonesia"))
+                .andExpect(jsonPath("$.balances[0].balance").value(500))
+                .andExpect(jsonPath("$.balances[1].partnerName").value("McDonald's Indonesia"))
+                .andExpect(jsonPath("$.balances[1].balance").value(300));
     }
 }

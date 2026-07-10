@@ -2,6 +2,7 @@ package com.jdt17.loyalty.service;
 
 import com.jdt17.loyalty.dto.login.LoginRequest;
 import com.jdt17.loyalty.dto.login.LoginResponse;
+import com.jdt17.loyalty.dto.member.MemberPointsResponse;
 import com.jdt17.loyalty.dto.member.MemberResponse;
 import com.jdt17.loyalty.dto.member.PagedMemberResponse;
 import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
@@ -11,6 +12,7 @@ import com.jdt17.loyalty.entity.Admin;
 import java.time.OffsetDateTime;
 import com.jdt17.loyalty.entity.Member;
 import com.jdt17.loyalty.entity.Partner;
+import com.jdt17.loyalty.entity.PointBalance;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.*;
 import com.jdt17.loyalty.security.JWTService;
@@ -772,5 +774,134 @@ class MemberServiceTest {
         assertEquals(1, response.getData().size());
         verify(memberRepository, times(1)).findAll(any(Pageable.class));
         verify(memberRepository, never()).findByStatus(anyString(), any(Pageable.class));
+    }
+
+    @Test
+    void testGetMemberPoints_Success() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .email("budi.santoso@example.com")
+                .status("ACTIVE")
+                .build();
+
+        Partner kfc = Partner.builder()
+                .id(UUID.randomUUID())
+                .name("KFC Indonesia")
+                .build();
+
+        PointBalance balance = PointBalance.builder()
+                .member(member)
+                .partner(kfc)
+                .balance(500L)
+                .build();
+
+        // Mock Security Context as MEMBER (Own Access)
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        when(pointBalanceRepository.findByMemberId(memberId)).thenReturn(List.of(balance));
+
+        // Act
+        MemberPointsResponse response = memberService.getMemberPoints(memberId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(memberId, response.getMemberId());
+        assertEquals("Budi Santoso", response.getMemberName());
+        assertEquals(1, response.getBalances().size());
+        assertEquals("KFC Indonesia", response.getBalances().get(0).getPartnerName());
+        assertEquals(500L, response.getBalances().get(0).getBalance());
+
+        // Clear security context
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberPoints_Forbidden_NotOwner() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+        UUID otherMemberId = UUID.randomUUID();
+
+        // Mock Security Context as MEMBER but accessing other member's ID
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(otherMemberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberPoints(memberId)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        assertEquals("FORBIDDEN", exception.getCode());
+
+        // Clear security context
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberPoints_Forbidden_AdminRole() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+
+        // Mock Security Context as ADMIN (Admin is explicitly forbidden)
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberPoints(memberId)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        assertEquals("FORBIDDEN", exception.getCode());
+
+        // Clear security context
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberPoints_MemberNotFound() {
+        // Arrange
+        UUID memberId = UUID.randomUUID();
+
+        // Mock Security Context as MEMBER (Own Access)
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberPoints(memberId)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("MEMBER_NOT_FOUND", exception.getCode());
+
+        // Clear security context
+        SecurityContextHolder.clearContext();
     }
 }
