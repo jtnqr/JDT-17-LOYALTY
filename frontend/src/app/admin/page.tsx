@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { useAdmin } from "@/lib/hooks/useAdmin";
+import axios from "axios";
 import Link from "next/link";
 import {
   Users,
@@ -59,6 +61,32 @@ const AUDIT_LOGS = [
 
 export default function AdminDashboardPage() {
   const { isLoaded } = useAdmin();
+
+  // Fetch Member count from API
+  const { data: memberData } = useQuery({
+    queryKey: ["admin-total-members"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/members?page=0&size=1", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data.totalElements as number;
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
+  // Fetch Partner count from API
+  const { data: partnerData } = useQuery({
+    queryKey: ["admin-total-partners"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/partners", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.data as any[]).length;
+    },
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
 
   const getEventBadge = (type: string) => {
     switch (type) {
@@ -130,7 +158,7 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <p className="text-2xl font-black text-neutral-900 tracking-tight">
-                  243
+                  {memberData ?? 0}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-600 font-bold">
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -150,7 +178,7 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <p className="text-2xl font-black text-neutral-900 tracking-tight">
-                  2{" "}
+                  {partnerData ?? 0}{" "}
                   <span className="text-xs text-neutral-400 font-bold">
                     merchants
                   </span>
