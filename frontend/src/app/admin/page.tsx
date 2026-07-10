@@ -70,7 +70,7 @@ export default function AdminDashboardPage() {
       const response = await axios.get("/api/v1/members?page=0&size=1", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data.totalElements as number;
+      return response.data.total as number;
     },
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
   });
