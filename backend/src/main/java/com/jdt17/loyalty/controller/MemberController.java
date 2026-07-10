@@ -52,4 +52,16 @@ public class MemberController {
         MemberPointsResponse response = memberService.getMemberPoints(id);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{id}/transactions")
+    public ResponseEntity<com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse> getMemberTransactions(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String type
+    ) {
+        com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse response =
+                memberService.getMemberTransactions(id, page, size, type);
+        return ResponseEntity.ok(response);
+    }
 }

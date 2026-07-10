@@ -158,4 +158,41 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.balances[1].partnerName").value("McDonald's Indonesia"))
                 .andExpect(jsonPath("$.balances[1].balance").value(300));
     }
+
+    @Test
+    void testGetMemberTransactions_Success() throws Exception {
+        UUID memberId = UUID.randomUUID();
+        UUID partnerId = UUID.randomUUID();
+
+        com.jdt17.loyalty.dto.member.MemberTransactionDetail detail =
+                com.jdt17.loyalty.dto.member.MemberTransactionDetail.builder()
+                        .id(UUID.randomUUID())
+                        .type("EARN")
+                        .partnerId(partnerId)
+                        .partnerName("KFC Indonesia")
+                        .points(100L)
+                        .trxAmountIDR(100000L)
+                        .createdAt(java.time.OffsetDateTime.now())
+                        .build();
+
+        com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse response =
+                com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse.builder()
+                        .memberId(memberId)
+                        .page(0)
+                        .size(20)
+                        .total(1)
+                        .transactions(List.of(detail))
+                        .build();
+
+        when(memberService.getMemberTransactions(eq(memberId), eq(0), eq(20), eq(null))).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/members/{id}/transactions", memberId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberId").value(memberId.toString()))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.transactions[0].type").value("EARN"))
+                .andExpect(jsonPath("$.transactions[0].points").value(100));
+    }
 }
