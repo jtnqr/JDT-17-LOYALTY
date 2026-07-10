@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 // Mock Fallback Partner Data matching TSD specs
 const MOCK_PARTNERS = [
   {
-    id: "kfc-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440001",
     name: "KFC",
     code: "KFC",
     pointsPerThousandIDR: 1,
@@ -34,7 +34,7 @@ const MOCK_PARTNERS = [
     exchangeRate: 0.8,
   },
   {
-    id: "mcd-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440002",
     name: "McDonald's",
     code: "MCD",
     pointsPerThousandIDR: 1,
