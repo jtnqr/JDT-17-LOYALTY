@@ -28,21 +28,21 @@ import Avatar from "@/components/atoms/Avatar";
 // Partner list definition matching FSD
 const PARTNER_PROGRAMS = [
   {
-    id: "kfc-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440001",
     code: "KFC",
     name: "KFC Colonel's Club",
     logoBg: "bg-red-50 text-[#C8102E]",
     logoChar: "K",
   },
   {
-    id: "mcd-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440002",
     code: "MCD",
     name: "McDonald's MyRewards",
     logoBg: "bg-yellow-50 text-[#D89F0E]",
     logoChar: "M",
   },
   {
-    id: "bk-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440003",
     code: "BK",
     name: "Burger King Indonesia",
     logoBg: "bg-amber-50 text-[#8B4F1D] border-amber-100",
