@@ -32,8 +32,8 @@
 - `GET /partners` (List partners) 🟢
 - `POST /partners` (Add partner + bulk init zero point balances) 🟢
 - `PUT /partners/{id}` (Admin update partner configs) 🟢
-- `GET /exchange-rates` (List directional exchange rates) 🔴
-- `POST /exchange-rates` (Admin add new exchange rates) 🔴
+- `GET /exchange-rates` (List directional exchange rates) 🟢
+- `POST /exchange-rates` (Admin add new exchange rates) 🟢
 - `POST /transactions` (Partner earns points for transactions) 🟢
 
 ## 4. System Cron & Auditing
