@@ -6,13 +6,15 @@ import com.jdt17.loyalty.dto.member.MemberPointsResponse;
 import com.jdt17.loyalty.dto.member.MemberResponse;
 import com.jdt17.loyalty.dto.member.PagedMemberResponse;
 import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
+import com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse;
+import com.jdt17.loyalty.dto.member.MemberTransactionDetail;
 import com.jdt17.loyalty.dto.register.RegisterRequest;
 import com.jdt17.loyalty.dto.register.RegisterResponse;
 import com.jdt17.loyalty.entity.Admin;
-import java.time.OffsetDateTime;
 import com.jdt17.loyalty.entity.Member;
 import com.jdt17.loyalty.entity.Partner;
 import com.jdt17.loyalty.entity.PointBalance;
+import com.jdt17.loyalty.entity.Transaction;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.*;
 import com.jdt17.loyalty.security.JWTService;
@@ -53,6 +55,9 @@ class MemberServiceTest {
 
     @Mock
     private PointBalanceRepository pointBalanceRepository;
+
+    @Mock
+    private TransactionRepository transactionRepository;
 
     @Mock
     private AuditTrailService auditTrailService;
@@ -902,6 +907,264 @@ class MemberServiceTest {
         assertEquals("MEMBER_NOT_FOUND", exception.getCode());
 
         // Clear security context
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_Success() {
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .status("ACTIVE")
+                .build();
+
+        Partner partner = Partner.builder()
+                .id(UUID.randomUUID())
+                .name("KFC Indonesia")
+                .build();
+
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID())
+                .member(member)
+                .partner(partner)
+                .type("EARN")
+                .points(100L)
+                .trxAmountIdr(100000L)
+                .createdAt(java.time.OffsetDateTime.now())
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        org.springframework.data.domain.Page<Transaction> page = new org.springframework.data.domain.PageImpl<>(List.of(tx));
+        when(transactionRepository.findByMemberIdAndType(eq(memberId), eq(null), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
+
+        MemberTransactionHistoryResponse response = memberService.getMemberTransactions(memberId, 0, 20, null);
+
+        assertNotNull(response);
+        assertEquals(memberId, response.getMemberId());
+        assertEquals(1, response.getTransactions().size());
+        assertEquals("EARN", response.getTransactions().get(0).getType());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_WithValidType() {
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .status("ACTIVE")
+                .build();
+
+        Partner partner = Partner.builder()
+                .id(UUID.randomUUID())
+                .name("KFC Indonesia")
+                .build();
+
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID())
+                .member(member)
+                .partner(partner)
+                .type("EXCHANGE_IN")
+                .points(100L)
+                .createdAt(java.time.OffsetDateTime.now())
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        org.springframework.data.domain.Page<Transaction> page = new org.springframework.data.domain.PageImpl<>(List.of(tx));
+        when(transactionRepository.findByMemberIdAndType(eq(memberId), eq("EXCHANGE_IN"), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
+
+        MemberTransactionHistoryResponse response = memberService.getMemberTransactions(memberId, 0, 20, "EXCHANGE_IN");
+
+        assertNotNull(response);
+        assertEquals(1, response.getTransactions().size());
+        assertEquals("EXCHANGE_IN", response.getTransactions().get(0).getType());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_InvalidType() {
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .status("ACTIVE")
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberTransactions(memberId, 0, 20, "INVALID")
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals("INVALID_TRANSACTION_TYPE", exception.getCode());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_Success_NullPartner() {
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .status("ACTIVE")
+                .build();
+
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID())
+                .member(member)
+                .partner(null)
+                .type("EARN")
+                .points(100L)
+                .trxAmountIdr(100000L)
+                .createdAt(java.time.OffsetDateTime.now())
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        org.springframework.data.domain.Page<Transaction> page = new org.springframework.data.domain.PageImpl<>(List.of(tx));
+        when(transactionRepository.findByMemberIdAndType(eq(memberId), eq(null), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
+
+        MemberTransactionHistoryResponse response = memberService.getMemberTransactions(memberId, 0, 20, null);
+
+        assertNotNull(response);
+        assertEquals(memberId, response.getMemberId());
+        assertEquals(1, response.getTransactions().size());
+        assertNull(response.getTransactions().get(0).getPartnerId());
+        assertNull(response.getTransactions().get(0).getPartnerName());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_MemberNotFound() {
+        UUID memberId = UUID.randomUUID();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.empty());
+
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberTransactions(memberId, 0, 20, null)
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("MEMBER_NOT_FOUND", exception.getCode());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_Forbidden_NotMemberRole() {
+        UUID memberId = UUID.randomUUID();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberTransactions(memberId, 0, 20, null)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        assertEquals("FORBIDDEN", exception.getCode());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_InvalidType_EmptyOrWhitespace() {
+        UUID memberId = UUID.randomUUID();
+        Member member = Member.builder()
+                .id(memberId)
+                .name("Budi Santoso")
+                .status("ACTIVE")
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(memberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(memberRepository.findById(memberId)).thenReturn(Optional.of(member));
+        org.springframework.data.domain.Page<Transaction> page = new org.springframework.data.domain.PageImpl<>(List.of());
+        when(transactionRepository.findByMemberIdAndType(eq(memberId), eq(null), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
+
+        MemberTransactionHistoryResponse response = memberService.getMemberTransactions(memberId, 0, 20, "   ");
+        assertNotNull(response);
+        assertTrue(response.getTransactions().isEmpty());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetMemberTransactions_Forbidden() {
+        UUID memberId = UUID.randomUUID();
+        UUID otherMemberId = UUID.randomUUID();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(otherMemberId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> memberService.getMemberTransactions(memberId, 0, 20, null)
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        assertEquals("FORBIDDEN", exception.getCode());
+
         SecurityContextHolder.clearContext();
     }
 }

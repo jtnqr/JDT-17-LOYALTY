@@ -1,5 +1,7 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.dto.member.MemberTransactionDetail;
+import com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse;
 import com.jdt17.loyalty.dto.login.LoginRequest;
 import com.jdt17.loyalty.dto.login.LoginResponse;
 import com.jdt17.loyalty.dto.member.MemberPointsResponse;
@@ -36,6 +38,7 @@ public class MemberService {
     private final AdminRepository adminRepository;
     private final PartnerRepository partnerRepository;
     private final PointBalanceRepository pointBalanceRepository;
+    private final TransactionRepository transactionRepository;
     private final AuditTrailService auditTrailService;
     private final PasswordEncoder passwordEncoder;
     private final JWTService jwtService;
@@ -288,5 +291,64 @@ public class MemberService {
                 .balances(balanceDetails)
                 .build();
 
+    }
+
+    public MemberTransactionHistoryResponse getMemberTransactions(UUID id, int page, int size, String type) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = authentication.getName();
+
+        boolean isMember = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER"));
+
+        // must be MEMBER with same ID
+        if (!isMember || !id.toString().equals(currentUserId)) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        }
+
+        // member must be registered
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Member does not exist", "MEMBER_NOT_FOUND"));
+
+        if (type != null && !type.trim().isEmpty()) {
+            String typeUpper = type.trim().toUpperCase();
+            if (!List.of("EARN", "REDEEM", "EXCHANGE_IN", "EXCHANGE_OUT", "EXPIRED").contains(typeUpper)) {
+                throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Invalid transaction type", "INVALID_TRANSACTION_TYPE");
+            }
+            type = typeUpper;
+        } else {
+            type = null;
+        }
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
+        org.springframework.data.domain.Page<Transaction> txPage = transactionRepository.findByMemberIdAndType(id, type, pageable);
+
+        List<MemberTransactionDetail> details = txPage.getContent().stream()
+                .map(t -> {
+                    UUID partnerId = null;
+                    String partnerName = null;
+                    if (t.getPartner() != null) {
+                        partnerId = t.getPartner().getId();
+                        partnerName = t.getPartner().getName();
+                    }
+                    return MemberTransactionDetail.builder()
+                            .id(t.getId())
+                            .type(t.getType())
+                            .partnerId(partnerId)
+                            .partnerName(partnerName)
+                            .points(t.getPoints())
+                            .trxAmountIDR(t.getTrxAmountIdr())
+                            .expiresAt(t.getExpiresAt())
+                            .createdAt(t.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return MemberTransactionHistoryResponse.builder()
+                .memberId(member.getId())
+                .page(txPage.getNumber())
+                .size(txPage.getSize())
+                .total(txPage.getTotalElements())
+                .transactions(details)
+                .build();
     }
 }
