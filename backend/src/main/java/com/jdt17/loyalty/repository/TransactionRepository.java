@@ -16,4 +16,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("type") String type,
             Pageable pageable
     );
+
+    @Query("SELECT SUM(t.points) FROM Transaction t WHERE t.member.id = :memberId AND t.partner.id = :partnerId AND t.type = :type AND t.expiresAt > :now")
+    Long sumPointsByMemberAndPartnerAndTypeAndExpiresAtAfter(
+            @Param("memberId") UUID memberId,
+            @Param("partnerId") UUID partnerId,
+            @Param("type") String type,
+            @Param("now") java.time.OffsetDateTime now
+    );
+
+    @Query("SELECT SUM(t.points) FROM Transaction t WHERE t.member.id = :memberId AND t.partner.id = :partnerId AND t.type = :type")
+    Long sumPointsByMemberAndPartnerAndType(
+            @Param("memberId") UUID memberId,
+            @Param("partnerId") UUID partnerId,
+            @Param("type") String type
+    );
 }
