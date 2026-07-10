@@ -166,44 +166,39 @@ export default function AdminMembersPage() {
         {
           headers: { Authorization: `Bearer ${token}` },
         }
-      const onSubmitEdit = async (data: EditMemberSchemaType) => {
-        try {
-          const token = localStorage.getItem("token");
-          await axios.put(`/api/v1/members/${selectedMember?.id}`, data, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+      );
 
-          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-          setIsEditOpen(false);
-        } catch (error: any) {
-          console.error("Failed to update member config:", error);
-          const responseData = error.response?.data;
-          const errorCode = responseData?.code;
-          const errorMessage = responseData?.message;
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+      setIsEditOpen(false);
+    } catch (error: any) {
+      console.error("Failed to update member config:", error);
+      const responseData = error.response?.data;
+      const errorCode = responseData?.code;
+      const errorMessage = responseData?.message;
 
-          if (errorCode === "DUPLICATE_EMAIL") {
-            setErrorEdit("email", {
-              type: "manual",
-              message: "Email is already registered.",
-            });
-          } else if (errorCode === "DUPLICATE_PHONE") {
-            setErrorEdit("phone", {
-              type: "manual",
-              message: "Phone number is already registered.",
-            });
-          } else if (errorMessage) {
-            setErrorEdit("root", {
-              type: "manual",
-              message: errorMessage,
-            });
-          } else {
-            setErrorEdit("root", {
-              type: "manual",
-              message: "Failed to update member. Please try again.",
-            });
-          }
-        }
-      };
+      if (errorCode === "DUPLICATE_EMAIL") {
+        setErrorEdit("email", {
+          type: "manual",
+          message: "Email is already registered.",
+        });
+      } else if (errorCode === "DUPLICATE_PHONE") {
+        setErrorEdit("phone", {
+          type: "manual",
+          message: "Phone number is already registered.",
+        });
+      } else if (errorMessage) {
+        setErrorEdit("root", {
+          type: "manual",
+          message: errorMessage,
+        });
+      } else {
+        setErrorEdit("root", {
+          type: "manual",
+          message: "Failed to update member. Please try again.",
+        });
+      }
+    }
+  };
 
       const onSubmitAdd = async (data: AddMemberSchemaType) => {
         // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
