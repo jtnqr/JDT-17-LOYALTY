@@ -282,4 +282,66 @@ class EntityTest {
         prePersistPointBalance.onUpdate();
         assertNotNull(prePersistPointBalance.getUpdatedAt());
     }
+
+    @Test
+    void testExchangeRateEntity() {
+        UUID id = UUID.randomUUID();
+        Partner fromPartner = new Partner();
+        Partner toPartner = new Partner();
+        java.math.BigDecimal rateVal = new java.math.BigDecimal("0.8500");
+        OffsetDateTime now = OffsetDateTime.now();
+        UUID createdBy = UUID.randomUUID();
+
+        ExchangeRate rate = new ExchangeRate();
+        rate.setId(id);
+        rate.setFromPartner(fromPartner);
+        rate.setToPartner(toPartner);
+        rate.setRate(rateVal);
+        rate.setEffectiveFrom(now);
+        rate.setCreatedBy(createdBy);
+        rate.setUpdatedAt(now);
+
+        assertEquals(id, rate.getId());
+        assertEquals(fromPartner, rate.getFromPartner());
+        assertEquals(toPartner, rate.getToPartner());
+        assertEquals(rateVal, rate.getRate());
+        assertEquals(now, rate.getEffectiveFrom());
+        assertEquals(createdBy, rate.getCreatedBy());
+        assertEquals(now, rate.getUpdatedAt());
+
+        // Test Builder
+        ExchangeRate built = ExchangeRate.builder()
+                .id(id)
+                .fromPartner(fromPartner)
+                .toPartner(toPartner)
+                .rate(rateVal)
+                .effectiveFrom(now)
+                .createdBy(createdBy)
+                .updatedAt(now)
+                .build();
+        assertEquals(id, built.getId());
+
+        // Test AllArgsConstructor
+        ExchangeRate rate2 = new ExchangeRate(id, fromPartner, toPartner, rateVal, now, createdBy, now);
+        assertEquals(rateVal, rate2.getRate());
+
+        // Test Lifecycle callbacks
+        ExchangeRate prePersistRate = new ExchangeRate();
+        assertNull(prePersistRate.getEffectiveFrom());
+        assertNull(prePersistRate.getUpdatedAt());
+        prePersistRate.onCreate();
+        assertNotNull(prePersistRate.getEffectiveFrom());
+        assertNotNull(prePersistRate.getUpdatedAt());
+
+        // Test Lifecycle callback when effectiveFrom is preset
+        ExchangeRate prePersistRatePreset = new ExchangeRate();
+        prePersistRatePreset.setEffectiveFrom(now);
+        prePersistRatePreset.onCreate();
+        assertEquals(now, prePersistRatePreset.getEffectiveFrom());
+
+        ExchangeRate preUpdateRate = new ExchangeRate();
+        assertNull(preUpdateRate.getUpdatedAt());
+        preUpdateRate.onUpdate();
+        assertNotNull(preUpdateRate.getUpdatedAt());
+    }
 }
