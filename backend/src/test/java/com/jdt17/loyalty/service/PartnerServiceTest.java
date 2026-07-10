@@ -5,6 +5,7 @@ import com.jdt17.loyalty.dto.partner.PartnerTokenResponse;
 import com.jdt17.loyalty.entity.Partner;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.PartnerRepository;
+import com.jdt17.loyalty.repository.PointBalanceRepository;
 import com.jdt17.loyalty.security.JWTService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +19,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.jdt17.loyalty.dto.partner.ListPartnerResponse;
 import com.jdt17.loyalty.dto.partner.PartnerResponse;
+import com.jdt17.loyalty.dto.partner.CreatePartnerRequest;
+import com.jdt17.loyalty.dto.partner.UpdatePartnerRequest;
 import java.util.List;
 
 import java.security.MessageDigest;
@@ -322,6 +325,325 @@ class PartnerServiceTest {
         verify(partnerRepository, never()).findAll();
 
         // Cleanup
+        SecurityContextHolder.clearContext();
+    }
+
+    @Mock
+    private PointBalanceRepository pointBalanceRepository;
+
+    @Mock
+    private AuditTrailService auditTrailService;
+
+    @Test
+    void testCreatePartner_Success() {
+        // Arrange
+        CreatePartnerRequest request = CreatePartnerRequest.builder()
+                .name("Starbucks")
+                .code("SBUX")
+                .pointsPerThousandIDR(2)
+                .expiryDays(180)
+                .build();
+
+        UUID adminId = UUID.randomUUID();
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(adminId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(partnerRepository.existsByCode("SBUX")).thenReturn(false);
+
+        Partner savedPartner = Partner.builder()
+                .id(UUID.randomUUID())
+                .name("Starbucks")
+                .code("SBUX")
+                .pointPerThousandIdr(2)
+                .expiryDays(180)
+                .status("ACTIVE")
+                .build();
+
+        when(partnerRepository.save(any(Partner.class))).thenReturn(savedPartner);
+
+        // Act
+        PartnerResponse response = partnerService.createPartner(request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(savedPartner.getId(), response.getId());
+        assertEquals("Starbucks", response.getName());
+        assertEquals("SBUX", response.getCode());
+        assertEquals(2, response.getPointsPerThousandIDR());
+        assertEquals(180, response.getExpiryDays());
+        assertEquals("ACTIVE", response.getStatus());
+
+        verify(partnerRepository).existsByCode("SBUX");
+        verify(partnerRepository).save(any(Partner.class));
+        verify(pointBalanceRepository).bulkInitPointBalances(savedPartner.getId());
+        verify(auditTrailService).logEvent("PARTNER_CREATED", adminId, "ADMIN", "PARTNER", savedPartner.getId(), null);
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testCreatePartner_DuplicateCode() {
+        // Arrange
+        CreatePartnerRequest request = CreatePartnerRequest.builder()
+                .name("Starbucks")
+                .code("SBUX")
+                .pointsPerThousandIDR(2)
+                .expiryDays(180)
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(partnerRepository.existsByCode("SBUX")).thenReturn(true);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(LoyaltyException.class, () -> partnerService.createPartner(request));
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals("DUPLICATE_PARTNER_CODE", exception.getCode());
+
+        verify(partnerRepository, never()).save(any());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdatePartner_Success() {
+        // Arrange
+        UUID partnerId = UUID.randomUUID();
+        UpdatePartnerRequest request = UpdatePartnerRequest.builder()
+                .name("KFC Indonesia Updated")
+                .pointsPerThousandIDR(2)
+                .expiryDays(180)
+                .status("ACTIVE")
+                .build();
+
+        UUID adminId = UUID.randomUUID();
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(adminId.toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("KFC")
+                .code("KFC")
+                .pointPerThousandIdr(1)
+                .expiryDays(365)
+                .status("ACTIVE")
+                .build();
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.of(partner));
+        when(partnerRepository.save(any(Partner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        PartnerResponse response = partnerService.updatePartner(partnerId, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("KFC Indonesia Updated", response.getName());
+        assertEquals(2, response.getPointsPerThousandIDR());
+        assertEquals(180, response.getExpiryDays());
+        assertEquals("ACTIVE", response.getStatus());
+
+        verify(partnerRepository).save(partner);
+        verify(auditTrailService).logEvent("PARTNER_UPDATED", adminId, "ADMIN", "PARTNER", partnerId, null);
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdatePartner_NotFound() {
+        // Arrange
+        UUID partnerId = UUID.randomUUID();
+        UpdatePartnerRequest request = UpdatePartnerRequest.builder()
+                .name("KFC Indonesia Updated")
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(LoyaltyException.class, () -> partnerService.updatePartner(partnerId, request));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("PARTNER_NOT_FOUND", exception.getCode());
+
+        verify(partnerRepository, never()).save(any());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testCreatePartner_AuthenticationNull() {
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(null);
+        SecurityContextHolder.setContext(securityContext);
+
+        CreatePartnerRequest request = CreatePartnerRequest.builder()
+                .name("Starbucks")
+                .code("SBUX")
+                .pointsPerThousandIDR(2)
+                .expiryDays(180)
+                .build();
+
+        LoyaltyException exception = assertThrows(LoyaltyException.class, () -> partnerService.createPartner(request));
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testCreatePartner_Forbidden() {
+        CreatePartnerRequest request = CreatePartnerRequest.builder().build();
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        LoyaltyException exception = assertThrows(LoyaltyException.class, () -> partnerService.createPartner(request));
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testCreatePartner_AuthenticationNameNull() {
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(null);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        CreatePartnerRequest request = CreatePartnerRequest.builder()
+                .name("Starbucks")
+                .code("SBUX")
+                .pointsPerThousandIDR(2)
+                .expiryDays(180)
+                .build();
+
+        Partner savedPartner = Partner.builder()
+                .id(UUID.randomUUID())
+                .name("Starbucks")
+                .code("SBUX")
+                .pointPerThousandIdr(2)
+                .expiryDays(180)
+                .status("ACTIVE")
+                .build();
+        when(partnerRepository.existsByCode("SBUX")).thenReturn(false);
+        when(partnerRepository.save(any(Partner.class))).thenReturn(savedPartner);
+
+        PartnerResponse response = partnerService.createPartner(request);
+        assertNotNull(response);
+        verify(auditTrailService).logEvent("PARTNER_CREATED", null, "ADMIN", "PARTNER", savedPartner.getId(), null);
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testCreatePartner_AuthenticationNameInvalidUUID() {
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("not-a-uuid");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        CreatePartnerRequest request = CreatePartnerRequest.builder()
+                .name("Starbucks")
+                .code("SBUX")
+                .pointsPerThousandIDR(2)
+                .expiryDays(180)
+                .build();
+
+        Partner savedPartner = Partner.builder()
+                .id(UUID.randomUUID())
+                .name("Starbucks")
+                .code("SBUX")
+                .pointPerThousandIdr(2)
+                .expiryDays(180)
+                .status("ACTIVE")
+                .build();
+        when(partnerRepository.existsByCode("SBUX")).thenReturn(false);
+        when(partnerRepository.save(any(Partner.class))).thenReturn(savedPartner);
+
+        PartnerResponse response = partnerService.createPartner(request);
+        assertNotNull(response);
+        verify(auditTrailService).logEvent("PARTNER_CREATED", null, "ADMIN", "PARTNER", savedPartner.getId(), null);
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdatePartner_FieldsOmitted() {
+        UUID partnerId = UUID.randomUUID();
+        UpdatePartnerRequest request = UpdatePartnerRequest.builder().build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(UUID.randomUUID().toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("KFC")
+                .code("KFC")
+                .pointPerThousandIdr(1)
+                .expiryDays(365)
+                .status("ACTIVE")
+                .build();
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.of(partner));
+        when(partnerRepository.save(any(Partner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PartnerResponse response = partnerService.updatePartner(partnerId, request);
+        assertNotNull(response);
+        assertEquals("KFC", response.getName());
+        assertEquals(1, response.getPointsPerThousandIDR());
+        assertEquals(365, response.getExpiryDays());
+        assertEquals("ACTIVE", response.getStatus());
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUpdatePartner_AuthenticationNameInvalidUUID() {
+        UUID partnerId = UUID.randomUUID();
+        UpdatePartnerRequest request = UpdatePartnerRequest.builder()
+                .name("KFC Indonesia Updated")
+                .build();
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("not-a-uuid");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("KFC")
+                .code("KFC")
+                .pointPerThousandIdr(1)
+                .expiryDays(365)
+                .status("ACTIVE")
+                .build();
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.of(partner));
+        when(partnerRepository.save(any(Partner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PartnerResponse response = partnerService.updatePartner(partnerId, request);
+        assertNotNull(response);
+        verify(auditTrailService).logEvent("PARTNER_UPDATED", null, "ADMIN", "PARTNER", partnerId, null);
         SecurityContextHolder.clearContext();
     }
 }

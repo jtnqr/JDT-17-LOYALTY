@@ -1,30 +1,122 @@
 package com.jdt17.loyalty.service;
 
-import com.jdt17.loyalty.dto.partner.ListPartnerResponse;
-import com.jdt17.loyalty.dto.partner.PartnerResponse;
-import com.jdt17.loyalty.dto.partner.PartnerTokenRequest;
-import com.jdt17.loyalty.dto.partner.PartnerTokenResponse;
+import com.jdt17.loyalty.dto.partner.*;
 import com.jdt17.loyalty.entity.Partner;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.PartnerRepository;
+import com.jdt17.loyalty.repository.PointBalanceRepository;
 import com.jdt17.loyalty.security.JWTService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PartnerService {
     private final PartnerRepository partnerRepository;
+    private final PointBalanceRepository pointBalanceRepository;
+    private final AuditTrailService auditTrailService;
     private final JWTService jwtService;
+
+    private void verifyAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new LoyaltyException(HttpStatus.UNAUTHORIZED, "Unauthorized", "UNAUTHORIZED");
+        }
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        }
+    }
+
+    private UUID getActorId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        try {
+            return UUID.fromString(authentication.getName());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Transactional
+    public PartnerResponse createPartner(CreatePartnerRequest request) {
+        verifyAdmin();
+
+        if (partnerRepository.existsByCode(request.getCode())) {
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Partner code already exists", "DUPLICATE_PARTNER_CODE");
+        }
+
+        Partner partner = Partner.builder()
+                .name(request.getName())
+                .code(request.getCode())
+                .pointPerThousandIdr(request.getPointsPerThousandIDR())
+                .expiryDays(request.getExpiryDays())
+                .status("ACTIVE")
+                .build();
+
+        Partner savedPartner = partnerRepository.save(partner);
+
+        // Bulk init point balances for active members
+        pointBalanceRepository.bulkInitPointBalances(savedPartner.getId());
+
+        // Audit Trail
+        auditTrailService.logEvent("PARTNER_CREATED", getActorId(), "ADMIN", "PARTNER", savedPartner.getId(), null);
+
+        return PartnerResponse.builder()
+                .id(savedPartner.getId())
+                .name(savedPartner.getName())
+                .code(savedPartner.getCode())
+                .pointsPerThousandIDR(savedPartner.getPointPerThousandIdr())
+                .expiryDays(savedPartner.getExpiryDays())
+                .status(savedPartner.getStatus())
+                .build();
+    }
+
+    @Transactional
+    public PartnerResponse updatePartner(UUID id, UpdatePartnerRequest request) {
+        verifyAdmin();
+
+        Partner partner = partnerRepository.findById(id)
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Partner does not exist", "PARTNER_NOT_FOUND"));
+
+        if (request.getName() != null) {
+            partner.setName(request.getName());
+        }
+        if (request.getPointsPerThousandIDR() != null) {
+            partner.setPointPerThousandIdr(request.getPointsPerThousandIDR());
+        }
+        if (request.getExpiryDays() != null) {
+            partner.setExpiryDays(request.getExpiryDays());
+        }
+        if (request.getStatus() != null) {
+            partner.setStatus(request.getStatus());
+        }
+
+        Partner updatedPartner = partnerRepository.save(partner);
+
+        // Audit Trail
+        auditTrailService.logEvent("PARTNER_UPDATED", getActorId(), "ADMIN", "PARTNER", updatedPartner.getId(), null);
+
+        return PartnerResponse.builder()
+                .id(updatedPartner.getId())
+                .name(updatedPartner.getName())
+                .code(updatedPartner.getCode())
+                .pointsPerThousandIDR(updatedPartner.getPointPerThousandIdr())
+                .expiryDays(updatedPartner.getExpiryDays())
+                .status(updatedPartner.getStatus())
+                .build();
+    }
 
     public PartnerTokenResponse getPartnerToken(PartnerTokenRequest request) {
         Partner partner = partnerRepository.findById(request.getPartnerId())

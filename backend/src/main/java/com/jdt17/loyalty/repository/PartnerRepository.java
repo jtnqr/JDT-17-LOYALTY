@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface PartnerRepository extends JpaRepository<Partner, UUID> {
     List<Partner> findByStatus(String status);
     Optional<Partner> findByCode(String code);
+    boolean existsByCode(String code);
 }
