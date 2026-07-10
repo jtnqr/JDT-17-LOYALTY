@@ -597,6 +597,19 @@ export default function MemberRewardsPage() {
                   </div>
                 </div>
 
+                {/* API Error Banner */}
+                {redeemError && (
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Redemption Failed</p>
+                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
+                        {redeemError}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Insufficient Warning Banner */}
                 {isInsufficient && (
                   <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
