@@ -109,6 +109,97 @@ class AuditTrailServiceTest {
     }
 
     @Test
+    void testLogEvent_Success_WithPlainStringPayload() {
+        // Arrange
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+        String payload = "plain text message";
+
+        // Act
+        auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
+
+        // Assert
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository, times(1)).save(captor.capture());
+
+        AuditTrail saved = captor.getValue();
+        assertNotNull(saved);
+        assertEquals("\"plain text message\"", saved.getPayload());
+    }
+
+    @Test
+    void testLogEvent_Success_WithArrayStringPayload() {
+        // Arrange
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+        String payload = "[\"item1\", \"item2\"]";
+
+        // Act
+        auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
+
+        // Assert
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository, times(1)).save(captor.capture());
+
+        AuditTrail saved = captor.getValue();
+        assertNotNull(saved);
+        assertEquals(payload, saved.getPayload());
+    }
+
+    @Test
+    void testLogEvent_Success_WithPartialJsonStringPayload() {
+        // Arrange
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+        
+        String[] partialPayloads = {
+            "{bad json",
+            "[bad json",
+            "bad json}",
+            "bad json]"
+        };
+
+        for (String payload : partialPayloads) {
+            // Act
+            auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
+        }
+
+        // Assert
+        verify(auditTrailRepository, times(partialPayloads.length)).save(any(AuditTrail.class));
+    }
+
+    @Test
+    void testLogEvent_Failure_SerializationError() {
+        // Arrange
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+        Object badPayload = new Object() {
+            public String getValue() {
+                throw new RuntimeException("Serialization failed");
+            }
+        };
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
+            auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, badPayload)
+        );
+
+        assertTrue(exception.getMessage().contains("Failed to write audit trail log"));
+    }
+
+    @Test
     void testLogEvent_Failure_ExceptionThrown() {
         // Arrange
         String eventType = "MEMBER_REGISTERED";
