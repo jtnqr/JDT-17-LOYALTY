@@ -12,6 +12,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.jdt17.loyalty.dto.partner.ListPartnerResponse;
+import com.jdt17.loyalty.dto.partner.PartnerResponse;
+import java.util.List;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -218,5 +225,103 @@ class PartnerServiceTest {
         assertEquals("INVALID_CREDENTIALS", exception.getCode());
 
         verify(jwtService, never()).generatePartnerToken(any());
+    }
+
+    @Test
+    void testGetAllPartners_Success_Admin() {
+        // Arrange
+        UUID partnerId = UUID.randomUUID();
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("KFC Indonesia")
+                .code("KFC")
+                .pointPerThousandIdr(1)
+                .expiryDays(365)
+                .status("ACTIVE")
+                .build();
+
+        // Mock Security Context as ADMIN
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(partnerRepository.findAll()).thenReturn(List.of(partner));
+
+        // Act
+        ListPartnerResponse response = partnerService.getAllPartners();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1, response.getData().size());
+        assertEquals("KFC Indonesia", response.getData().get(0).getName());
+        assertEquals("KFC", response.getData().get(0).getCode());
+        assertEquals(1, response.getData().get(0).getPointsPerThousandIDR());
+
+        verify(partnerRepository, times(1)).findAll();
+
+        // Cleanup
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetAllPartners_Success_Member() {
+        // Arrange
+        UUID partnerId = UUID.randomUUID();
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("McDonald's Indonesia")
+                .code("MCD")
+                .pointPerThousandIdr(1)
+                .expiryDays(365)
+                .status("ACTIVE")
+                .build();
+
+        // Mock Security Context as MEMBER
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(partnerRepository.findAll()).thenReturn(List.of(partner));
+
+        // Act
+        ListPartnerResponse response = partnerService.getAllPartners();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1, response.getData().size());
+        assertEquals("McDonald's Indonesia", response.getData().get(0).getName());
+
+        verify(partnerRepository, times(1)).findAll();
+
+        // Cleanup
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testGetAllPartners_Forbidden() {
+        // Mock Security Context as PARTNER (should be forbidden)
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_PARTNER"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        // Act & Assert
+        LoyaltyException exception = assertThrows(
+                LoyaltyException.class,
+                () -> partnerService.getAllPartners()
+        );
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
+        assertEquals("FORBIDDEN", exception.getCode());
+
+        verify(partnerRepository, never()).findAll();
+
+        // Cleanup
+        SecurityContextHolder.clearContext();
     }
 }
