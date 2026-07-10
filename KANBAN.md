@@ -49,4 +49,4 @@
 - Rewards catalog UI (Reward lists + details modal) 🟢
 - Admin CMS member list UI 🟢
 - History page UI (Filter & groups transaction history) 🟢
-- Integration: E2E smoke tests and actual API wiring 🔴
+- Integration: E2E smoke tests and actual API wiring 🟢

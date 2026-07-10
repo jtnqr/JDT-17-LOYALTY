@@ -1,0 +1,228 @@
+{
+  "info": {
+    "name": "PISTOS Loyalty API",
+    "description": "API endpoints for Points Integration System for Transaction-Originated Services (PISTOS)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"email\": \"budi.santoso@example.com\",\n  \"phone\": \"081234567890\",\n  \"password\": \"Member123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"budi.santoso@example.com\",\n  \"password\": \"Member123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Partner Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"partnerId\": \"{{kfcPartnerId}}\",\n  \"apiKey\": \"kfc_api_key_2026_secure_demo_only\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/partner/token", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "partner", "token"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Member Operations",
+      "item": [
+        {
+          "name": "Get Points Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/members/{{memberId}}/points", "host": ["{{baseUrl}}"], "path": ["api", "v1", "members", "{{memberId}}", "points"] }
+          }
+        },
+        {
+          "name": "Get Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/members/{{memberId}}/transactions?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "members", "{{memberId}}", "transactions"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "type", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Exchange Points",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromPartnerId\": \"{{kfcPartnerId}}\",\n  \"toPartnerId\": \"{{mcdPartnerId}}\",\n  \"points\": 500\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exchange", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exchange"] }
+          }
+        },
+        {
+          "name": "Redeem Reward",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rewardId\": \"880e8400-e29b-41d4-a716-446655440007\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/redeem", "host": ["{{baseUrl}}"], "path": ["api", "v1", "redeem"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Operations",
+      "item": [
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/members?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "members"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "status", "value": "ACTIVE", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Member by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/members/{{memberId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "members", "{{memberId}}"] }
+          }
+        },
+        {
+          "name": "Update Member Profile/Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"phone\": \"081234567890\",\n  \"status\": \"INACTIVE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/members/{{memberId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "members", "{{memberId}}"] }
+          }
+        },
+        {
+          "name": "Create Partner",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Starbucks Indonesia\",\n  \"code\": \"SBUX\",\n  \"pointsPerThousandIDR\": 2,\n  \"expiryDays\": 180,\n  \"apiKey\": \"sbux_api_key_2026_demo\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/partners", "host": ["{{baseUrl}}"], "path": ["api", "v1", "partners"] }
+          }
+        },
+        {
+          "name": "Create Exchange Rate",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromPartnerId\": \"{{kfcPartnerId}}\",\n  \"toPartnerId\": \"{{mcdPartnerId}}\",\n  \"rate\": 0.8500,\n  \"effectiveFrom\": \"2026-07-10T12:00:00Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/exchange-rates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exchange-rates"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Partner Operations",
+      "item": [
+        {
+          "name": "Earn Points",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{partnerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberIdentifier\": \"budi.santoso@example.com\",\n  \"partner\": \"KFC\",\n  \"trxAmount\": 150000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/transactions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "transactions"] }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8082", "type": "string" },
+    { "key": "memberToken", "value": "", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "partnerToken", "value": "", "type": "string" },
+    { "key": "memberId", "value": "990e8400-e29b-41d4-a716-446655440001", "type": "string" },
+    { "key": "kfcPartnerId", "value": "660e8400-e29b-41d4-a716-446655440001", "type": "string" },
+    { "key": "mcdPartnerId", "value": "660e8400-e29b-41d4-a716-446655440002", "type": "string" }
+  ]
+}

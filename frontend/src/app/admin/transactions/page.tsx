@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import { ChevronRight, ShieldAlert, Search, Clock, Bell } from "lucide-react";
 import Link from "next/link";
@@ -10,6 +11,7 @@ import Link from "next/link";
 import { Member, MOCK_MEMBERS } from "@/lib/mocks";
 
 export default function AdminTransactionsPage() {
+  const { isLoaded } = useAdmin();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch Member List
@@ -25,6 +27,14 @@ export default function AdminTransactionsPage() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
     retry: 1,
   });
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const membersList = memberData || MOCK_MEMBERS;
 

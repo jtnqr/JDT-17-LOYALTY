@@ -33,8 +33,8 @@ import Avatar from "@/components/atoms/Avatar";
 
 // Mock Fallback Data (per docs/seed-data.sql & design brief)
 const MOCK_BALANCES = [
-  { partnerId: "kfc-uuid", partnerName: "KFC Colonel's Club", balance: 1200 },
-  { partnerId: "mcd-uuid", partnerName: "McDonald's MyRewards", balance: 4850 },
+  { partnerId: "660e8400-e29b-41d4-a716-446655440001", partnerName: "KFC Colonel's Club", balance: 1200 },
+  { partnerId: "660e8400-e29b-41d4-a716-446655440002", partnerName: "McDonald's MyRewards", balance: 4850 },
 ];
 
 const MOCK_TRANSACTIONS = [

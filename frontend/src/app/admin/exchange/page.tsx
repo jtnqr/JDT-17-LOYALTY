@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
   ChevronRight,
@@ -75,6 +76,7 @@ const DEFAULT_RATES: ExchangeRate[] = [
 ];
 
 export default function AdminExchangePage() {
+  const { isLoaded } = useAdmin();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
     null
@@ -203,6 +205,14 @@ export default function AdminExchangePage() {
 
     setRateInputs(inputs);
   }, [selectedPartnerId, rates, partners]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Get active rate helper
   const getRateValue = (fromId: string, toId: string): number => {

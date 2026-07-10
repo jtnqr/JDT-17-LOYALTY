@@ -19,13 +19,13 @@ export type {
 
 
 export const DASHBOARD_MOCK_BALANCES: PointBalance[] = [
-  { partnerId: "kfc-uuid", partnerName: "KFC Colonel's Club", balance: 1200 },
-  { partnerId: "mcd-uuid", partnerName: "McDonald's MyRewards", balance: 4850 },
+  { partnerId: "660e8400-e29b-41d4-a716-446655440001", partnerName: "KFC Colonel's Club", balance: 1200 },
+  { partnerId: "660e8400-e29b-41d4-a716-446655440002", partnerName: "McDonald's MyRewards", balance: 4850 },
 ];
 
 export const PROFILE_MOCK_BALANCES: PointBalance[] = [
-  { partnerId: "kfc-uuid", partnerName: "KFC Colonel's Club", balance: 12450 },
-  { partnerId: "mcd-uuid", partnerName: "McDonald's MyRewards", balance: 4850 },
+  { partnerId: "660e8400-e29b-41d4-a716-446655440001", partnerName: "KFC Colonel's Club", balance: 12450 },
+  { partnerId: "660e8400-e29b-41d4-a716-446655440002", partnerName: "McDonald's MyRewards", balance: 4850 },
 ];
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
@@ -76,7 +76,7 @@ export const MOCK_MEMBERS: Member[] = [
 
 export const MOCK_PARTNERS: Partner[] = [
   {
-    id: "kfc-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440001",
     name: "KFC",
     code: "KFC",
     pointsPerThousandIDR: 1,
@@ -84,7 +84,7 @@ export const MOCK_PARTNERS: Partner[] = [
     status: "ACTIVE",
   },
   {
-    id: "mcd-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440002",
     name: "McDonald's",
     code: "MCD",
     pointsPerThousandIDR: 1,

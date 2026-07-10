@@ -28,7 +28,13 @@ public class AuditTrailServiceImpl implements AuditTrailService {
             String jsonPayload = null;
             if (payload != null) {
                 if (payload instanceof String) {
-                    jsonPayload = (String) payload;
+                    String strPayload = (String) payload;
+                    if ((strPayload.trim().startsWith("{") && strPayload.trim().endsWith("}")) ||
+                        (strPayload.trim().startsWith("[") && strPayload.trim().endsWith("]"))) {
+                        jsonPayload = strPayload;
+                    } else {
+                        jsonPayload = objectMapper.writeValueAsString(strPayload);
+                    }
                 } else {
                     jsonPayload = objectMapper.writeValueAsString(payload);
                 }

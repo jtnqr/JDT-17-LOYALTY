@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
   Search,
@@ -24,7 +25,7 @@ import { cn } from "@/lib/utils";
 // Mock Fallback Partner Data matching TSD specs
 const MOCK_PARTNERS = [
   {
-    id: "kfc-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440001",
     name: "KFC",
     code: "KFC",
     pointsPerThousandIDR: 1,
@@ -34,7 +35,7 @@ const MOCK_PARTNERS = [
     exchangeRate: 0.8,
   },
   {
-    id: "mcd-uuid",
+    id: "660e8400-e29b-41d4-a716-446655440002",
     name: "McDonald's",
     code: "MCD",
     pointsPerThousandIDR: 1,
@@ -57,6 +58,7 @@ interface Partner {
 }
 
 export default function AdminPartnersPage() {
+  const { isLoaded } = useAdmin();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
@@ -170,6 +172,14 @@ export default function AdminPartnersPage() {
     },
     retry: 1,
   });
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const partners = partnerData || MOCK_PARTNERS;
 

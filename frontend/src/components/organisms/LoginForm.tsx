@@ -62,36 +62,9 @@ export function LoginForm() {
     } catch (error: any) {
       console.error("Login failed:", error);
 
-      // If server is offline / no response, bypass for slicing demo purposes
+      // Show connection error if server is offline
       if (!error.response) {
-        console.warn("Backend offline. Bypassing login with mock credentials.");
-
-        const isEmailAdmin = data.email.toLowerCase().includes("admin");
-        const mockRole = isEmailAdmin ? "ADMIN" : "MEMBER";
-        const mockUser = isEmailAdmin
-          ? {
-              id: "admin-uuid-123",
-              name: "System Admin",
-              email: data.email,
-              status: "ACTIVE",
-            }
-          : {
-              id: "550e8400-e29b-41d4-a716-446655440001",
-              name: "Budi Santoso",
-              email: data.email,
-              phone: "081234567890",
-              status: "ACTIVE",
-            };
-
-        localStorage.setItem("token", "mock-jwt-token-for-slicing");
-        localStorage.setItem("role", mockRole);
-        localStorage.setItem("user", JSON.stringify(mockUser));
-
-        if (mockRole === "ADMIN") {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
+        setApiError("Cannot connect to authentication service. Please check if the server is running.");
         return;
       }
 

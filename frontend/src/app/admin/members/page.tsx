@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
   Search,
@@ -101,6 +102,7 @@ const addMemberSchema = z.object({
 type AddMemberSchemaType = z.infer<typeof addMemberSchema>;
 
 export default function AdminMembersPage() {
+  const { isLoaded } = useAdmin();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(0);
@@ -352,6 +354,14 @@ export default function AdminMembersPage() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
     retry: 1,
   });
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const rawMembers = (memberData?.data as Member[]) || MOCK_MEMBERS;
 
