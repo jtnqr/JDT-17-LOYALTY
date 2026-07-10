@@ -8,7 +8,7 @@ import axios from "axios";
 import { ChevronRight, ShieldAlert, Search, Clock, Bell } from "lucide-react";
 import Link from "next/link";
 
-import { Member, MOCK_MEMBERS } from "@/lib/mocks";
+import { Member } from "@/types";
 
 export default function AdminTransactionsPage() {
   const { isLoaded } = useAdmin();
@@ -36,7 +36,7 @@ export default function AdminTransactionsPage() {
     );
   }
 
-  const membersList = memberData || MOCK_MEMBERS;
+  const membersList = memberData || [];
 
   const filteredMembers = membersList.filter(
     (m) =>

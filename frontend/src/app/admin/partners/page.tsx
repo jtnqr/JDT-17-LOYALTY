@@ -114,36 +114,6 @@ export default function AdminPartnersPage() {
     } catch (error: any) {
       console.error("Failed to create partner:", error);
 
-      if (!error.response) {
-        console.warn("Backend offline. Simulating local partner creation.");
-
-        const newPartner = {
-          id: `partner-mock-${Math.random().toString(36).substr(2, 9)}`,
-          name: createName,
-          code: createCode.toUpperCase(),
-          pointsPerThousandIDR: createPointsRate,
-          expiryDays: createExpiryDays,
-          status: "ACTIVE",
-          targetPartnerName: "KFC",
-          exchangeRate: 1.0,
-        };
-
-        MOCK_PARTNERS.push(newPartner);
-
-        setCreateSuccess(true);
-        setTimeout(() => {
-          setIsCreating(false);
-          setIsCreateModalOpen(false);
-          setCreateSuccess(false);
-          setCreateName("");
-          setCreateCode("");
-          setCreatePointsRate(1);
-          setCreateExpiryDays(365);
-          refetch();
-        }, 1000);
-        return;
-      }
-
       if (error.response?.data?.message) {
         setCreateApiError(error.response.data.message);
       } else {
@@ -181,7 +151,7 @@ export default function AdminPartnersPage() {
     );
   }
 
-  const partners = partnerData || MOCK_PARTNERS;
+  const partners = partnerData || [];
 
   // Search filtering
   const filteredPartners = partners.filter(
@@ -235,36 +205,6 @@ export default function AdminPartnersPage() {
       }, 1000);
     } catch (error: any) {
       console.error("Failed to update partner config:", error);
-      
-      // If server is offline / fallback mode, simulate success!
-      if (!error.response) {
-        console.warn("Backend offline. Simulating local partner config update.");
-        
-        // Update mock partner values in local cache for visual accuracy
-        const partnerIndex = MOCK_PARTNERS.findIndex(p => p.id === editingPartner?.id);
-        if (partnerIndex !== -1) {
-          MOCK_PARTNERS[partnerIndex] = {
-            ...MOCK_PARTNERS[partnerIndex],
-            pointsPerThousandIDR: formPointsRate,
-            expiryDays: formExpiryDays,
-            status: formStatus,
-            exchangeRate: formExchangeRate,
-          };
-          
-          // Also update bidirectional rate for McDonald's/KFC if applicable
-          const targetIndex = MOCK_PARTNERS.findIndex(p => p.name === MOCK_PARTNERS[partnerIndex].targetPartnerName);
-          if (targetIndex !== -1) {
-            // Outbound rate update
-          }
-        }
-        
-        setSaveSuccess(true);
-        setTimeout(() => {
-          setIsSaving(false);
-          closeEditModal();
-        }, 1000);
-        return;
-      }
 
       if (error.response?.data?.message) {
         setApiError(error.response.data.message);

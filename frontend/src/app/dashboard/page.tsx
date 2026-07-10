@@ -119,21 +119,15 @@ export default function DashboardPage() {
   const apiBalances = balanceData || [];
   const kfcPoints =
     apiBalances.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ??
-    MOCK_BALANCES.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ??
-    0;
+      ?.balance ?? 0;
   const mcdPoints =
     apiBalances.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ??
-    MOCK_BALANCES.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ??
-    0;
+      ?.balance ?? 0;
 
   const combinedBalance = kfcPoints + mcdPoints;
   const estimatedValue = combinedBalance * 0.01; // $60.50 style
 
-  const transactions = transactionData || MOCK_TRANSACTIONS;
+  const transactions = transactionData || [];
 
   const getGreeting = () => {
     const hour = new Date().getHours();

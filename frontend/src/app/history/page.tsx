@@ -122,7 +122,7 @@ export default function HistoryPage() {
     );
   }
 
-  const rawTransactions = transactionData || MOCK_HISTORY_TRANSACTIONS;
+  const rawTransactions = transactionData || [];
 
   // Client-side filtering (handles fallback lists and searches)
   const filteredTransactions = rawTransactions.filter((tx) => {

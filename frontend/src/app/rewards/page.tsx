@@ -68,14 +68,25 @@ export default function MemberRewardsPage() {
   const [showPointsBanner, setShowPointsBanner] = useState(true);
 
   // Selected reward state for Screen 4 bottom sheet confirmation modal
-  const [selectedReward, setSelectedReward] = useState<
-    (typeof MEMBER_REWARDS)[0] | null
-  >(null);
+  const [selectedReward, setSelectedReward] = useState<any | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemSuccess, setRedeemSuccess] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+
+  // Fetch real reward catalog from backend
+  const { data: rewardsData, refetch: refetchRewards } = useQuery({
+    queryKey: ["rewards"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/rewards", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data.data as any[];
+    },
+  });
 
   // Fetch balances for calculating points availability (Budi has KFC: 350 pts, McD: 120 pts)
-  const { data: balanceData } = useQuery({
+  const { data: balanceData, refetch: refetchBalances } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
       const token = localStorage.getItem("token");
@@ -102,13 +113,15 @@ export default function MemberRewardsPage() {
 
   const kfcPoints =
     balanceData?.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ?? 350;
+      ?.balance ?? 0;
   const mcdPoints =
     balanceData?.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ?? 120;
+      ?.balance ?? 0;
+
+  const rewardsList = rewardsData || [];
 
   // Filter rewards
-  const filteredRewards = MEMBER_REWARDS.filter((reward) => {
+  const filteredRewards = rewardsList.filter((reward) => {
     const matchesSearch = reward.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -130,18 +143,30 @@ export default function MemberRewardsPage() {
     ? currentBalance - selectedReward.pointCost
     : 0;
 
-  const handleRedeemConfirm = () => {
-    if (isInsufficient) return;
+  const handleRedeemConfirm = async () => {
+    if (isInsufficient || !selectedReward) return;
     setIsRedeeming(true);
-    setTimeout(() => {
-      setIsRedeeming(false);
+    setRedeemError(null);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "/api/v1/redeem",
+        { rewardId: selectedReward.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setRedeemSuccess(true);
-    }, 1500);
+      refetchBalances();
+    } catch (err: any) {
+      setRedeemError(err.response?.data?.message || "Redemption failed");
+    } finally {
+      setIsRedeeming(false);
+    }
   };
 
   const closeRedeemModal = () => {
     setSelectedReward(null);
     setRedeemSuccess(false);
+    setRedeemError(null);
   };
 
   return (

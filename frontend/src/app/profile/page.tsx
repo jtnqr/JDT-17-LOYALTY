@@ -11,7 +11,7 @@ import { LogOut, ChevronRight, User, Building2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-import { PointBalance, PROFILE_MOCK_BALANCES } from "@/lib/mocks";
+import { PointBalance } from "@/types";
 
 export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -39,12 +39,12 @@ export default function ProfilePage() {
     );
   }
 
-  const balances = balanceData || PROFILE_MOCK_BALANCES;
+  const balances = balanceData || [];
 
   // Available Points = sum of all balances or fallback mockup value
   const totalPoints = balanceData
     ? balanceData.reduce((sum, item) => sum + item.balance, 0)
-    : 9462;
+    : 0;
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">

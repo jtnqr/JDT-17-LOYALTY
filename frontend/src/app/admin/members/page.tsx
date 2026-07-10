@@ -166,171 +166,96 @@ export default function AdminMembersPage() {
         {
           headers: { Authorization: `Bearer ${token}` },
         }
-      );
+      const onSubmitEdit = async (data: EditMemberSchemaType) => {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.put(`/api/v1/members/${selectedMember?.id}`, data, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
-      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-      setIsEditOpen(false);
-    } catch (error: any) {
-      console.error("Failed to update member:", error);
-      const responseData = error.response?.data;
-      const errorCode = responseData?.code;
-      const errorMessage = responseData?.message;
+          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+          setIsEditOpen(false);
+        } catch (error: any) {
+          console.error("Failed to update member config:", error);
+          const responseData = error.response?.data;
+          const errorCode = responseData?.code;
+          const errorMessage = responseData?.message;
 
-      if (errorCode === "DUPLICATE_EMAIL") {
-        setErrorEdit("email", {
-          type: "manual",
-          message: "Email is already registered.",
-        });
-      } else if (errorCode === "DUPLICATE_PHONE") {
-        setErrorEdit("phone", {
-          type: "manual",
-          message: "Phone number is already registered.",
-        });
-      } else if (errorCode === "MEMBER_NOT_FOUND") {
-        setErrorEdit("root", {
-          type: "manual",
-          message: "Member not found.",
-        });
-      } else if (errorMessage) {
-        setErrorEdit("root", {
-          type: "manual",
-          message: errorMessage,
-        });
-      } else {
-        // Fallback for offline / mock testing:
-        if (!error.response) {
-          if (data.email === "duplicate@example.com") {
+          if (errorCode === "DUPLICATE_EMAIL") {
             setErrorEdit("email", {
               type: "manual",
               message: "Email is already registered.",
             });
-            return;
-          }
-          if (data.phone === "999999") {
+          } else if (errorCode === "DUPLICATE_PHONE") {
             setErrorEdit("phone", {
               type: "manual",
               message: "Phone number is already registered.",
             });
-            return;
-          }
-          if (data.name === "notfound") {
+          } else if (errorMessage) {
             setErrorEdit("root", {
               type: "manual",
-              message: "Member not found.",
+              message: errorMessage,
             });
-            return;
+          } else {
+            setErrorEdit("root", {
+              type: "manual",
+              message: "Failed to update member. Please try again.",
+            });
           }
+        }
+      };
 
-          // Simulate updating mock members
-          const index = MOCK_MEMBERS.findIndex(
-            (m) => m.id === selectedMember.id
-          );
-          if (index !== -1) {
-            MOCK_MEMBERS[index] = {
-              ...MOCK_MEMBERS[index],
-              name: data.name,
-              email: data.email,
-              phone: data.phone,
-              status: data.status,
-            };
+      const onSubmitAdd = async (data: AddMemberSchemaType) => {
+        // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
+        let formattedPhone = data.phone;
+        if (!formattedPhone.startsWith("0")) {
+          if (formattedPhone.startsWith("62")) {
+            formattedPhone = "0" + formattedPhone.slice(2);
+          } else {
+            formattedPhone = "0" + formattedPhone;
           }
-          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-          setIsEditOpen(false);
-          return;
         }
 
-        setErrorEdit("root", {
-          type: "manual",
-          message: "Failed to update member. Please try again.",
-        });
-      }
-    }
-  };
+        try {
+          await axios.post("/api/v1/auth/register", {
+            name: data.name,
+            email: data.email,
+            phone: formattedPhone,
+            password: data.password,
+          });
 
-  const onSubmitAdd = async (data: AddMemberSchemaType) => {
-    // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
-    let formattedPhone = data.phone;
-    if (!formattedPhone.startsWith("0")) {
-      if (formattedPhone.startsWith("62")) {
-        formattedPhone = "0" + formattedPhone.slice(2);
-      } else {
-        formattedPhone = "0" + formattedPhone;
-      }
-    }
+          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+          resetAdd();
+          setIsAddOpen(false);
+        } catch (error: any) {
+          console.error("Failed to add member:", error);
+          const responseData = error.response?.data;
+          const errorCode = responseData?.code;
+          const errorMessage = responseData?.message;
 
-    try {
-      await axios.post("/api/v1/auth/register", {
-        name: data.name,
-        email: data.email,
-        phone: formattedPhone,
-        password: data.password,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-      resetAdd();
-      setIsAddOpen(false);
-    } catch (error: any) {
-      console.error("Failed to add member:", error);
-      const responseData = error.response?.data;
-      const errorCode = responseData?.code;
-      const errorMessage = responseData?.message;
-
-      if (errorCode === "DUPLICATE_EMAIL") {
-        setErrorAdd("email", {
-          type: "manual",
-          message: "Email is already registered.",
-        });
-      } else if (errorCode === "DUPLICATE_PHONE") {
-        setErrorAdd("phone", {
-          type: "manual",
-          message: "Phone number is already registered.",
-        });
-      } else if (errorMessage) {
-        setErrorAdd("root", {
-          type: "manual",
-          message: errorMessage,
-        });
-      } else {
-        // Fallback for offline / mock testing:
-        if (!error.response) {
-          if (data.email === "duplicate@example.com") {
+          if (errorCode === "DUPLICATE_EMAIL") {
             setErrorAdd("email", {
               type: "manual",
               message: "Email is already registered.",
             });
-            return;
-          }
-          if (data.phone === "999999") {
+          } else if (errorCode === "DUPLICATE_PHONE") {
             setErrorAdd("phone", {
               type: "manual",
               message: "Phone number is already registered.",
             });
-            return;
+          } else if (errorMessage) {
+            setErrorAdd("root", {
+              type: "manual",
+              message: errorMessage,
+            });
+          } else {
+            setErrorAdd("root", {
+              type: "manual",
+              message: "Failed to add member. Please try again.",
+            });
           }
-
-          // Simulate adding to mock members list
-          const newMember: Member = {
-            id: `mock-id-${Date.now()}`,
-            name: data.name,
-            email: data.email,
-            phone: formattedPhone,
-            status: "ACTIVE",
-            createdAt: new Date().toISOString(),
-          };
-          MOCK_MEMBERS.push(newMember);
-          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-          resetAdd();
-          setIsAddOpen(false);
-          return;
         }
-
-        setErrorAdd("root", {
-          type: "manual",
-          message: "Failed to add member. Please try again.",
-        });
-      }
-    }
-  };
+      };
 
   // Fetch Member List via React Query
   const {
