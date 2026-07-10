@@ -85,35 +85,21 @@ export function RegisterForm() {
     try {
       const response = await axios.post("/api/v1/auth/register", payload);
       
-      const { token, member } = response.data;
+      const { token, role, user } = response.data;
       
       // Store credentials in localStorage
       localStorage.setItem("token", token);
-      localStorage.setItem("role", "MEMBER");
-      localStorage.setItem("user", JSON.stringify(member));
+      localStorage.setItem("role", role || "MEMBER");
+      localStorage.setItem("user", JSON.stringify(user));
 
       // Auto-navigate to Member Home / Dashboard (Screen 2)
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Registration failed:", error);
       
-      // If server is offline / no response, bypass for slicing demo purposes
+      // Show connection error if server is offline
       if (!error.response) {
-        console.warn("Backend offline. Bypassing registration with mock credentials.");
-        
-        const mockMember = {
-          id: "550e8400-e29b-41d4-a716-446655440001",
-          name: data.name,
-          email: data.email,
-          phone: formattedPhone,
-          status: "ACTIVE",
-        };
-        
-        localStorage.setItem("token", "mock-jwt-token-for-slicing");
-        localStorage.setItem("role", "MEMBER");
-        localStorage.setItem("user", JSON.stringify(mockMember));
-        
-        router.push("/dashboard");
+        setApiError("Cannot connect to registration service. Please check if the server is running.");
         return;
       }
       

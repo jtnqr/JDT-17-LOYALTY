@@ -17,20 +17,7 @@ export function useMember() {
       let userString = localStorage.getItem("user");
 
       if (!token || role !== "MEMBER" || !userString) {
-        // Backend not running/no auth, auto-set mock credentials for easy slicing
-        console.warn("Auth token missing. Seeding localStorage with mock user Budi Santoso.");
-        const mockUser = {
-          id: "550e8400-e29b-41d4-a716-446655440001",
-          name: "Budi Santoso",
-          email: "budi.santoso@example.com",
-          phone: "081234567890",
-          status: "ACTIVE",
-        };
-        localStorage.setItem("token", "mock-jwt-token-for-slicing");
-        localStorage.setItem("role", "MEMBER");
-        localStorage.setItem("user", JSON.stringify(mockUser));
-        
-        setMember(mockUser);
+        router.push("/login");
       } else {
         const parsedUser = JSON.parse(userString) as MemberUser;
         setMember(parsedUser);

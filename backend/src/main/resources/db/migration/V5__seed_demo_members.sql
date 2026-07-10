@@ -12,7 +12,7 @@ VALUES (
     '550e8400-e29b-41d4-a716-446655440001',
     'Admin PISTOS',
     'admin@jdt17loyalty.com',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',  -- Admin123!
+    '$2a$12$Y7G9EqKlck2VIfejUBq3PuyxjhvQMpno4Ql1ydAVstvYszRLGwLjG',  -- Admin123!
     'ACTIVE',
     NOW()
 );
@@ -27,7 +27,7 @@ VALUES
         'Budi Santoso',
         'budi.santoso@example.com',
         '081234567890',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',  -- Member123!
+        '$2a$12$qGcI.Co1Nit1oN9mgPRzIumvffyCicmvhI4UxmJEMXzDzeobV7z36',  -- Member123!
         'ACTIVE',
         NOW(),
         NOW()
@@ -37,7 +37,7 @@ VALUES
         'Siti Rahmawati',
         'siti.rahmawati@example.com',
         '081298765432',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',  -- Member123!
+        '$2a$12$qGcI.Co1Nit1oN9mgPRzIumvffyCicmvhI4UxmJEMXzDzeobV7z36',  -- Member123!
         'ACTIVE',
         NOW(),
         NOW()
@@ -47,7 +47,7 @@ VALUES
         'Andi Wijaya',
         'andi.wijaya@example.com',
         '081287654321',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',  -- Member123!
+        '$2a$12$qGcI.Co1Nit1oN9mgPRzIumvffyCicmvhI4UxmJEMXzDzeobV7z36',  -- Member123!
         'ACTIVE',
         NOW(),
         NOW()
