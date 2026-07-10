@@ -156,6 +156,25 @@ class ExchangeRateServiceTest {
     }
 
     @Test
+    void createExchangeRate_ToPartnerNotFound_ThrowsException() {
+        CreateExchangeRateRequest request = CreateExchangeRateRequest.builder()
+                .fromPartnerId(partnerA.getId())
+                .toPartnerId(partnerB.getId())
+                .rate(new BigDecimal("1.0000"))
+                .effectiveFrom(OffsetDateTime.now())
+                .build();
+
+        when(partnerRepository.findById(partnerA.getId())).thenReturn(Optional.of(partnerA));
+        when(partnerRepository.findById(partnerB.getId())).thenReturn(Optional.empty());
+
+        LoyaltyException exception = assertThrows(LoyaltyException.class,
+                () -> exchangeRateService.createExchangeRate(request, adminId));
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("PARTNER_NOT_FOUND", exception.getCode());
+    }
+
+    @Test
     void createExchangeRate_InactivePartner_ThrowsException() {
         CreateExchangeRateRequest request = CreateExchangeRateRequest.builder()
                 .fromPartnerId(partnerA.getId())
@@ -166,6 +185,25 @@ class ExchangeRateServiceTest {
 
         when(partnerRepository.findById(partnerA.getId())).thenReturn(Optional.of(partnerA));
         when(partnerRepository.findById(inactivePartner.getId())).thenReturn(Optional.of(inactivePartner));
+
+        LoyaltyException exception = assertThrows(LoyaltyException.class,
+                () -> exchangeRateService.createExchangeRate(request, adminId));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals("PARTNER_INACTIVE", exception.getCode());
+    }
+
+    @Test
+    void createExchangeRate_FromPartnerInactive_ThrowsException() {
+        CreateExchangeRateRequest request = CreateExchangeRateRequest.builder()
+                .fromPartnerId(inactivePartner.getId())
+                .toPartnerId(partnerB.getId())
+                .rate(new BigDecimal("1.0000"))
+                .effectiveFrom(OffsetDateTime.now())
+                .build();
+
+        when(partnerRepository.findById(inactivePartner.getId())).thenReturn(Optional.of(inactivePartner));
+        when(partnerRepository.findById(partnerB.getId())).thenReturn(Optional.of(partnerB));
 
         LoyaltyException exception = assertThrows(LoyaltyException.class,
                 () -> exchangeRateService.createExchangeRate(request, adminId));
