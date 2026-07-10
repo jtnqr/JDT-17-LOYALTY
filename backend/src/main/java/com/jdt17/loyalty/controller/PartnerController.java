@@ -1,12 +1,17 @@
 package com.jdt17.loyalty.controller;
 
+import com.jdt17.loyalty.dto.partner.CreatePartnerRequest;
 import com.jdt17.loyalty.dto.partner.ListPartnerResponse;
+import com.jdt17.loyalty.dto.partner.PartnerResponse;
+import com.jdt17.loyalty.dto.partner.UpdatePartnerRequest;
 import com.jdt17.loyalty.service.PartnerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/partners")
@@ -17,6 +22,21 @@ public class PartnerController {
     @GetMapping
     public ResponseEntity<ListPartnerResponse> getAllPartners() {
         ListPartnerResponse response = partnerService.getAllPartners();
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping
+    public ResponseEntity<PartnerResponse> createPartner(@Valid @RequestBody CreatePartnerRequest request) {
+        PartnerResponse response = partnerService.createPartner(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<PartnerResponse> updatePartner(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdatePartnerRequest request
+    ) {
+        PartnerResponse response = partnerService.updatePartner(id, request);
         return ResponseEntity.ok(response);
     }
 }
