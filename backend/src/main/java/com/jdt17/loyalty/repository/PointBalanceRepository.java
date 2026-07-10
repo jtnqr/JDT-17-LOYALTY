@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface PointBalanceRepository extends JpaRepository<PointBalance, UUID> {
     List<PointBalance> findByMemberId(UUID memberId);
     Optional<PointBalance> findByMemberIdAndPartnerId(UUID memberId, UUID partnerId);
+    List<PointBalance> findByBalanceGreaterThan(Long balance);
 
     @Modifying
     @Query(value = "INSERT INTO trx_point_balance (id, member_id, partner_id, balance, version, updated_at) " +

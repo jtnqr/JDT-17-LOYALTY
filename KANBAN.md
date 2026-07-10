@@ -25,8 +25,8 @@
 - `PUT /members/{id}` (Admin update member status & profile) 🟢
 - `GET /members/{id}/points` (Get point balances across active partners) 🟢
 - `GET /members/{id}/transactions` (Get transaction history) 🟢
-- `POST /exchange` (Exchange points McD <-> KFC) 🔴
-- `POST /redeem` (Redeem points for partner rewards) 🔴
+- `POST /exchange` (Exchange points McD <-> KFC) 🟢
+- `POST /redeem` (Redeem points for partner rewards) 🟢
 
 ## 3. Partner & Rates
 - `GET /partners` (List partners) 🟢
@@ -38,7 +38,7 @@
 
 ## 4. System Cron & Auditing
 
-- Point Expiry Scheduler (Daily at 17:00 UTC / 00:00 WIB) 🔴
+- Point Expiry Scheduler (Daily at 17:00 UTC / 00:00 WIB) 🟢
 - AuditTrailService logging linked to transactional operations 🟢
 
 ## 5. Frontend (Next.js 16)
