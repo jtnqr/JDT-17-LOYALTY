@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
+    console.log("Rewrites configured with backendUrl:", backendUrl);
     return [
       {
         source: "/api/v1/:path*",

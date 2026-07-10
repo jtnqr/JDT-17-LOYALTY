@@ -47,6 +47,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - BACKEND_URL=http://backend:8080
+        - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:8082}
     container_name: loyalty-frontend
     restart: unless-stopped
     env_file: .env
