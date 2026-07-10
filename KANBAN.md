@@ -24,7 +24,7 @@
 - `GET /members/{id}` (Get member profiles) 🟢
 - `PUT /members/{id}` (Admin update member status & profile) 🟢
 - `GET /members/{id}/points` (Get point balances across active partners) 🟢
-- `GET /members/{id}/transactions` (Get transaction history) 🔴
+- `GET /members/{id}/transactions` (Get transaction history) 🟢
 - `POST /exchange` (Exchange points McD <-> KFC) 🔴
 - `POST /redeem` (Redeem points for partner rewards) 🔴
 
