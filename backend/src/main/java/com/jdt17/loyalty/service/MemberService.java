@@ -2,6 +2,7 @@ package com.jdt17.loyalty.service;
 
 import com.jdt17.loyalty.dto.login.LoginRequest;
 import com.jdt17.loyalty.dto.login.LoginResponse;
+import com.jdt17.loyalty.dto.member.MemberPointsResponse;
 import com.jdt17.loyalty.dto.member.MemberResponse;
 import com.jdt17.loyalty.dto.member.PagedMemberResponse;
 import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
@@ -249,5 +250,43 @@ public class MemberService {
                 .status(updatedMember.getStatus())
                 .createdAt(updatedMember.getCreatedAt())
                 .build();
+    }
+
+    public MemberPointsResponse getMemberPoints(UUID id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = authentication.getName();
+
+        boolean isMember = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MEMBER"));
+
+        // must be MEMBER with same ID
+        if (!isMember || !id.toString().equals(currentUserId)) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        }
+
+        // member must be registered
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Member does not exist", "MEMBER_NOT_FOUND"));
+
+        List<PointBalance> balances = pointBalanceRepository.findByMemberId(id);
+
+        List<MemberPointsResponse.PointBalanceDetail>
+                balanceDetails = balances.stream()
+                .map(pb -> MemberPointsResponse.
+                        PointBalanceDetail.builder()
+                        .partnerId(pb.getPartner().
+                                getId())
+                        .partnerName(pb.getPartner().
+                                getName())
+                        .balance(pb.getBalance())
+                        .build())
+                .collect(Collectors.toList());
+
+        return MemberPointsResponse.builder()
+                .memberId(member.getId())
+                .memberName(member.getName())
+                .balances(balanceDetails)
+                .build();
+
     }
 }
