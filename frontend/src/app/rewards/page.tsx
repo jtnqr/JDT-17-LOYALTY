@@ -82,38 +82,56 @@ export default function MemberRewardsPage() {
     retry: 1,
   });
 
+  // Fetch active partner list from API
+  const { data: apiPartners } = useQuery({
+    queryKey: ["rewards-partners"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/partners", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.partners || response.data.data || []) as any[];
+    },
+    retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const kfcPoints =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ?? 0;
-  const mcdPoints =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ?? 0;
-
   const rewardsList = rewardsData || [];
 
-  // Filter rewards
+  // Filter rewards dynamically based on active filter
   const filteredRewards = rewardsList.filter((reward) => {
     const matchesSearch = reward.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesPartner =
       activePartnerFilter === "ALL" ||
-      (activePartnerFilter === "KFC" && reward.partnerName === "KFC") ||
-      (activePartnerFilter === "MCD" && reward.partnerName === "MCD");
+      (reward.partnerName &&
+        reward.partnerName.toLowerCase().includes(activePartnerFilter.toLowerCase())) ||
+      (reward.partnerCode &&
+        reward.partnerCode.toLowerCase().includes(activePartnerFilter.toLowerCase()));
     return matchesSearch && matchesPartner;
   });
 
-  // Calculate variables for the selected redemption details
-  const currentBalance =
-    selectedReward?.partnerName === "KFC" ? kfcPoints : mcdPoints;
+  // Calculate variables for the selected redemption details dynamically
+  const currentBalance = (() => {
+    if (!selectedReward || !balanceData) return 0;
+    const found = balanceData.find(
+      (b) =>
+        b.partnerId === selectedReward.partnerId ||
+        (selectedReward.partnerName &&
+          b.partnerName.toLowerCase().includes(selectedReward.partnerName.toLowerCase()))
+    );
+    return found ? found.balance : 0;
+  })();
+
   const neededPoints = selectedReward
     ? selectedReward.pointCost - currentBalance
     : 0;
@@ -121,6 +139,8 @@ export default function MemberRewardsPage() {
   const remainingPoints = selectedReward
     ? currentBalance - selectedReward.pointCost
     : 0;
+
+  const combinedBalance = balanceData?.reduce((sum, item) => sum + item.balance, 0) ?? 0;
 
   const handleRedeemConfirm = async () => {
     if (isInsufficient || !selectedReward) return;
@@ -197,11 +217,11 @@ export default function MemberRewardsPage() {
             </div>
 
             {/* Filter Chips */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
                 onClick={() => setActivePartnerFilter("ALL")}
                 className={cn(
-                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent",
+                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
                   activePartnerFilter === "ALL"
                     ? "bg-[#8B3D06] text-white"
                     : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
@@ -209,28 +229,20 @@ export default function MemberRewardsPage() {
               >
                 All
               </button>
-              <button
-                onClick={() => setActivePartnerFilter("KFC")}
-                className={cn(
-                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent",
-                  activePartnerFilter === "KFC"
-                    ? "bg-[#8B3D06] text-white"
-                    : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
-                )}
-              >
-                KFC
-              </button>
-              <button
-                onClick={() => setActivePartnerFilter("MCD")}
-                className={cn(
-                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent",
-                  activePartnerFilter === "MCD"
-                    ? "bg-[#8B3D06] text-white"
-                    : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
-                )}
-              >
-                McDonald's
-              </button>
+              {apiPartners?.map((p: any) => (
+                <button
+                  key={p.id}
+                  onClick={() => setActivePartnerFilter(p.code)}
+                  className={cn(
+                    "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
+                    activePartnerFilter === p.code
+                      ? "bg-[#8B3D06] text-white"
+                      : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
+                  )}
+                >
+                  {p.name.split(" ")[0]}
+                </button>
+              ))}
             </div>
 
             {/* Mobile Grid */}
@@ -284,7 +296,7 @@ export default function MemberRewardsPage() {
           >
             <div className="flex items-center gap-1.5 text-[11px] font-black text-[#8B3D06]">
               <Coins className="w-3.5 h-3.5" />
-              <span>Your KFC Points: {kfcPoints} pts</span>
+              <span>Total Points: {combinedBalance.toLocaleString()} pts</span>
             </div>
             <div className="flex items-center gap-3">
               <Link
@@ -343,26 +355,18 @@ export default function MemberRewardsPage() {
                     />
                     <span>All Merchants</span>
                   </label>
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "KFC"}
-                      onChange={() => setActivePartnerFilter("KFC")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>KFC</span>
-                  </label>
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "MCD"}
-                      onChange={() => setActivePartnerFilter("MCD")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>McDonald's</span>
-                  </label>
+                  {apiPartners?.map((p: any) => (
+                    <label key={p.id} className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="partner"
+                        checked={activePartnerFilter === p.code}
+                        onChange={() => setActivePartnerFilter(p.code)}
+                        className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>
