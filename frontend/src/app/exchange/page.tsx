@@ -25,49 +25,9 @@ import {
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
 
-// Partner list definition matching FSD
-const PARTNER_PROGRAMS = [
-  {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    code: "KFC",
-    name: "KFC Colonel's Club",
-    logoBg: "bg-red-50 text-[#C8102E]",
-    logoChar: "K",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440002",
-    code: "MCD",
-    name: "McDonald's MyRewards",
-    logoBg: "bg-yellow-50 text-[#D89F0E]",
-    logoChar: "M",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440003",
-    code: "BK",
-    name: "Burger King Indonesia",
-    logoBg: "bg-amber-50 text-[#8B4F1D] border-amber-100",
-    logoChar: "B",
-  },
-];
-
 export default function ExchangePointsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("member_sidebar_open");
-    if (saved !== null) {
-      setIsSidebarOpen(saved === "true");
-    }
-  }, []);
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => {
-      const next = !prev;
-      localStorage.setItem("member_sidebar_open", String(next));
-      return next;
-    });
-  };
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Fetch all active partners from API
   const { data: apiPartners } = useQuery({
@@ -87,7 +47,11 @@ export default function ExchangePointsPage() {
     if (!apiPartners) return [];
     return apiPartners.map((p: any) => {
       let logoBg = "bg-neutral-50 text-neutral-800 border-neutral-100";
-      let logoChar = p.name ? p.name.charAt(0) : p.code ? p.code.charAt(0) : "P";
+      let logoChar = p.name
+        ? p.name.charAt(0)
+        : p.code
+        ? p.code.charAt(0)
+        : "P";
       if (p.code === "KFC") {
         logoBg = "bg-red-50 text-[#C8102E]";
         logoChar = "K";
@@ -123,6 +87,11 @@ export default function ExchangePointsPage() {
   const [exchangeAmount, setExchangeAmount] = useState<string>("100");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setErrorMessage(null);
+  }, [fromPartner, toPartner, exchangeAmount]);
 
   // Fetch balances for live calculations
   const { data: balanceData, refetch } = useQuery({
@@ -228,6 +197,8 @@ export default function ExchangePointsPage() {
 
   const handleConfirmExchange = async () => {
     if (!isValidAmount || isSubmitting) return;
+
+    setShowConfirmModal(false);
     setIsSubmitting(true);
 
     const token = localStorage.getItem("token");
@@ -246,19 +217,32 @@ export default function ExchangePointsPage() {
       setIsSubmitting(false);
       setShowSuccessModal(true);
       refetch(); // Reload balances
+      setErrorMessage(null);
     } catch (error: any) {
       console.error("Exchange request failed:", error);
 
-      // Fallback offline success simulation
       if (!error.response) {
         console.warn(
           "Backend offline. Simulating local points exchange update."
         );
-
-        // Update mock balances in localStorage or just simulate success
         setShowSuccessModal(true);
         setIsSubmitting(false);
         return;
+      }
+
+      if (error.response?.data?.message) {
+        setErrorMessage(error.response.data.message);
+      } else if (
+        error.response?.data?.code === "EXCHANGE_RATE_NOT_CONFIGURED" ||
+        error.response?.status === 404
+      ) {
+        setErrorMessage("Exchange rate not configured between these partners.");
+      } else if (error.response?.data?.error) {
+        setErrorMessage(error.response.data.error);
+      } else {
+        setErrorMessage(
+          "Exchange request failed. Please check your selection."
+        );
       }
       setIsSubmitting(false);
     }
@@ -284,12 +268,7 @@ export default function ExchangePointsPage() {
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="exchange"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -302,8 +281,7 @@ export default function ExchangePointsPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={handleToggleSidebar}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
         />
 
         {/* ========================================================
@@ -327,7 +305,9 @@ export default function ExchangePointsPage() {
                     <select
                       value={fromPartner.id}
                       onChange={(e) => {
-                        const selected = partners.find((p) => p.id === e.target.value);
+                        const selected = partners.find(
+                          (p) => p.id === e.target.value
+                        );
                         if (selected) setFromPartner(selected);
                       }}
                       className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
@@ -342,8 +322,18 @@ export default function ExchangePointsPage() {
                       <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </div>
                   </div>
@@ -386,7 +376,9 @@ export default function ExchangePointsPage() {
                     <select
                       value={toPartner.id}
                       onChange={(e) => {
-                        const selected = partners.find((p) => p.id === e.target.value);
+                        const selected = partners.find(
+                          (p) => p.id === e.target.value
+                        );
                         if (selected) setToPartner(selected);
                       }}
                       className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
@@ -401,8 +393,18 @@ export default function ExchangePointsPage() {
                       <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </div>
                   </div>
@@ -451,16 +453,42 @@ export default function ExchangePointsPage() {
               </div>
             </div>
 
+            {/* Mobile Warnings & Errors */}
+            <div className="space-y-2 mt-2">
+              {isInsufficient && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>
+                    Insufficient points in your {fromPartner.code} account.
+                  </span>
+                </div>
+              )}
+              {isSamePartner && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>
+                    Cannot exchange points within the same partner program.
+                  </span>
+                </div>
+              )}
+              {errorMessage && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+            </div>
+
             {/* Action button */}
             <button
-              onClick={handleConfirmExchange}
+              onClick={() => setShowConfirmModal(true)}
               disabled={!isValidAmount || isSubmitting}
               className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 shadow-sm"
             >
               {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                "Confirm Exchange"
+                "Exchange"
               )}
             </button>
           </div>
@@ -499,13 +527,15 @@ export default function ExchangePointsPage() {
                   {/* From Dropdown Selector */}
                   <div className="space-y-2">
                     <label className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wide">
-                      From Partner Program
+                      From Partner
                     </label>
                     <div className="relative">
                       <select
                         value={fromPartner.id}
                         onChange={(e) => {
-                          const selected = partners.find((p) => p.id === e.target.value);
+                          const selected = partners.find(
+                            (p) => p.id === e.target.value
+                          );
                           if (selected) setFromPartner(selected);
                         }}
                         className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
@@ -520,15 +550,25 @@ export default function ExchangePointsPage() {
                         <Coins className="w-4 h-4 text-neutral-400" />
                       </div>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </div>
                     </div>
                   </div>
 
                   {/* Swap Button (Desktop position) */}
-                  <div className="flex justify-center absolute left-1/2 -translate-x-1/2 top-[47px] z-10">
+                  <div className="flex justify-center -my-2 z-10">
                     <button
                       onClick={handleSwapPartners}
                       className="w-10 h-10 rounded-full bg-[#8B3D06] hover:bg-[#723204] text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer active:scale-95 transition-transform"
@@ -541,13 +581,15 @@ export default function ExchangePointsPage() {
                   {/* To Dropdown Selector */}
                   <div className="space-y-2 pt-2">
                     <label className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wide">
-                      To Partner Program
+                      To Partner
                     </label>
                     <div className="relative">
                       <select
                         value={toPartner.id}
                         onChange={(e) => {
-                          const selected = partners.find((p) => p.id === e.target.value);
+                          const selected = partners.find(
+                            (p) => p.id === e.target.value
+                          );
                           if (selected) setToPartner(selected);
                         }}
                         className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
@@ -562,8 +604,18 @@ export default function ExchangePointsPage() {
                         <Coins className="w-4 h-4 text-neutral-400" />
                       </div>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </div>
                     </div>
@@ -583,14 +635,6 @@ export default function ExchangePointsPage() {
                         placeholder="Enter amount"
                       />
                       <div className="flex items-center gap-2 text-[10px] font-bold text-brand-primary shrink-0 select-none">
-                        {/* <button
-                          type="button"
-                          onClick={handleSetMin}
-                          className="hover:underline cursor-pointer"
-                        >
-                          Min
-                        </button> */}
-                        {/* <span className="text-neutral-200">|</span> */}
                         <button
                           type="button"
                           onClick={handleSetMax}
@@ -673,10 +717,16 @@ export default function ExchangePointsPage() {
                       </span>
                     </div>
                   )}
+                  {errorMessage && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3 animate-in fade-in duration-150">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
 
                   {/* Confirm Button */}
                   <button
-                    onClick={handleConfirmExchange}
+                    onClick={() => setShowConfirmModal(true)}
                     disabled={!isValidAmount || isSubmitting}
                     className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 mt-4 shadow-sm"
                   >
@@ -684,19 +734,11 @@ export default function ExchangePointsPage() {
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Confirm Exchange
+                        Exchange
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
-
-                  <p className="text-[9px] text-center text-neutral-400 font-semibold mt-3">
-                    By confirming, you agree to the{" "}
-                    <span className="underline cursor-pointer">
-                      Terms of Exchange
-                    </span>
-                    .
-                  </p>
                 </div>
               </div>
             </div>
@@ -707,50 +749,63 @@ export default function ExchangePointsPage() {
       {/* ========================================================
           EXCHANGE SUCCESS MODAL (Slides in over dashboard)
           ======================================================== */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
-          {/* Backdrop */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            onClick={() => setShowSuccessModal(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+            onClick={() => setShowConfirmModal(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
 
-          {/* Modal Container */}
-          <div className="absolute w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center relative z-10 animate-in zoom-in-95 duration-200 select-none">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4 shadow-inner">
-              <CheckCircle2 className="w-9 h-9" />
+          <div className="relative z-10 w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-5">
+              <ArrowUpDown className="w-8 h-8 text-[#8B3D06]" />
             </div>
 
-            <h3 className="text-base font-black text-neutral-900">
-              Exchange Complete!
+            <h3 className="text-lg font-black text-center text-neutral-900">
+              Confirm Exchange
             </h3>
-            <p className="text-xs text-neutral-500 mt-2 leading-relaxed max-w-[280px]">
-              You have successfully converted **{amountNumber}{" "}
-              {fromPartner.code} points** into **{receiveAmount}{" "}
-              {toPartner.code} points**.
+
+            <p className="text-sm text-neutral-500 text-center mt-2 leading-relaxed">
+              Are you sure you want to exchange your points?
             </p>
 
-            <div className="w-full border border-neutral-100 rounded-2xl bg-neutral-50/50 p-4 mt-5 space-y-2 text-xs font-semibold text-neutral-500">
-              <div className="flex justify-between items-center">
-                <span>{fromPartner.code} Remaining Balance</span>
-                <span className="font-extrabold text-neutral-800">
-                  {fromBalance - amountNumber} pts
+            <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">From</span>
+                <span className="font-bold">
+                  {amountNumber} {fromPartner.code} pts
                 </span>
               </div>
-              <div className="flex justify-between items-center border-t border-neutral-100/50 pt-2">
-                <span>{toPartner.code} New Balance</span>
-                <span className="font-extrabold text-brand-primary">
-                  {toBalance + receiveAmount} pts
+
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">To</span>
+                <span className="font-bold text-[#8B3D06]">
+                  {receiveAmount} {toPartner.code} pts
                 </span>
+              </div>
+
+              <div className="flex justify-between text-sm border-t pt-3">
+                <span className="text-neutral-500">Rate</span>
+                <span className="font-bold">1 : {activeRate}</span>
               </div>
             </div>
 
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3.5 font-bold cursor-pointer transition-colors text-xs mt-5 shadow-sm"
-            >
-              Done
-            </button>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="cursor-pointer flex-1 border border-neutral-300 rounded-xl py-3 font-semibold hover:bg-neutral-100 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleConfirmExchange}
+                disabled={isSubmitting}
+                className="cursor-pointer flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3 font-bold transition disabled:opacity-50"
+              >
+                {isSubmitting ? "Processing..." : "Confirm"}
+              </button>
+            </div>
           </div>
         </div>
       )}

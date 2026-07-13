@@ -49,22 +49,7 @@ interface Transaction {
 
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("member_sidebar_open");
-    if (saved !== null) {
-      setIsSidebarOpen(saved === "true");
-    }
-  }, []);
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => {
-      const next = !prev;
-      localStorage.setItem("member_sidebar_open", String(next));
-      return next;
-    });
-  };
 
   // 1. Fetch Balances via React Query
   const { data: balanceData, isLoading: isBalancesLoading } = useQuery({
@@ -220,12 +205,7 @@ export default function DashboardPage() {
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* 1. DESKTOP SIDEBAR NAVIGATION (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="home"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -237,8 +217,7 @@ export default function DashboardPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={handleToggleSidebar}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
         />
 
         {/* ========================================================

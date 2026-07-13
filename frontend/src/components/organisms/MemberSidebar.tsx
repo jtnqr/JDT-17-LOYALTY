@@ -94,7 +94,7 @@ export function MemberSidebar({
   return (
     <aside
       className={cn(
-        "w-60 h-screen bg-white border-r border-neutral-200 flex flex-col justify-between shrink-0 sticky top-0 z-40 transition-all duration-300 ease-in-out",
+        "overflow-hidden w-60 h-screen bg-white border-r border-neutral-200 flex flex-col justify-between shrink-0 sticky top-0 z-40 transition-all duration-300 ease-in-out",
         className
       )}
     >

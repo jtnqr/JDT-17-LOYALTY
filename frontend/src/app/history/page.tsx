@@ -93,22 +93,7 @@ interface Transaction {
 
 export default function HistoryPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("member_sidebar_open");
-    if (saved !== null) {
-      setIsSidebarOpen(saved === "true");
-    }
-  }, []);
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => {
-      const next = !prev;
-      localStorage.setItem("member_sidebar_open", String(next));
-      return next;
-    });
-  };
 
   const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT
   const [searchQuery, setSearchQuery] = useState("");
@@ -238,12 +223,7 @@ export default function HistoryPage() {
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -256,8 +236,7 @@ export default function HistoryPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={handleToggleSidebar}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search transactions..."
@@ -392,53 +371,47 @@ export default function HistoryPage() {
                 <ChevronRight className="w-3 h-3" />
                 <span className="text-neutral-600">History</span>
               </div>
-              <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
-                Transaction History
-              </h1>
-              <p className="text-xs font-semibold text-neutral-400">
-                Track all your point earnings, redemptions, and conversion
-                transfers in one place.
-              </p>
             </div>
+          </header>
 
+          {/* Desktop filter row */}
+          <div className="flex gap-2 justify-between">
+            <div>
+              {[
+                { filter: "ALL", label: "All Transactions" },
+                { filter: "EARN", label: "Earnings" },
+                { filter: "REDEEM", label: "Redemptions" },
+                { filter: "EXCHANGE_IN", label: "Exchange In" },
+                { filter: "EXCHANGE_OUT", label: "Exchange Out" },
+              ].map((chip) => (
+                <button
+                  key={chip.filter}
+                  onClick={() => {
+                    setActiveFilter(chip.filter);
+                    setCurrentPage(0);
+                  }}
+                  className={cn(
+                    "px-5 py-2.5 rounded-xl text-xs font-bold transition-all border border-neutral-200/50 cursor-pointer",
+                    activeFilter === chip.filter
+                      ? "bg-[#8B3D06] border-[#8B3D06] text-white shadow-sm"
+                      : "bg-white text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
             {/* Desktop Quick Search */}
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search transactions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white text-neutral-700 border border-neutral-200 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#8B3D06] transition-colors font-medium placeholder:text-neutral-400 font-semibold"
+                className="w-full bg-white text-neutral-700 border border-neutral-200 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#8B3D06] transition-colors font-semibold placeholder:text-neutral-400"
               />
             </div>
-          </header>
-
-          {/* Desktop filter row */}
-          <div className="flex gap-2">
-            {[
-              { filter: "ALL", label: "All Transactions" },
-              { filter: "EARN", label: "Earnings" },
-              { filter: "REDEEM", label: "Redemptions" },
-              { filter: "EXCHANGE_IN", label: "Exchange In" },
-              { filter: "EXCHANGE_OUT", label: "Exchange Out" },
-            ].map((chip) => (
-              <button
-                key={chip.filter}
-                onClick={() => {
-                  setActiveFilter(chip.filter);
-                  setCurrentPage(0);
-                }}
-                className={cn(
-                  "px-5 py-2.5 rounded-xl text-xs font-bold transition-all border border-neutral-200/50 cursor-pointer",
-                  activeFilter === chip.filter
-                    ? "bg-[#8B3D06] border-[#8B3D06] text-white shadow-sm"
-                    : "bg-white text-neutral-600 hover:bg-neutral-50"
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
           </div>
 
           {/* Desktop Table View */}

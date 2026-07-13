@@ -12,25 +12,11 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 import { PointBalance } from "@/types";
+import Avatar from "@/components/atoms/Avatar";
 
 export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("member_sidebar_open");
-    if (saved !== null) {
-      setIsSidebarOpen(saved === "true");
-    }
-  }, []);
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => {
-      const next = !prev;
-      localStorage.setItem("member_sidebar_open", String(next));
-      return next;
-    });
-  };
 
   // Fetch Member Balances via React Query
   const { data: balanceData } = useQuery({
@@ -65,12 +51,7 @@ export default function ProfilePage() {
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* 1. DESKTOP SIDEBAR NAVIGATION */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="profile"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -82,8 +63,7 @@ export default function ProfilePage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={handleToggleSidebar}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
         />
 
         {/* Outer Scroll Container */}
@@ -102,11 +82,7 @@ export default function ProfilePage() {
               {/* Large Centered Avatar Area */}
               <div className="flex flex-col items-center">
                 <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-neutral-200">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250&h=250"
-                    alt="Budi Santoso Avatar"
-                    className="w-full h-full object-cover"
-                  />
+                  <Avatar name={member?.name} className="w-24 h-24" />
                 </div>
                 <h3 className="text-lg font-black text-neutral-900 mt-4 leading-none">
                   {member?.name || "Budi Santoso"}
@@ -128,11 +104,10 @@ export default function ProfilePage() {
 
               {/* From Partner Section */}
               <div className="space-y-3">
-                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block px-1">
-                  From Partner
-                </span>
                 {balances.map((bal) => {
-                  const firstChar = bal.partnerName ? bal.partnerName.trim().charAt(0).toUpperCase() : "P";
+                  const firstChar = bal.partnerName
+                    ? bal.partnerName.trim().charAt(0).toUpperCase()
+                    : "P";
                   return (
                     <div
                       key={bal.partnerId}
@@ -195,11 +170,7 @@ export default function ProfilePage() {
               {/* Column 1: Profile Summary Card */}
               <div className="bg-white rounded-3xl border border-neutral-200/50 p-6 flex flex-col items-center text-center shadow-xs">
                 <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-neutral-200">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=250&h=250"
-                    alt="Budi Santoso Avatar"
-                    className="w-full h-full object-cover"
-                  />
+                  <Avatar name={member?.name} className="w-28 h-28" />
                 </div>
                 <h3 className="text-lg font-black text-neutral-900 mt-4 leading-none">
                   {member?.name || "Budi Santoso"}
@@ -277,7 +248,9 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {balances.map((bal) => {
-                      const firstChar = bal.partnerName ? bal.partnerName.trim().charAt(0).toUpperCase() : "P";
+                      const firstChar = bal.partnerName
+                        ? bal.partnerName.trim().charAt(0).toUpperCase()
+                        : "P";
                       return (
                         <div
                           key={bal.partnerId}

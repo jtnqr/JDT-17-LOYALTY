@@ -25,22 +25,7 @@ import Link from "next/link";
 
 export default function MemberRewardsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("member_sidebar_open");
-    if (saved !== null) {
-      setIsSidebarOpen(saved === "true");
-    }
-  }, []);
-
-  const handleToggleSidebar = () => {
-    setIsSidebarOpen((prev) => {
-      const next = !prev;
-      localStorage.setItem("member_sidebar_open", String(next));
-      return next;
-    });
-  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activePartnerFilter, setActivePartnerFilter] = useState("ALL");
@@ -100,7 +85,9 @@ export default function MemberRewardsPage() {
     if (typeof window !== "undefined") {
       const storedPartnerId = sessionStorage.getItem("selected_partner_filter");
       if (storedPartnerId && apiPartners) {
-        const foundPartner = apiPartners.find((p: any) => p.id === storedPartnerId);
+        const foundPartner = apiPartners.find(
+          (p: any) => p.id === storedPartnerId
+        );
         if (foundPartner) {
           setActivePartnerFilter(foundPartner.code);
         } else {
@@ -194,12 +181,7 @@ export default function MemberRewardsPage() {
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="rewards"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -212,8 +194,7 @@ export default function MemberRewardsPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={handleToggleSidebar}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search rewards..."
@@ -311,37 +292,6 @@ export default function MemberRewardsPage() {
             </div>
           </div>
 
-          {/* Sticky Bottom Balance bar */}
-          <div
-            className={cn(
-              "fixed bottom-16 left-0 right-0 h-10 bg-[#FDE8D8] border-t border-orange-100 flex items-center justify-between px-5 z-20 transition-all duration-300 ease-in-out transform",
-              showPointsBanner
-                ? "translate-y-0 opacity-100"
-                : "translate-y-12 opacity-0 pointer-events-none"
-            )}
-          >
-            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#8B3D06]">
-              <Coins className="w-3.5 h-3.5" />
-              <span>Total Points: {combinedBalance.toLocaleString()} pts</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                className="text-[10px] font-black text-[#8B3D06] underline tracking-wider"
-              >
-                DETAILS
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowPointsBanner(false)}
-                className="text-[#8B3D06]/70 hover:text-[#8B3D06] cursor-pointer p-0.5"
-                title="Dismiss notification"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
           {/* Bottom Tabs */}
           <BottomNavigation />
         </div>
@@ -364,56 +314,8 @@ export default function MemberRewardsPage() {
           </header>
 
           <div className="grid grid-cols-4 gap-6 items-stretch">
-            {/* Left Sidebar Category filters */}
-            <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
-                  Filter Partner
-                </h3>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "ALL"}
-                      onChange={() => setActivePartnerFilter("ALL")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>All Merchants</span>
-                  </label>
-                  {apiPartners?.map((p: any) => (
-                    <label
-                      key={p.id}
-                      className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="partner"
-                        checked={activePartnerFilter === p.code}
-                        onChange={() => setActivePartnerFilter(p.code)}
-                        className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                      />
-                      <span>{p.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
             {/* Right Main Grid */}
             <div className="col-span-3 space-y-6">
-              {/* Search tool */}
-              {/* <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search rewards..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white text-sm text-neutral-800 pl-11 pr-4 py-3 rounded-2xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors placeholder:text-neutral-400 font-semibold"
-                />
-              </div> */}
-
               {/* Desktop Catalog Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredRewards.map((reward) => (
@@ -457,6 +359,41 @@ export default function MemberRewardsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+            {/* Left Sidebar Category filters */}
+            <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
+                  Filter Partner
+                </h3>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="partner"
+                      checked={activePartnerFilter === "ALL"}
+                      onChange={() => setActivePartnerFilter("ALL")}
+                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                    />
+                    <span>All Merchants</span>
+                  </label>
+                  {apiPartners?.map((p: any) => (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="partner"
+                        checked={activePartnerFilter === p.code}
+                        onChange={() => setActivePartnerFilter(p.code)}
+                        className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

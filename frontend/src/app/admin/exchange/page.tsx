@@ -268,6 +268,7 @@ export default function AdminExchangePage() {
           fromPartnerId: selectedPartnerId,
           toPartnerId: otherPartnerId,
           rate: outRate,
+          effectiveFrom: new Date().toISOString(),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -281,6 +282,7 @@ export default function AdminExchangePage() {
           fromPartnerId: otherPartnerId,
           toPartnerId: selectedPartnerId,
           rate: inRate,
+          effectiveFrom: new Date().toISOString(),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -382,6 +384,7 @@ export default function AdminExchangePage() {
           fromPartnerId: selectedPartnerId,
           toPartnerId: otherPartnerId,
           rate: defaultOut,
+          effectiveFrom: new Date().toISOString(),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -395,6 +398,7 @@ export default function AdminExchangePage() {
           fromPartnerId: otherPartnerId,
           toPartnerId: selectedPartnerId,
           rate: defaultIn,
+          effectiveFrom: new Date().toISOString(),
         },
         {
           headers: { Authorization: `Bearer ${token}` },

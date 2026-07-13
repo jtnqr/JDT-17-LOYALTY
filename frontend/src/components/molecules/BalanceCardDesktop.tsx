@@ -105,7 +105,7 @@ export function BalanceCardDesktop({
           sessionStorage.setItem("selected_partner_filter", partnerId);
         }
       }}
-      className="block"
+      className="block group"
     >
       <div
         className={cn(
@@ -124,14 +124,14 @@ export function BalanceCardDesktop({
             {activeTheme.icon}
           </div>
 
-          <span
+          {/* <span
             className={cn(
               "text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm",
               activeTheme.badge
             )}
           >
             {badgeText || "Redeem Now"}
-          </span>
+          </span> */}
         </div>
 
         {/* Middle */}
@@ -149,11 +149,11 @@ export function BalanceCardDesktop({
         {/* Bottom */}
         <div className="border-t border-neutral-100 pt-3 flex items-center justify-between">
           <div className="flex items-center gap-1 text-neutral-400">
-            <Info className="w-4 h-4" />
+            {/* <Info className="w-4 h-4" /> */}
           </div>
 
-          <div className="text-xs font-extrabold text-[#8B3D06] flex items-center gap-1 group">
-            View Details
+          <div className="group-hover:underline underline-offset-2 text-xs font-extrabold text-[#8B3D06] flex items-center gap-1 group">
+            REDEEM NOW
             <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
           </div>
         </div>
