@@ -188,7 +188,7 @@ export default function DashboardPage() {
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-20">
+        <div className="md:hidden flex-grow flex flex-col pb-20 overflow-y-auto">
           {/* Top Banner (Gradient Hero) */}
           <section className="pt-6 pb-4 px-5 text-white relative">
             <div className="flex items-center justify-between mb-6">
@@ -228,39 +228,47 @@ export default function DashboardPage() {
                     <div className="h-3 bg-neutral-200 rounded w-1/2" />
                   </div>
                 ))
+              ) : apiBalances.length === 0 ? (
+                <p className="text-xs text-neutral-400 italic py-4 px-2">No active wallets.</p>
               ) : (
-                <>
-                  {/* McDonald's Card */}
-                  <div className="flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 border-t-[#FFC72C] snap-start">
-                    <div className="w-8 h-8 rounded-full bg-yellow-50 text-[#D89F0E] flex items-center justify-center font-bold text-xs mb-2">
-                      M
+                apiBalances.map((b) => {
+                  const firstChar = b.partnerName ? b.partnerName.trim().charAt(0).toUpperCase() : "P";
+                  const isKfc = b.partnerName.toLowerCase().includes("kfc");
+                  const isMcd = b.partnerName.toLowerCase().includes("mcd");
+                  
+                  let borderTop = "border-t-[#8B3D06]";
+                  let iconBg = "bg-[#FCF5F1] text-[#8B3D06]";
+                  if (isKfc) {
+                    borderTop = "border-t-[#C8102E]";
+                    iconBg = "bg-red-50 text-[#C8102E]";
+                  } else if (isMcd) {
+                    borderTop = "border-t-[#FFC72C]";
+                    iconBg = "bg-yellow-50 text-[#D89F0E]";
+                  }
+
+                  return (
+                    <div
+                      key={b.partnerId}
+                      className={cn(
+                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start",
+                        borderTop
+                      )}
+                    >
+                      <div className={cn("w-8 h-8 rounded-full flex items-center justify-center font-black text-xs mb-2 shadow-inner", iconBg)}>
+                        {firstChar}
+                      </div>
+                      <p className="text-[11px] font-semibold text-neutral-500 truncate">
+                        {b.partnerName}
+                      </p>
+                      <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight truncate">
+                        {b.balance.toLocaleString()}{" "}
+                        <span className="text-xs font-bold text-neutral-500">
+                          pts
+                        </span>
+                      </p>
                     </div>
-                    <p className="text-[11px] font-semibold text-neutral-500">
-                      McDonald's Points
-                    </p>
-                    <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight">
-                      {mcdPoints}{" "}
-                      <span className="text-xs font-bold text-neutral-500">
-                        pts
-                      </span>
-                    </p>
-                  </div>
-                  {/* KFC Card */}
-                  <div className="flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 border-t-[#C8102E] snap-start">
-                    <div className="w-8 h-8 rounded-full bg-red-50 text-[#C8102E] flex items-center justify-center font-bold text-xs mb-2">
-                      K
-                    </div>
-                    <p className="text-[11px] font-semibold text-neutral-500">
-                      KFC Points
-                    </p>
-                    <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight">
-                      {kfcPoints}{" "}
-                      <span className="text-xs font-bold text-neutral-500">
-                        pts
-                      </span>
-                    </p>
-                  </div>
-                </>
+                  );
+                })
               )}
             </div>
           </section>

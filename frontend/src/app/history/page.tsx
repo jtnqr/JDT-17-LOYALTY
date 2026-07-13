@@ -258,12 +258,16 @@ export default function HistoryPage() {
           onLogout={logout}
           onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search transactions..."
+          showSearch={true}
         />
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200">
+        <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200 overflow-y-auto">
           {/* Top Header */}
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">

@@ -10,6 +10,10 @@ interface DesktopNavbarProps {
   onLogout?: () => void;
   onToggleMenu?: () => void;
   showBrand?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (val: string) => void;
+  searchPlaceholder?: string;
+  showSearch?: boolean;
 }
 
 export function DesktopNavbar({
@@ -18,6 +22,10 @@ export function DesktopNavbar({
   onLogout,
   onToggleMenu,
   showBrand = true,
+  searchQuery = "",
+  onSearchChange,
+  searchPlaceholder = "Search...",
+  showSearch = false,
 }: DesktopNavbarProps) {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
@@ -58,16 +66,22 @@ export function DesktopNavbar({
       </div>
 
       {/* Middle: Search Bar */}
-      <div className="flex-1 max-w-lg mx-8 relative">
-        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-neutral-400">
-          <Search className="w-4 h-4" />
+      {showSearch ? (
+        <div className="flex-1 max-w-lg mx-8 relative">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-neutral-400">
+            <Search className="w-4 h-4" />
+          </div>
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+            className="w-full bg-[#F1F3F4] text-neutral-700 pl-10 pr-4 py-2 rounded-full text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-medium placeholder:text-neutral-400"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Search rewards, brands, or history..."
-          className="w-full bg-[#F1F3F4] text-neutral-700 pl-10 pr-4 py-2 rounded-full text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-medium placeholder:text-neutral-400"
-        />
-      </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
       {/* Right: Notification & User Info */}
       <div className="flex items-center gap-5">

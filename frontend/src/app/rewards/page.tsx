@@ -114,9 +114,13 @@ export default function MemberRewardsPage() {
     const matchesPartner =
       activePartnerFilter === "ALL" ||
       (reward.partnerName &&
-        reward.partnerName.toLowerCase().includes(activePartnerFilter.toLowerCase())) ||
+        reward.partnerName
+          .toLowerCase()
+          .includes(activePartnerFilter.toLowerCase())) ||
       (reward.partnerCode &&
-        reward.partnerCode.toLowerCase().includes(activePartnerFilter.toLowerCase()));
+        reward.partnerCode
+          .toLowerCase()
+          .includes(activePartnerFilter.toLowerCase()));
     return matchesSearch && matchesPartner;
   });
 
@@ -127,7 +131,9 @@ export default function MemberRewardsPage() {
       (b) =>
         b.partnerId === selectedReward.partnerId ||
         (selectedReward.partnerName &&
-          b.partnerName.toLowerCase().includes(selectedReward.partnerName.toLowerCase()))
+          b.partnerName
+            .toLowerCase()
+            .includes(selectedReward.partnerName.toLowerCase()))
     );
     return found ? found.balance : 0;
   })();
@@ -140,7 +146,8 @@ export default function MemberRewardsPage() {
     ? currentBalance - selectedReward.pointCost
     : 0;
 
-  const combinedBalance = balanceData?.reduce((sum, item) => sum + item.balance, 0) ?? 0;
+  const combinedBalance =
+    balanceData?.reduce((sum, item) => sum + item.balance, 0) ?? 0;
 
   const handleRedeemConfirm = async () => {
     if (isInsufficient || !selectedReward) return;
@@ -192,12 +199,16 @@ export default function MemberRewardsPage() {
           onLogout={logout}
           onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search rewards..."
+          showSearch={true}
         />
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-32">
+        <div className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
           {/* Top Navbar */}
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
@@ -356,7 +367,10 @@ export default function MemberRewardsPage() {
                     <span>All Merchants</span>
                   </label>
                   {apiPartners?.map((p: any) => (
-                    <label key={p.id} className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
+                    >
                       <input
                         type="radio"
                         name="partner"
@@ -374,7 +388,7 @@ export default function MemberRewardsPage() {
             {/* Right Main Grid */}
             <div className="col-span-3 space-y-6">
               {/* Search tool */}
-              <div className="relative">
+              {/* <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                 <input
                   type="text"
@@ -383,7 +397,7 @@ export default function MemberRewardsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-white text-sm text-neutral-800 pl-11 pr-4 py-3 rounded-2xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors placeholder:text-neutral-400 font-semibold"
                 />
-              </div>
+              </div> */}
 
               {/* Desktop Catalog Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

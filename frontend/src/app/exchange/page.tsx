@@ -309,7 +309,7 @@ export default function ExchangePointsPage() {
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-24">
+        <div className="md:hidden flex-grow flex flex-col pb-24 overflow-y-auto">
           {/* Top Navbar */}
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
