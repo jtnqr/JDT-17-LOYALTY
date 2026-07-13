@@ -3,6 +3,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import Link from "next/link";
@@ -119,18 +120,10 @@ export default function AdminDashboardPage() {
       {/* Main Content Area */}
       <main className="flex-grow flex flex-col min-w-0">
         {/* Top Header Bar */}
-        <header className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-30">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Admin</span>
-              <ChevronRight className="w-3 h-3 text-neutral-300" />
-              <span className="text-neutral-600">Dashboard</span>
-            </div>
-            <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
-              Overview Dashboard
-            </h2>
-          </div>
-        </header>
+        <AdminHeader
+          breadcrumbs={[{ label: "Dashboard" }]}
+          title="Overview Dashboard"
+        />
 
         {/* Content Body */}
         <div className="p-8 space-y-6 overflow-y-auto flex-1">
@@ -160,10 +153,6 @@ export default function AdminDashboardPage() {
                 <p className="text-2xl font-black text-neutral-900 tracking-tight">
                   {memberData ?? 0}
                 </p>
-                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-600 font-bold">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>+12% vs last week</span>
-                </div>
               </div>
             </div>
             {/* Metric 2: Active Pilot Merchants */}
@@ -182,9 +171,6 @@ export default function AdminDashboardPage() {
                   <span className="text-xs text-neutral-400 font-bold">
                     merchants
                   </span>
-                </p>
-                <p className="text-[9px] text-neutral-400 mt-1 font-semibold">
-                  KFC Colonel's Club & McDonald's
                 </p>
               </div>
             </div>
@@ -205,9 +191,6 @@ export default function AdminDashboardPage() {
                     exchanges
                   </span>
                 </p>
-                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-neutral-400 font-bold">
-                  <span>Cross-brand point conversions</span>
-                </div>
               </div>
             </div>
             {/* Metric 4: Redemptions Count */}
@@ -227,9 +210,6 @@ export default function AdminDashboardPage() {
                     claims
                   </span>
                 </p>
-                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-emerald-600 font-bold">
-                  <span>Total merchant voucher claims</span>
-                </div>
               </div>
             </div>
           </div>
@@ -287,22 +267,3 @@ export default function AdminDashboardPage() {
   );
 }
 
-// Chevron Right stub
-function ChevronRight({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={3}
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8.25 4.5l7.5 7.5-7.5 7.5"
-      />
-    </svg>
-  );
-}

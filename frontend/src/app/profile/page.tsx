@@ -15,7 +15,22 @@ import { PointBalance } from "@/types";
 
 export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("member_sidebar_open");
+    if (saved !== null) {
+      setIsSidebarOpen(saved === "true");
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("member_sidebar_open", String(next));
+      return next;
+    });
+  };
 
   // Fetch Member Balances via React Query
   const { data: balanceData } = useQuery({
@@ -47,7 +62,7 @@ export default function ProfilePage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* 1. DESKTOP SIDEBAR NAVIGATION */}
       <MemberSidebar
         className={cn(
@@ -67,7 +82,7 @@ export default function ProfilePage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
         />
 
@@ -78,9 +93,9 @@ export default function ProfilePage() {
               ======================================================== */}
           <div className="md:hidden max-w-md mx-auto px-5 py-6 pb-24">
             {/* Top Bar Header */}
-            <div className="flex items-center justify-center gap-3.5 mb-6 px-1">
+            {/* <div className="flex items-center justify-center gap-3.5 mb-6 px-1">
               <h2 className="text-xl font-black text-[#8B3D06]">Profile</h2>
-            </div>
+            </div> */}
 
             {/* Profile Content Container */}
             <div className="bg-white rounded-3xl p-1 space-y-6">
@@ -338,21 +353,13 @@ export default function ProfilePage() {
 
                           <div className="border-t border-neutral-100 pt-3 flex items-center justify-between text-[10px] text-neutral-500 font-bold">
                             {isKfc ? (
-                              <>
-                                <div className="flex-1 max-w-[100px] bg-neutral-100 h-2 rounded-full overflow-hidden">
-                                  <div className="bg-[#B84C06] h-full rounded-full w-[60%]" />
-                                </div>
-                                <span className="ml-2">60% to reward</span>
-                              </>
+                              <></>
                             ) : (
                               <>
-                                <span>Expiring points: 0 pts</span>
                                 <Link
                                   href="/rewards"
                                   className="text-[#8B3D06] hover:underline"
-                                >
-                                  Redeem
-                                </Link>
+                                ></Link>
                               </>
                             )}
                           </div>

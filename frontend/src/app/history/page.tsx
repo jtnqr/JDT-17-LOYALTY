@@ -35,6 +35,15 @@ const MOCK_HISTORY_TRANSACTIONS = [
     detailText: "Exchange to McDonald's",
   },
   {
+    id: "tx-history-1-in",
+    type: "EXCHANGE_IN",
+    partnerName: "McDonald's",
+    points: 80,
+    trxAmountIDR: 0,
+    createdAt: new Date().toISOString(), // Today
+    detailText: "Exchange from KFC",
+  },
+  {
     id: "tx-history-2",
     type: "EARN",
     partnerName: "KFC",
@@ -84,8 +93,24 @@ interface Transaction {
 
 export default function HistoryPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("member_sidebar_open");
+    if (saved !== null) {
+      setIsSidebarOpen(saved === "true");
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("member_sidebar_open", String(next));
+      return next;
+    });
+  };
+
+  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -99,8 +124,8 @@ export default function HistoryPage() {
       let typeParam = "";
       if (activeFilter === "EARN") typeParam = "&type=EARN";
       if (activeFilter === "REDEEM") typeParam = "&type=REDEEM";
-      if (activeFilter === "EXCHANGE")
-        typeParam = "&type=EXCHANGE_OUT,EXCHANGE_IN";
+      if (activeFilter === "EXCHANGE_IN") typeParam = "&type=EXCHANGE_IN";
+      if (activeFilter === "EXCHANGE_OUT") typeParam = "&type=EXCHANGE_OUT";
 
       const response = await axios.get(
         `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`,
@@ -136,8 +161,8 @@ export default function HistoryPage() {
       activeFilter === "ALL" ||
       (activeFilter === "EARN" && tx.type === "EARN") ||
       (activeFilter === "REDEEM" && tx.type === "REDEEM") ||
-      (activeFilter === "EXCHANGE" &&
-        (tx.type === "EXCHANGE_OUT" || tx.type === "EXCHANGE_IN"));
+      (activeFilter === "EXCHANGE_IN" && tx.type === "EXCHANGE_IN") ||
+      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT");
 
     return matchesSearch && matchesFilter;
   });
@@ -210,7 +235,7 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
         className={cn(
@@ -231,7 +256,7 @@ export default function HistoryPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
         />
 
@@ -240,18 +265,6 @@ export default function HistoryPage() {
             ======================================================== */}
         <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200">
           {/* Top Header */}
-          <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-2">
-              <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
-                LoyaltyHub
-              </span>
-            </div>
-            <button className="text-neutral-700 hover:text-neutral-900">
-              <Bell className="w-5 h-5" />
-            </button>
-          </header>
-
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
               History
@@ -263,7 +276,8 @@ export default function HistoryPage() {
                 { filter: "ALL", label: "All active" },
                 { filter: "EARN", label: "EARN" },
                 { filter: "REDEEM", label: "REDEEM" },
-                { filter: "EXCHANGE", label: "EXCHANGE" },
+                { filter: "EXCHANGE_IN", label: "EXCHANGE IN" },
+                { filter: "EXCHANGE_OUT", label: "EXCHANGE OUT" },
               ].map((chip) => (
                 <button
                   key={chip.filter}
@@ -323,14 +337,14 @@ export default function HistoryPage() {
                                         ? "bg-[#E8F5E9] text-[#2E7D32]"
                                         : tx.type === "REDEEM"
                                         ? "bg-[#FFEBEE] text-[#C62828]"
-                                        : tx.type.startsWith("EXCHANGE")
+                                        : tx.type === "EXCHANGE_IN"
                                         ? "bg-[#E3F2FD] text-[#1565C0]"
+                                        : tx.type === "EXCHANGE_OUT"
+                                        ? "bg-[#FFE0B2] text-[#E65100]"
                                         : "bg-[#F5F5F5] text-[#9E9E9E]"
                                     )}
                                   >
-                                    {tx.type
-                                      .replace("_OUT", "")
-                                      .replace("_IN", "")}
+                                    {tx.type.replace("_", " ")}
                                   </span>
                                   {tx.type === "EARN" && tx.trxAmountIDR && (
                                     <span className="text-[9px] font-semibold text-neutral-400">
@@ -400,9 +414,10 @@ export default function HistoryPage() {
           <div className="flex gap-2">
             {[
               { filter: "ALL", label: "All Transactions" },
-              { filter: "EARN", label: "Earnings (EARN)" },
-              { filter: "REDEEM", label: "Redemptions (REDEEM)" },
-              { filter: "EXCHANGE", label: "Point Exchanges" },
+              { filter: "EARN", label: "Earnings" },
+              { filter: "REDEEM", label: "Redemptions" },
+              { filter: "EXCHANGE_IN", label: "Exchange In" },
+              { filter: "EXCHANGE_OUT", label: "Exchange Out" },
             ].map((chip) => (
               <button
                 key={chip.filter}
@@ -506,10 +521,14 @@ export default function HistoryPage() {
                                   ? "bg-emerald-50 border-emerald-200/50 text-emerald-700"
                                   : tx.type === "REDEEM"
                                   ? "bg-neutral-50 border-neutral-200 text-neutral-700"
+                                  : tx.type === "EXCHANGE_IN"
+                                  ? "bg-blue-50 border-blue-200/50 text-blue-700"
+                                  : tx.type === "EXCHANGE_OUT"
+                                  ? "bg-orange-50 border-orange-200/50 text-orange-700"
                                   : "bg-red-50 border-red-200/50 text-red-700"
                               )}
                             >
-                              {tx.type}
+                              {tx.type.replace("_", " ")}
                             </span>
                           </td>
                           <td className="px-6 py-4.5">

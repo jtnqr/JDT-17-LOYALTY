@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
@@ -65,7 +66,7 @@ interface Member {
   name: string;
   email: string;
   phone: string;
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  status: "ACTIVE" | "INACTIVE";
   createdAt: string;
 }
 
@@ -80,7 +81,7 @@ const editMemberSchema = z.object({
     .min(1, "Phone number is required")
     .regex(/^[0-9]+$/, "Phone number must contain only numbers")
     .min(8, "Phone number must be at least 8 digits"),
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 type EditMemberSchemaType = z.infer<typeof editMemberSchema>;
@@ -200,57 +201,57 @@ export default function AdminMembersPage() {
     }
   };
 
-      const onSubmitAdd = async (data: AddMemberSchemaType) => {
-        // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
-        let formattedPhone = data.phone;
-        if (!formattedPhone.startsWith("0")) {
-          if (formattedPhone.startsWith("62")) {
-            formattedPhone = "0" + formattedPhone.slice(2);
-          } else {
-            formattedPhone = "0" + formattedPhone;
-          }
-        }
+  const onSubmitAdd = async (data: AddMemberSchemaType) => {
+    // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
+    let formattedPhone = data.phone;
+    if (!formattedPhone.startsWith("0")) {
+      if (formattedPhone.startsWith("62")) {
+        formattedPhone = "0" + formattedPhone.slice(2);
+      } else {
+        formattedPhone = "0" + formattedPhone;
+      }
+    }
 
-        try {
-          await axios.post("/api/v1/auth/register", {
-            name: data.name,
-            email: data.email,
-            phone: formattedPhone,
-            password: data.password,
-          });
+    try {
+      await axios.post("/api/v1/auth/register", {
+        name: data.name,
+        email: data.email,
+        phone: formattedPhone,
+        password: data.password,
+      });
 
-          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-          resetAdd();
-          setIsAddOpen(false);
-        } catch (error: any) {
-          console.error("Failed to add member:", error);
-          const responseData = error.response?.data;
-          const errorCode = responseData?.code;
-          const errorMessage = responseData?.message;
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+      resetAdd();
+      setIsAddOpen(false);
+    } catch (error: any) {
+      console.error("Failed to add member:", error);
+      const responseData = error.response?.data;
+      const errorCode = responseData?.code;
+      const errorMessage = responseData?.message;
 
-          if (errorCode === "DUPLICATE_EMAIL") {
-            setErrorAdd("email", {
-              type: "manual",
-              message: "Email is already registered.",
-            });
-          } else if (errorCode === "DUPLICATE_PHONE") {
-            setErrorAdd("phone", {
-              type: "manual",
-              message: "Phone number is already registered.",
-            });
-          } else if (errorMessage) {
-            setErrorAdd("root", {
-              type: "manual",
-              message: errorMessage,
-            });
-          } else {
-            setErrorAdd("root", {
-              type: "manual",
-              message: "Failed to add member. Please try again.",
-            });
-          }
-        }
-      };
+      if (errorCode === "DUPLICATE_EMAIL") {
+        setErrorAdd("email", {
+          type: "manual",
+          message: "Email is already registered.",
+        });
+      } else if (errorCode === "DUPLICATE_PHONE") {
+        setErrorAdd("phone", {
+          type: "manual",
+          message: "Phone number is already registered.",
+        });
+      } else if (errorMessage) {
+        setErrorAdd("root", {
+          type: "manual",
+          message: errorMessage,
+        });
+      } else {
+        setErrorAdd("root", {
+          type: "manual",
+          message: "Failed to add member. Please try again.",
+        });
+      }
+    }
+  };
 
   // Fetch Member List via React Query
   const {
@@ -302,9 +303,7 @@ export default function AdminMembersPage() {
       case "ACTIVE":
         return "bg-emerald-50 text-emerald-700 border-emerald-200/50";
       case "INACTIVE":
-        return "bg-neutral-100 text-neutral-500 border-neutral-200/30";
-      case "SUSPENDED":
-        return "bg-red-50 text-red-700 border-red-200/50";
+        return "bg-neutral-100 text-red-500 border-neutral-200/30";
       default:
         return "bg-neutral-100 text-neutral-500";
     }
@@ -319,37 +318,14 @@ export default function AdminMembersPage() {
         {/* Main CMS Content Container */}
         <main className="flex-1 flex flex-col min-w-0">
           {/* Top Header Bar */}
-          <header className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-30">
-            <div>
-              {/* Breadcrumbs */}
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-                <span>Admin</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-neutral-600">Members</span>
-              </div>
-              <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
-                Members Directory
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-6">
-              {/* Search Bar in Header */}
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search members by name, email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#F1F3F4] text-neutral-700 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 transition-colors font-medium placeholder:text-neutral-400"
-                />
-              </div>
-              <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
-              </button>
-            </div>
-          </header>
+          <AdminHeader
+            breadcrumbs={[{ label: "Members" }]}
+            title="Members Directory"
+            showSearch={true}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchPlaceholder="Search members by name, email..."
+          />
 
           {/* Inner Content Area */}
           <div className="p-8 flex-grow flex flex-col space-y-6">
@@ -368,7 +344,6 @@ export default function AdminMembersPage() {
                     <option value="ALL">All Statuses</option>
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
-                    <option value="SUSPENDED">Suspended</option>
                   </select>
                   <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
                 </div>
@@ -499,12 +474,6 @@ export default function AdminMembersPage() {
                             </td>
                             <td className="px-6 py-4.5">
                               <div className="flex items-center justify-center gap-2">
-                                <button
-                                  className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg cursor-pointer transition-colors"
-                                  title="View details"
-                                >
-                                  <Eye className="w-4.5 h-4.5" />
-                                </button>
                                 <button
                                   onClick={() => {
                                     setSelectedMember(member);
@@ -654,7 +623,6 @@ export default function AdminMembersPage() {
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
-                    <option value="SUSPENDED">Suspended</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
                 </div>

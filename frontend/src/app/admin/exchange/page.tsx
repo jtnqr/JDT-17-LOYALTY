@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
@@ -50,14 +51,6 @@ const DEFAULT_PARTNERS: Partner[] = [
     logoBg: "bg-yellow-50 text-[#D89F0E] border-yellow-100",
     logoChar: "M",
   },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440003",
-    name: "Burger King Indonesia",
-    code: "BK",
-    status: "ACTIVE",
-    logoBg: "bg-amber-50 text-[#8B4F1D] border-amber-100",
-    logoChar: "B",
-  },
 ];
 
 const DEFAULT_RATES: ExchangeRate[] = [
@@ -77,11 +70,39 @@ const DEFAULT_RATES: ExchangeRate[] = [
 
 export default function AdminExchangePage() {
   const { isLoaded } = useAdmin();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
     null
   );
-  const [rates, setRates] = useState<ExchangeRate[]>([]);
+  const [ratesState, setRatesState] = useState<ExchangeRate[]>([]);
+
+  // 1. Fetch Exchange Rates via React Query
+  const { data: apiRates } = useQuery({
+    queryKey: ["admin-exchange-rates"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/exchange-rates", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.rates || response.data.data || []) as any[];
+    },
+    retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
+  // Combine API rates and local fallback state
+  const rates = React.useMemo(() => {
+    if (apiRates && apiRates.length > 0) {
+      return apiRates.map((r, idx) => ({
+        id: r.id || `rate-api-${idx}`,
+        fromPartnerId: r.fromPartnerId,
+        toPartnerId: r.toPartnerId,
+        rate: r.rate,
+      }));
+    }
+    return ratesState.length > 0 ? ratesState : DEFAULT_RATES;
+  }, [apiRates, ratesState]);
 
   // Local input states for rates [fromId_toId]: string
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
@@ -102,13 +123,13 @@ export default function AdminExchangePage() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
   });
 
-  // Combine API Partners and static default list (to ensure KFC, McD, and BK are available)
+  // Load partners strictly from API
   const partners: Partner[] = React.useMemo(() => {
-    if (!apiPartners || apiPartners.length === 0) {
-      return DEFAULT_PARTNERS;
+    if (!apiPartners) {
+      return [];
     }
 
-    const mapped = apiPartners.map((p) => {
+    return apiPartners.map((p) => {
       let logoBg = "bg-neutral-50 text-neutral-800 border-neutral-100";
       let logoChar = p.name
         ? p.name.charAt(0)
@@ -133,21 +154,6 @@ export default function AdminExchangePage() {
         logoChar,
       };
     });
-
-    // Make sure we satisfy the requirement for MCD, KFC, and BK
-    const hasBK = mapped.some((p) => p.code === "BK");
-    if (!hasBK) {
-      mapped.push({
-        id: "660e8400-e29b-41d4-a716-446655440003",
-        name: "Burger King Indonesia",
-        code: "BK",
-        status: "ACTIVE",
-        logoBg: "bg-amber-50 text-[#8B4F1D] border-amber-100",
-        logoChar: "B",
-      });
-    }
-
-    return mapped;
   }, [apiPartners]);
 
   // Find active selected partner object
@@ -155,17 +161,17 @@ export default function AdminExchangePage() {
     return partners.find((p) => p.id === selectedPartnerId) || null;
   }, [partners, selectedPartnerId]);
 
-  // 2. Load exchange rates from localStorage
+  // 3. Load fallback exchange rates from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("pistos_exchange_rates");
     if (saved) {
       try {
-        setRates(JSON.parse(saved));
+        setRatesState(JSON.parse(saved));
       } catch (e) {
-        setRates(DEFAULT_RATES);
+        setRatesState(DEFAULT_RATES);
       }
     } else {
-      setRates(DEFAULT_RATES);
+      setRatesState(DEFAULT_RATES);
       localStorage.setItem(
         "pistos_exchange_rates",
         JSON.stringify(DEFAULT_RATES)
@@ -238,7 +244,7 @@ export default function AdminExchangePage() {
   };
 
   // Save the bidirectional rates for a pair of partners
-  const handleSavePairRates = (otherPartnerId: string) => {
+  const handleSavePairRates = async (otherPartnerId: string) => {
     if (!selectedPartnerId) return;
 
     const outKey = `${selectedPartnerId}_${otherPartnerId}`;
@@ -252,47 +258,94 @@ export default function AdminExchangePage() {
     const outRate = isNaN(rawOut) || rawOut <= 0 ? 1.0 : rawOut;
     const inRate = isNaN(rawIn) || rawIn <= 0 ? 1.0 : rawIn;
 
-    // Filter out existing entries for these directions
-    let updatedRates = rates.filter(
-      (r) =>
-        !(
-          r.fromPartnerId === selectedPartnerId &&
-          r.toPartnerId === otherPartnerId
-        ) &&
-        !(
-          r.fromPartnerId === otherPartnerId &&
-          r.toPartnerId === selectedPartnerId
-        )
-    );
+    const token = localStorage.getItem("token");
 
-    // Append updated ones
-    updatedRates.push(
-      {
-        id: `rate-${selectedPartnerId}-${otherPartnerId}`,
-        fromPartnerId: selectedPartnerId,
-        toPartnerId: otherPartnerId,
-        rate: outRate,
-      },
-      {
-        id: `rate-${otherPartnerId}-${selectedPartnerId}`,
-        fromPartnerId: otherPartnerId,
-        toPartnerId: selectedPartnerId,
-        rate: inRate,
-      }
-    );
+    try {
+      // 1. Post Outward Rate (Selected -> Other)
+      await axios.post(
+        "/api/v1/exchange-rates",
+        {
+          fromPartnerId: selectedPartnerId,
+          toPartnerId: otherPartnerId,
+          rate: outRate,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    setRates(updatedRates);
-    localStorage.setItem("pistos_exchange_rates", JSON.stringify(updatedRates));
+      // 2. Post Inward Rate (Other -> Selected)
+      await axios.post(
+        "/api/v1/exchange-rates",
+        {
+          fromPartnerId: otherPartnerId,
+          toPartnerId: selectedPartnerId,
+          rate: inRate,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    // Show temporary success feedback
-    setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
-    setTimeout(() => {
-      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
-    }, 2000);
+      // Invalidate queries to reload from backend
+      queryClient.invalidateQueries({ queryKey: ["admin-exchange-rates"] });
+
+      // Show temporary success feedback
+      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
+      setTimeout(() => {
+        setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
+      }, 2000);
+    } catch (error) {
+      console.error(
+        "Failed to save pair rates to API, using localStorage fallback:",
+        error
+      );
+
+      // Filter out existing entries for these directions
+      let updatedRates = rates.filter(
+        (r) =>
+          !(
+            r.fromPartnerId === selectedPartnerId &&
+            r.toPartnerId === otherPartnerId
+          ) &&
+          !(
+            r.fromPartnerId === otherPartnerId &&
+            r.toPartnerId === selectedPartnerId
+          )
+      );
+
+      // Append updated ones
+      updatedRates.push(
+        {
+          id: `rate-${selectedPartnerId}-${otherPartnerId}`,
+          fromPartnerId: selectedPartnerId,
+          toPartnerId: otherPartnerId,
+          rate: outRate,
+        },
+        {
+          id: `rate-${otherPartnerId}-${selectedPartnerId}`,
+          fromPartnerId: otherPartnerId,
+          toPartnerId: selectedPartnerId,
+          rate: inRate,
+        }
+      );
+
+      setRatesState(updatedRates);
+      localStorage.setItem(
+        "pistos_exchange_rates",
+        JSON.stringify(updatedRates)
+      );
+
+      // Show temporary success feedback
+      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
+      setTimeout(() => {
+        setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
+      }, 2000);
+    }
   };
 
   // Reset bidirectional rates to defaults
-  const handleResetPairRates = (otherPartnerId: string) => {
+  const handleResetPairRates = async (otherPartnerId: string) => {
     if (!selectedPartnerId) return;
 
     const outKey = `${selectedPartnerId}_${otherPartnerId}`;
@@ -319,41 +372,87 @@ export default function AdminExchangePage() {
       [inKey]: defaultIn.toString(),
     }));
 
-    // Filter and update
-    let updatedRates = rates.filter(
-      (r) =>
-        !(
-          r.fromPartnerId === selectedPartnerId &&
-          r.toPartnerId === otherPartnerId
-        ) &&
-        !(
-          r.fromPartnerId === otherPartnerId &&
-          r.toPartnerId === selectedPartnerId
-        )
-    );
+    const token = localStorage.getItem("token");
 
-    updatedRates.push(
-      {
-        id: `rate-${selectedPartnerId}-${otherPartnerId}`,
-        fromPartnerId: selectedPartnerId,
-        toPartnerId: otherPartnerId,
-        rate: defaultOut,
-      },
-      {
-        id: `rate-${otherPartnerId}-${selectedPartnerId}`,
-        fromPartnerId: otherPartnerId,
-        toPartnerId: selectedPartnerId,
-        rate: defaultIn,
-      }
-    );
+    try {
+      // 1. Post default Outward Rate (Selected -> Other)
+      await axios.post(
+        "/api/v1/exchange-rates",
+        {
+          fromPartnerId: selectedPartnerId,
+          toPartnerId: otherPartnerId,
+          rate: defaultOut,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    setRates(updatedRates);
-    localStorage.setItem("pistos_exchange_rates", JSON.stringify(updatedRates));
+      // 2. Post default Inward Rate (Other -> Selected)
+      await axios.post(
+        "/api/v1/exchange-rates",
+        {
+          fromPartnerId: otherPartnerId,
+          toPartnerId: selectedPartnerId,
+          rate: defaultIn,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
-    setTimeout(() => {
-      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
-    }, 1500);
+      // Invalidate queries to reload from backend
+      queryClient.invalidateQueries({ queryKey: ["admin-exchange-rates"] });
+
+      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
+      setTimeout(() => {
+        setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
+      }, 1500);
+    } catch (error) {
+      console.error(
+        "Failed to reset rates via API, using localStorage fallback:",
+        error
+      );
+
+      // Filter and update
+      let updatedRates = rates.filter(
+        (r) =>
+          !(
+            r.fromPartnerId === selectedPartnerId &&
+            r.toPartnerId === otherPartnerId
+          ) &&
+          !(
+            r.fromPartnerId === otherPartnerId &&
+            r.toPartnerId === selectedPartnerId
+          )
+      );
+
+      updatedRates.push(
+        {
+          id: `rate-${selectedPartnerId}-${otherPartnerId}`,
+          fromPartnerId: selectedPartnerId,
+          toPartnerId: otherPartnerId,
+          rate: defaultOut,
+        },
+        {
+          id: `rate-${otherPartnerId}-${selectedPartnerId}`,
+          fromPartnerId: otherPartnerId,
+          toPartnerId: selectedPartnerId,
+          rate: defaultIn,
+        }
+      );
+
+      setRatesState(updatedRates);
+      localStorage.setItem(
+        "pistos_exchange_rates",
+        JSON.stringify(updatedRates)
+      );
+
+      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
+      setTimeout(() => {
+        setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
+      }, 1500);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -376,47 +475,22 @@ export default function AdminExchangePage() {
       {/* Main Content */}
       <main className="flex-grow flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-30">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Admin</span>
-              <ChevronRight className="w-3 h-3 text-neutral-300" />
-              <span className="text-neutral-500">Exchange Matrix</span>
-              {selectedPartner && (
-                <>
-                  <ChevronRight className="w-3 h-3 text-neutral-300" />
-                  <span className="text-neutral-700 font-bold">
-                    {selectedPartner.name}
-                  </span>
-                </>
-              )}
-            </div>
-            <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
-              {selectedPartner
-                ? `${selectedPartner.name} Relations`
-                : "Points Exchange Configuration"}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-6">
-            {!selectedPartner && (
-              <div className="relative w-60">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search partners..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#F1F3F4] text-neutral-700 pl-9 pr-4 py-2 rounded-xl text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 transition-colors font-medium placeholder:text-neutral-400"
-                />
-              </div>
-            )}
-            <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
-            </button>
-          </div>
-        </header>
+        <AdminHeader
+          breadcrumbs={
+            selectedPartner
+              ? [{ label: "Exchange Matrix" }, { label: selectedPartner.name }]
+              : [{ label: "Exchange Matrix" }]
+          }
+          title={
+            selectedPartner
+              ? `${selectedPartner.name} Relations`
+              : "Points Exchange Configuration"
+          }
+          showSearch={!selectedPartner}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchPlaceholder="Search partners..."
+        />
 
         {/* Content Body */}
         <div className="p-8 flex-grow flex flex-col space-y-6">

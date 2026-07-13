@@ -71,13 +71,6 @@ export function DesktopNavbar({
 
       {/* Right: Notification & User Info */}
       <div className="flex items-center gap-5">
-        <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors cursor-pointer">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
-        </button>
-
-        <div className="w-[1.5px] h-6 bg-neutral-200" />
-
         <div className="relative" ref={popoverRef}>
           <button
             onClick={() => setIsPopoverOpen((prev) => !prev)}
@@ -96,14 +89,14 @@ export function DesktopNavbar({
           {/* User Actions Popover */}
           {isPopoverOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200/60 rounded-2xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-4 py-2 border-b border-neutral-100 mb-1">
-                <p className="text-xs font-bold text-neutral-800 truncate">
+              {/* <div className="px-4 py-2 border-b border-neutral-100 mb-1"> */}
+              {/* <p className="text-xs font-bold text-neutral-800 truncate">
                   {userName}
                 </p>
                 <p className="text-[10px] text-neutral-400 font-semibold truncate mt-0.5">
                   {userTier}
-                </p>
-              </div>
+                </p> */}
+              {/* </div> */}
               {onLogout && (
                 <button
                   onClick={() => {

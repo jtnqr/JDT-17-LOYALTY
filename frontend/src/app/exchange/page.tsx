@@ -52,7 +52,22 @@ const PARTNER_PROGRAMS = [
 
 export default function ExchangePointsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("member_sidebar_open");
+    if (saved !== null) {
+      setIsSidebarOpen(saved === "true");
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("member_sidebar_open", String(next));
+      return next;
+    });
+  };
 
   // Exchange state
   const [fromPartner, setFromPartner] = useState(PARTNER_PROGRAMS[0]); // Starts KFC
@@ -76,7 +91,20 @@ export default function ExchangePointsPage() {
       }[];
     },
     enabled: !!memberId,
+  });
+
+  // Fetch exchange rates from API
+  const { data: apiRates } = useQuery({
+    queryKey: ["exchange-rates"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/exchange-rates", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.rates || response.data.data || []) as any[];
+    },
     retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
   });
 
   const kfcBalance =
@@ -103,8 +131,18 @@ export default function ExchangePointsPage() {
       ? mcdBalance
       : bkBalance;
 
-  // Conversion rate based on active direction loading from admin local storage configurations
+  // Conversion rate based on active direction loading from API or fallback configurations
   const activeRate = React.useMemo(() => {
+    // 1. Try finding in API rates first
+    if (apiRates && apiRates.length > 0) {
+      const found = apiRates.find(
+        (r: any) =>
+          r.fromPartnerId === fromPartner.id && r.toPartnerId === toPartner.id
+      );
+      if (found) return found.rate;
+    }
+
+    // 2. Try finding in localStorage rates as fallback
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("pistos_exchange_rates");
       if (saved) {
@@ -131,11 +169,11 @@ export default function ExchangePointsPage() {
       }
     }
 
-    // Default fallback rates
+    // 3. Default fallback rates
     if (fromPartner.code === "KFC" && toPartner.code === "MCD") return 0.8;
     if (fromPartner.code === "MCD" && toPartner.code === "KFC") return 0.9;
     return 1.0;
-  }, [fromPartner, toPartner]);
+  }, [fromPartner, toPartner, apiRates]);
 
   // Handle swapping the From and To partners
   const handleSwapPartners = () => {
@@ -206,7 +244,7 @@ export default function ExchangePointsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
         className={cn(
@@ -227,7 +265,7 @@ export default function ExchangePointsPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
         />
 
@@ -236,18 +274,6 @@ export default function ExchangePointsPage() {
             ======================================================== */}
         <div className="md:hidden flex-grow flex flex-col pb-24">
           {/* Top Navbar */}
-          <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-2">
-              <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
-                LoyaltyHub
-              </span>
-            </div>
-            <button className="text-neutral-700 hover:text-neutral-900">
-              <Bell className="w-5 h-5" />
-            </button>
-          </header>
-
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
               Exchange Points
@@ -481,14 +507,14 @@ export default function ExchangePointsPage() {
                         placeholder="Enter amount"
                       />
                       <div className="flex items-center gap-2 text-[10px] font-bold text-brand-primary shrink-0 select-none">
-                        <button
+                        {/* <button
                           type="button"
                           onClick={handleSetMin}
                           className="hover:underline cursor-pointer"
                         >
                           Min
-                        </button>
-                        <span className="text-neutral-200">|</span>
+                        </button> */}
+                        {/* <span className="text-neutral-200">|</span> */}
                         <button
                           type="button"
                           onClick={handleSetMax}
@@ -499,21 +525,6 @@ export default function ExchangePointsPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Bottom Info Banner: Exchange rates explanation */}
-              <div className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-neutral-200/50 shadow-sm border-l-4 border-l-[#8B3D06]">
-                <Info className="w-5 h-5 text-[#8B3D06] shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-neutral-800">
-                    Exchange Rates
-                  </h4>
-                  <p className="text-[11px] text-neutral-400 font-semibold leading-relaxed">
-                    Conversion rates are updated live based on partner
-                    agreements. The current rate is guaranteed for the next 15
-                    minutes.
-                  </p>
                 </div>
               </div>
             </div>
@@ -602,27 +613,6 @@ export default function ExchangePointsPage() {
                     </span>
                     .
                   </p>
-                </div>
-              </div>
-
-              {/* Popular Pairs Widget */}
-              <div className="bg-[#FAF9F9] rounded-2xl border border-dashed border-neutral-300 p-5 shadow-inner space-y-3.5 select-none">
-                <h4 className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">
-                  Popular Pairs Today
-                </h4>
-                <div className="space-y-2">
-                  <div className="bg-white border border-neutral-100 rounded-xl px-4 py-2.5 flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-neutral-600">
-                      KFC &rarr; McDonald's
-                    </span>
-                    <span className="text-neutral-900">1 : 0.80</span>
-                  </div>
-                  <div className="bg-white border border-neutral-100 rounded-xl px-4 py-2.5 flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-neutral-600">
-                      McDonald's &rarr; KFC
-                    </span>
-                    <span className="text-neutral-900">1 : 0.80</span>
-                  </div>
                 </div>
               </div>
             </div>

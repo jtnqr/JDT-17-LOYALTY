@@ -23,46 +23,25 @@ import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
 import Link from "next/link";
 
-// Mock catalog list matching public/Reward Catalog.png
-const MEMBER_REWARDS = [
-  {
-    id: "reward-1",
-    name: "KFC Original Bucket",
-    partnerName: "KFC",
-    pointCost: 500,
-    imageUrl:
-      "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=400&auto=format&fit=crop&q=80",
-    accentColor: "border-t-[#C8102E]",
-    badgeBg: "bg-red-50 text-[#C8102E]",
-    isLocked: false,
-  },
-  {
-    id: "reward-2",
-    name: "McDouble Meal",
-    partnerName: "MCD",
-    pointCost: 400,
-    imageUrl:
-      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&auto=format&fit=crop&q=80",
-    accentColor: "border-t-[#FFC72C]",
-    badgeBg: "bg-yellow-50 text-[#D89F0E]",
-    isLocked: false,
-  },
-  {
-    id: "reward-3",
-    name: "6pc McNuggets",
-    partnerName: "MCD",
-    pointCost: 250,
-    imageUrl:
-      "https://images.unsplash.com/photo-1562967914-608f82629710?w=400&auto=format&fit=crop&q=80",
-    accentColor: "border-t-[#FFC72C]",
-    badgeBg: "bg-yellow-50 text-[#D89F0E]",
-    isLocked: false,
-  },
-];
-
 export default function MemberRewardsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("member_sidebar_open");
+    if (saved !== null) {
+      setIsSidebarOpen(saved === "true");
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("member_sidebar_open", String(next));
+      return next;
+    });
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activePartnerFilter, setActivePartnerFilter] = useState("ALL");
   const [showPointsBanner, setShowPointsBanner] = useState(true);
@@ -170,7 +149,7 @@ export default function MemberRewardsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
         className={cn(
@@ -191,7 +170,7 @@ export default function MemberRewardsPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
         />
 
@@ -200,18 +179,6 @@ export default function MemberRewardsPage() {
             ======================================================== */}
         <div className="md:hidden flex-grow flex flex-col pb-32">
           {/* Top Navbar */}
-          <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-2">
-              <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
-                LoyaltyHub
-              </span>
-            </div>
-            <button className="text-neutral-700 hover:text-neutral-900">
-              <Bell className="w-5 h-5" />
-            </button>
-          </header>
-
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
               Rewards
@@ -303,14 +270,6 @@ export default function MemberRewardsPage() {
                   </div>
                 </div>
               ))}
-
-              {/* Locked card matching mockup */}
-              <div className="bg-[#FAF9F9] rounded-2xl border border-dashed border-neutral-300 p-4 flex flex-col items-center justify-center text-center gap-2 h-44 opacity-85 select-none">
-                <Lock className="w-6 h-6 text-neutral-400" />
-                <span className="text-[10px] font-extrabold text-neutral-500 leading-tight">
-                  Unlock more at Silver Tier
-                </span>
-              </div>
             </div>
           </div>
 
@@ -364,24 +323,6 @@ export default function MemberRewardsPage() {
             </div>
 
             {/* Desktop points display */}
-            <div className="flex gap-4">
-              <div className="bg-white border border-neutral-200/50 rounded-2xl px-5 py-3 shadow-sm text-left">
-                <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest leading-none">
-                  KFC Balance
-                </p>
-                <p className="text-lg font-black text-neutral-800 mt-1">
-                  {kfcPoints} pts
-                </p>
-              </div>
-              <div className="bg-white border border-neutral-200/50 rounded-2xl px-5 py-3 shadow-sm text-left">
-                <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest leading-none">
-                  McD Balance
-                </p>
-                <p className="text-lg font-black text-neutral-800 mt-1">
-                  {mcdPoints} pts
-                </p>
-              </div>
-            </div>
           </header>
 
           <div className="grid grid-cols-4 gap-6 items-stretch">
@@ -483,22 +424,6 @@ export default function MemberRewardsPage() {
                     </div>
                   </div>
                 ))}
-
-                {/* Locked Tier card on desktop */}
-                <div className="bg-[#FAF9F9] rounded-2xl border border-dashed border-neutral-300 p-6 flex flex-col items-center justify-center text-center gap-3 h-64 opacity-80 select-none">
-                  <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-800">
-                      Unlock more at Silver Tier
-                    </p>
-                    <p className="text-[10px] text-neutral-400 mt-1">
-                      Reach 2,500 points at KFC or McDonald's to view more
-                      rewards.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

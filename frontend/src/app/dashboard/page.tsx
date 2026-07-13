@@ -33,8 +33,16 @@ import Avatar from "@/components/atoms/Avatar";
 
 // Mock Fallback Data (per docs/seed-data.sql & design brief)
 const MOCK_BALANCES = [
-  { partnerId: "660e8400-e29b-41d4-a716-446655440001", partnerName: "KFC Colonel's Club", balance: 1200 },
-  { partnerId: "660e8400-e29b-41d4-a716-446655440002", partnerName: "McDonald's MyRewards", balance: 4850 },
+  {
+    partnerId: "660e8400-e29b-41d4-a716-446655440001",
+    partnerName: "KFC Colonel's Club",
+    balance: 1200,
+  },
+  {
+    partnerId: "660e8400-e29b-41d4-a716-446655440002",
+    partnerName: "McDonald's MyRewards",
+    balance: 4850,
+  },
 ];
 
 const MOCK_TRANSACTIONS = [
@@ -74,7 +82,22 @@ interface Transaction {
 
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("member_sidebar_open");
+    if (saved !== null) {
+      setIsSidebarOpen(saved === "true");
+    }
+  }, []);
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem("member_sidebar_open", String(next));
+      return next;
+    });
+  };
 
   // 1. Fetch Balances via React Query
   const { data: balanceData, isLoading: isBalancesLoading } = useQuery({
@@ -137,7 +160,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* 1. DESKTOP SIDEBAR NAVIGATION (Hidden on Mobile) */}
       <MemberSidebar
         className={cn(
@@ -157,7 +180,7 @@ export default function DashboardPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
+          onToggleMenu={handleToggleSidebar}
           showBrand={!isSidebarOpen}
         />
 
@@ -172,16 +195,6 @@ export default function DashboardPage() {
                 <span className="font-bold text-2xl text-brand-primary tracking-wider">
                   LoyaltyHub
                 </span>
-              </div>
-              <div className="flex items-center gap-3 text-primary">
-                <Bell className="w-5 h-5 text-brand-primary" />
-                {/* <button
-                  onClick={logout}
-                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button> */}
-                <Avatar name={member?.name} />
               </div>
             </div>
 
@@ -492,70 +505,6 @@ export default function DashboardPage() {
 
             {/* Right Sidebar Area */}
             <div className="space-y-6">
-              {/* Gold Tier Status Card */}
-              {/* <section className="bg-[#8B3D06] rounded-2xl p-5 text-white shadow-sm relative overflow-hidden h-44 flex flex-col justify-between">
-                <div className="flex justify-between items-start relative z-10">
-                  <div className="space-y-1">
-                    <h3 className="text-base font-black tracking-tight">
-                      Gold Tier
-                    </h3>
-                    <p className="text-[11px] text-orange-100 font-medium">
-                      You've saved $124.50 this month through redemptions!
-                    </p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-                    <Award className="w-4.5 h-4.5 text-white" />
-                  </div>
-                </div>
-
-                <div className="space-y-2 mt-4 relative z-10">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-orange-100">
-                    <span>Level Progress</span>
-                    <span>85%</span>
-                  </div>
-                  <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-white h-full rounded-full w-[85%]" />
-                  </div>
-                  <p className="text-[9px] text-center text-orange-200 font-semibold mt-1">
-                    Only 1,200 pts to Platinum Status
-                  </p>
-                </div>
-              </section> */}
-
-              {/* Points Value Calculator */}
-              {/* <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm space-y-4">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                  Points Value
-                </h3>
-
-                <div className="bg-neutral-50/80 p-4 rounded-xl space-y-3.5 border border-neutral-100">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-neutral-500">
-                      Combined Balance
-                    </span>
-                    <span className="font-extrabold text-brand-primary text-sm">
-                      {combinedBalance.toLocaleString()} pts
-                    </span>
-                  </div>
-
-                  <div className="h-[1px] bg-neutral-200/60" />
-
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-neutral-500">
-                      Estimated Value
-                    </span>
-                    <span className="font-extrabold text-neutral-900 text-sm">
-                      ${estimatedValue.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                <button className="w-full bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3.5 font-bold transition-all shadow-sm active:translate-y-px text-xs flex items-center justify-center gap-2 cursor-pointer">
-                  <Wallet className="w-4 h-4" />
-                  Cash Out to Wallet
-                </button>
-              </section> */}
-
               {/* Sponsored Card */}
               <section className="bg-white rounded-2xl border border-neutral-200/50 shadow-sm overflow-hidden flex flex-col justify-between group cursor-pointer">
                 <div className="h-44 relative bg-neutral-900">
