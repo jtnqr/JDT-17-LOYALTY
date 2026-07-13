@@ -69,9 +69,57 @@ export default function ExchangePointsPage() {
     });
   };
 
+  // Fetch all active partners from API
+  const { data: apiPartners } = useQuery({
+    queryKey: ["exchange-partners-list"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/partners", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.partners || response.data.data || []) as any[];
+    },
+    retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
+  const partners = React.useMemo(() => {
+    if (!apiPartners) return [];
+    return apiPartners.map((p: any) => {
+      let logoBg = "bg-neutral-50 text-neutral-800 border-neutral-100";
+      let logoChar = p.name ? p.name.charAt(0) : p.code ? p.code.charAt(0) : "P";
+      if (p.code === "KFC") {
+        logoBg = "bg-red-50 text-[#C8102E]";
+        logoChar = "K";
+      } else if (p.code === "MCD") {
+        logoBg = "bg-yellow-50 text-[#D89F0E]";
+        logoChar = "M";
+      }
+      return {
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        logoBg,
+        logoChar,
+      };
+    });
+  }, [apiPartners]);
+
   // Exchange state
-  const [fromPartner, setFromPartner] = useState(PARTNER_PROGRAMS[0]); // Starts KFC
-  const [toPartner, setToPartner] = useState(PARTNER_PROGRAMS[1]); // Starts McD
+  const [fromPartner, setFromPartner] = useState<any | null>(null);
+  const [toPartner, setToPartner] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (partners.length >= 2) {
+      if (!fromPartner || !partners.some((p) => p.id === fromPartner.id)) {
+        setFromPartner(partners[0]);
+      }
+      if (!toPartner || !partners.some((p) => p.id === toPartner.id)) {
+        setToPartner(partners[1]);
+      }
+    }
+  }, [partners]);
+
   const [exchangeAmount, setExchangeAmount] = useState<string>("100");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -107,32 +155,20 @@ export default function ExchangePointsPage() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
   });
 
-  const kfcBalance =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ?? 350;
-  const mcdBalance =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ?? 120;
-  const bkBalance =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("burger"))
-      ?.balance ?? 80;
+  const getBalanceForPartner = (partnerId: string) => {
+    if (!balanceData) return 0;
+    const found = balanceData.find((b) => b.partnerId === partnerId);
+    return found ? found.balance : 0;
+  };
 
   // Active balances based on selection
-  const fromBalance =
-    fromPartner.code === "KFC"
-      ? kfcBalance
-      : fromPartner.code === "MCD"
-      ? mcdBalance
-      : bkBalance;
-  const toBalance =
-    toPartner.code === "KFC"
-      ? kfcBalance
-      : toPartner.code === "MCD"
-      ? mcdBalance
-      : bkBalance;
+  const fromBalance = fromPartner ? getBalanceForPartner(fromPartner.id) : 0;
+  const toBalance = toPartner ? getBalanceForPartner(toPartner.id) : 0;
 
   // Conversion rate based on active direction loading from API or fallback configurations
   const activeRate = React.useMemo(() => {
+    if (!fromPartner || !toPartner) return 1.0;
+
     // 1. Try finding in API rates first
     if (apiRates && apiRates.length > 0) {
       const found = apiRates.find(
@@ -187,7 +223,8 @@ export default function ExchangePointsPage() {
 
   // Validation
   const isInsufficient = amountNumber > fromBalance;
-  const isValidAmount = amountNumber > 0 && !isInsufficient;
+  const isSamePartner = fromPartner?.id === toPartner?.id;
+  const isValidAmount = amountNumber > 0 && !isInsufficient && !isSamePartner;
 
   const handleConfirmExchange = async () => {
     if (!isValidAmount || isSubmitting) return;
@@ -235,10 +272,10 @@ export default function ExchangePointsPage() {
     setExchangeAmount("10"); // Minimum exchange limit
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || !fromPartner || !toPartner) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -282,26 +319,32 @@ export default function ExchangePointsPage() {
             <div className="space-y-3 relative">
               {/* FROM PARTNER CARD */}
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">
                     From Partner
                   </p>
-                  <div className="flex items-center gap-2.5 mt-1">
-                    <div
-                      className={cn(
-                        "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs border shadow-inner",
-                        fromPartner.logoBg
-                      )}
+                  <div className="relative mt-1">
+                    <select
+                      value={fromPartner.id}
+                      onChange={(e) => {
+                        const selected = partners.find((p) => p.id === e.target.value);
+                        if (selected) setFromPartner(selected);
+                      }}
+                      className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
                     >
-                      {fromPartner.logoChar}
+                      {partners.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({getBalanceForPartner(p.id)} pts)
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-neutral-800 leading-none">
-                        {fromPartner.name}
-                      </p>
-                      <p className="text-[10px] font-semibold text-neutral-400 mt-1">
-                        Balance: {fromBalance} pts
-                      </p>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -335,26 +378,32 @@ export default function ExchangePointsPage() {
 
               {/* TO PARTNER CARD */}
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between pt-6">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">
                     To Partner
                   </p>
-                  <div className="flex items-center gap-2.5 mt-1">
-                    <div
-                      className={cn(
-                        "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs border shadow-inner",
-                        toPartner.logoBg
-                      )}
+                  <div className="relative mt-1">
+                    <select
+                      value={toPartner.id}
+                      onChange={(e) => {
+                        const selected = partners.find((p) => p.id === e.target.value);
+                        if (selected) setToPartner(selected);
+                      }}
+                      className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
                     >
-                      {toPartner.logoChar}
+                      {partners.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({getBalanceForPartner(p.id)} pts)
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-neutral-800 leading-none">
-                        {toPartner.name}
-                      </p>
-                      <p className="text-[10px] font-semibold text-neutral-400 mt-1">
-                        Balance: {toBalance} pts
-                      </p>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -369,15 +418,14 @@ export default function ExchangePointsPage() {
               </span>
             </div>
 
-            {/* Insufficient Warning */}
-            {isInsufficient && (
+            {/* Same Partner Warning */}
+            {isSamePartner && (
               <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in duration-200">
                 <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
                 <div>
-                  <p className="font-bold">Insufficient Balance</p>
+                  <p className="font-bold">Invalid Partner Pair</p>
                   <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                    You have {fromBalance} {fromPartner.code} points, but
-                    entered {exchangeAmount}.
+                    Cannot exchange points within the same partner program.
                   </p>
                 </div>
               </div>
@@ -454,13 +502,27 @@ export default function ExchangePointsPage() {
                       From Partner Program
                     </label>
                     <div className="relative">
-                      <div className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl px-4 py-3 flex items-center justify-between select-none">
-                        <div className="flex items-center gap-3">
-                          <Coins className="w-4 h-4 text-neutral-400" />
-                          <span className="text-xs font-bold text-neutral-700">
-                            {fromPartner.name} ({fromBalance} pts)
-                          </span>
-                        </div>
+                      <select
+                        value={fromPartner.id}
+                        onChange={(e) => {
+                          const selected = partners.find((p) => p.id === e.target.value);
+                          if (selected) setFromPartner(selected);
+                        }}
+                        className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
+                      >
+                        {partners.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({getBalanceForPartner(p.id)} pts)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Coins className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -482,13 +544,27 @@ export default function ExchangePointsPage() {
                       To Partner Program
                     </label>
                     <div className="relative">
-                      <div className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl px-4 py-3 flex items-center justify-between select-none">
-                        <div className="flex items-center gap-3">
-                          <Coins className="w-4 h-4 text-neutral-400" />
-                          <span className="text-xs font-bold text-neutral-700">
-                            {toPartner.name} ({toBalance} pts)
-                          </span>
-                        </div>
+                      <select
+                        value={toPartner.id}
+                        onChange={(e) => {
+                          const selected = partners.find((p) => p.id === e.target.value);
+                          if (selected) setToPartner(selected);
+                        }}
+                        className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
+                      >
+                        {partners.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({getBalanceForPartner(p.id)} pts)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Coins className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -586,6 +662,14 @@ export default function ExchangePointsPage() {
                       <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
                       <span>
                         Insufficient points in your {fromPartner.code} account.
+                      </span>
+                    </div>
+                  )}
+                  {isSamePartner && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                      <span>
+                        Cannot exchange points within the same partner program.
                       </span>
                     </div>
                   )}

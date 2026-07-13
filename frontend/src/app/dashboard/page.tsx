@@ -176,7 +176,7 @@ export default function DashboardPage() {
       />
 
       {/* 2. MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
+      <div className="flex-grow flex flex-col min-w-0 h-full overflow-hidden">
         <DesktopNavbar
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
@@ -374,7 +374,7 @@ export default function DashboardPage() {
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
           {/* Welcome Hero Banner (Full Width) */}
-          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#8B3D06] via-[#A65B28] to-[#C17A4A] text-white p-6 shadow-md shadow-[#8B3D06]/10">
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#8B3D06] via-[#A65B28] to-[#C17A4A] text-white p-6 shadow-md shadow-[#8B3D06]/10 shrink-0">
             <div className="absolute right-0 bottom-0 top-0 w-1/3 opacity-15 pointer-events-none">
               <svg
                 className="w-full h-full"

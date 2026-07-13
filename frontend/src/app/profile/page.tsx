@@ -132,36 +132,18 @@ export default function ProfilePage() {
                   From Partner
                 </span>
                 {balances.map((bal) => {
-                  const isKfc = bal.partnerName.toLowerCase().includes("kfc");
+                  const firstChar = bal.partnerName ? bal.partnerName.trim().charAt(0).toUpperCase() : "P";
                   return (
                     <div
                       key={bal.partnerId}
                       className="bg-[#FCF5F1] border border-[#8B3D06]/5 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:bg-[#FBECE3]"
                     >
-                      {isKfc ? (
-                        <div className="w-12 h-12 rounded-2xl bg-[#C8102E] flex items-center justify-center text-white shrink-0 shadow-sm shadow-[#C8102E]/20">
-                          <svg
-                            className="w-7 h-7"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M4 8h16l-2 12H6L4 8zm8 2a3 3 0 0 0-3 3h6a3 3 0 0 0-3-3z" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-2xl bg-[#FFC72C] flex items-center justify-center text-[#C8102E] shrink-0 shadow-sm shadow-yellow-500/10">
-                          <svg
-                            className="w-7 h-7"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M5 10h14v10H5V10zm2 2v6h2v-6H7zm4 0v6h2v-6h-2zm4 0v6h2v-6h-2zM6 4h2v5H6V4zm4 1h2v4h-2V5zm4-2h2v7h-2V3z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-black text-neutral-800 leading-none">
-                          {isKfc ? "KFC" : "McDonald's"}
+                      <div className="w-12 h-12 rounded-2xl bg-[#8B3D06] text-white flex items-center justify-center shrink-0 shadow-sm shadow-[#8B3D06]/20 font-black text-lg select-none">
+                        {firstChar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-neutral-800 leading-none truncate">
+                          {bal.partnerName}
                         </p>
                         <p className="text-xs text-neutral-500 font-semibold mt-1.5">
                           Balance:{" "}
@@ -295,45 +277,20 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {balances.map((bal) => {
-                      const isKfc = bal.partnerName
-                        .toLowerCase()
-                        .includes("kfc");
+                      const firstChar = bal.partnerName ? bal.partnerName.trim().charAt(0).toUpperCase() : "P";
                       return (
                         <div
                           key={bal.partnerId}
-                          className={cn(
-                            "bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-xs flex flex-col justify-between h-40 transition-all hover:shadow-md border-t-4",
-                            isKfc ? "border-t-[#C8102E]" : "border-t-[#FFC72C]"
-                          )}
+                          className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-xs flex flex-col justify-between h-40 transition-all hover:shadow-md border-t-4 border-t-[#8B3D06]"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              {isKfc ? (
-                                <div className="w-10 h-10 rounded-xl bg-[#FFEBEE] text-[#C8102E] flex items-center justify-center shadow-inner">
-                                  <svg
-                                    className="w-6 h-6"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M4 8h16l-2 12H6L4 8zm8 2a3 3 0 0 0-3 3h6a3 3 0 0 0-3-3z" />
-                                  </svg>
-                                </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-xl bg-yellow-50 text-[#D89F0E] flex items-center justify-center shadow-inner">
-                                  <svg
-                                    className="w-6 h-6"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M5 10h14v10H5V10zm2 2v6h2v-6H7zm4 0v6h2v-6h-2zm4 0v6h2v-6h-2zM6 4h2v5H6V4zm4 1h2v4h-2V5zm4-2h2v7h-2V3z" />
-                                  </svg>
-                                </div>
-                              )}
+                              <div className="w-10 h-10 rounded-xl bg-[#FCF5F1] text-[#8B3D06] flex items-center justify-center shadow-inner font-black text-base select-none">
+                                {firstChar}
+                              </div>
                               <div>
                                 <p className="text-xs font-bold text-neutral-800 leading-none">
-                                  {isKfc
-                                    ? "KFC Colonel's Club"
-                                    : "McDonald's MyRewards"}
+                                  {bal.partnerName}
                                 </p>
                               </div>
                             </div>
@@ -352,16 +309,12 @@ export default function ProfilePage() {
                           </div>
 
                           <div className="border-t border-neutral-100 pt-3 flex items-center justify-between text-[10px] text-neutral-500 font-bold">
-                            {isKfc ? (
-                              <></>
-                            ) : (
-                              <>
-                                <Link
-                                  href="/rewards"
-                                  className="text-[#8B3D06] hover:underline"
-                                ></Link>
-                              </>
-                            )}
+                            <Link
+                              href="/rewards"
+                              className="text-[#8B3D06] hover:underline"
+                            >
+                              View Rewards
+                            </Link>
                           </div>
                         </div>
                       );
