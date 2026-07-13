@@ -25,41 +25,73 @@ import {
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
 
-// Partner list definition matching FSD
-const PARTNER_PROGRAMS = [
-  {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    code: "KFC",
-    name: "KFC Colonel's Club",
-    logoBg: "bg-red-50 text-[#C8102E]",
-    logoChar: "K",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440002",
-    code: "MCD",
-    name: "McDonald's MyRewards",
-    logoBg: "bg-yellow-50 text-[#D89F0E]",
-    logoChar: "M",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440003",
-    code: "BK",
-    name: "Burger King Indonesia",
-    logoBg: "bg-amber-50 text-[#8B4F1D] border-amber-100",
-    logoChar: "B",
-  },
-];
-
 export default function ExchangePointsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Fetch all active partners from API
+  const { data: apiPartners } = useQuery({
+    queryKey: ["exchange-partners-list"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/partners", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.partners || response.data.data || []) as any[];
+    },
+    retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
+  const partners = React.useMemo(() => {
+    if (!apiPartners) return [];
+    return apiPartners.map((p: any) => {
+      let logoBg = "bg-neutral-50 text-neutral-800 border-neutral-100";
+      let logoChar = p.name
+        ? p.name.charAt(0)
+        : p.code
+        ? p.code.charAt(0)
+        : "P";
+      if (p.code === "KFC") {
+        logoBg = "bg-red-50 text-[#C8102E]";
+        logoChar = "K";
+      } else if (p.code === "MCD") {
+        logoBg = "bg-yellow-50 text-[#D89F0E]";
+        logoChar = "M";
+      }
+      return {
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        logoBg,
+        logoChar,
+      };
+    });
+  }, [apiPartners]);
 
   // Exchange state
-  const [fromPartner, setFromPartner] = useState(PARTNER_PROGRAMS[0]); // Starts KFC
-  const [toPartner, setToPartner] = useState(PARTNER_PROGRAMS[1]); // Starts McD
+  const [fromPartner, setFromPartner] = useState<any | null>(null);
+  const [toPartner, setToPartner] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (partners.length >= 2) {
+      if (!fromPartner || !partners.some((p) => p.id === fromPartner.id)) {
+        setFromPartner(partners[0]);
+      }
+      if (!toPartner || !partners.some((p) => p.id === toPartner.id)) {
+        setToPartner(partners[1]);
+      }
+    }
+  }, [partners]);
+
   const [exchangeAmount, setExchangeAmount] = useState<string>("100");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setErrorMessage(null);
+  }, [fromPartner, toPartner, exchangeAmount]);
 
   // Fetch balances for live calculations
   const { data: balanceData, refetch } = useQuery({
@@ -76,35 +108,46 @@ export default function ExchangePointsPage() {
       }[];
     },
     enabled: !!memberId,
-    retry: 1,
   });
 
-  const kfcBalance =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ?? 350;
-  const mcdBalance =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ?? 120;
-  const bkBalance =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("burger"))
-      ?.balance ?? 80;
+  // Fetch exchange rates from API
+  const { data: apiRates } = useQuery({
+    queryKey: ["exchange-rates"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/exchange-rates", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.rates || response.data.data || []) as any[];
+    },
+    retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
+  const getBalanceForPartner = (partnerId: string) => {
+    if (!balanceData) return 0;
+    const found = balanceData.find((b) => b.partnerId === partnerId);
+    return found ? found.balance : 0;
+  };
 
   // Active balances based on selection
-  const fromBalance =
-    fromPartner.code === "KFC"
-      ? kfcBalance
-      : fromPartner.code === "MCD"
-      ? mcdBalance
-      : bkBalance;
-  const toBalance =
-    toPartner.code === "KFC"
-      ? kfcBalance
-      : toPartner.code === "MCD"
-      ? mcdBalance
-      : bkBalance;
+  const fromBalance = fromPartner ? getBalanceForPartner(fromPartner.id) : 0;
+  const toBalance = toPartner ? getBalanceForPartner(toPartner.id) : 0;
 
-  // Conversion rate based on active direction loading from admin local storage configurations
+  // Conversion rate based on active direction loading from API or fallback configurations
   const activeRate = React.useMemo(() => {
+    if (!fromPartner || !toPartner) return 1.0;
+
+    // 1. Try finding in API rates first
+    if (apiRates && apiRates.length > 0) {
+      const found = apiRates.find(
+        (r: any) =>
+          r.fromPartnerId === fromPartner.id && r.toPartnerId === toPartner.id
+      );
+      if (found) return found.rate;
+    }
+
+    // 2. Try finding in localStorage rates as fallback
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("pistos_exchange_rates");
       if (saved) {
@@ -131,11 +174,11 @@ export default function ExchangePointsPage() {
       }
     }
 
-    // Default fallback rates
+    // 3. Default fallback rates
     if (fromPartner.code === "KFC" && toPartner.code === "MCD") return 0.8;
     if (fromPartner.code === "MCD" && toPartner.code === "KFC") return 0.9;
     return 1.0;
-  }, [fromPartner, toPartner]);
+  }, [fromPartner, toPartner, apiRates]);
 
   // Handle swapping the From and To partners
   const handleSwapPartners = () => {
@@ -149,10 +192,13 @@ export default function ExchangePointsPage() {
 
   // Validation
   const isInsufficient = amountNumber > fromBalance;
-  const isValidAmount = amountNumber > 0 && !isInsufficient;
+  const isSamePartner = fromPartner?.id === toPartner?.id;
+  const isValidAmount = amountNumber > 0 && !isInsufficient && !isSamePartner;
 
   const handleConfirmExchange = async () => {
     if (!isValidAmount || isSubmitting) return;
+
+    setShowConfirmModal(false);
     setIsSubmitting(true);
 
     const token = localStorage.getItem("token");
@@ -171,19 +217,32 @@ export default function ExchangePointsPage() {
       setIsSubmitting(false);
       setShowSuccessModal(true);
       refetch(); // Reload balances
+      setErrorMessage(null);
     } catch (error: any) {
       console.error("Exchange request failed:", error);
 
-      // Fallback offline success simulation
       if (!error.response) {
         console.warn(
           "Backend offline. Simulating local points exchange update."
         );
-
-        // Update mock balances in localStorage or just simulate success
         setShowSuccessModal(true);
         setIsSubmitting(false);
         return;
+      }
+
+      if (error.response?.data?.message) {
+        setErrorMessage(error.response.data.message);
+      } else if (
+        error.response?.data?.code === "EXCHANGE_RATE_NOT_CONFIGURED" ||
+        error.response?.status === 404
+      ) {
+        setErrorMessage("Exchange rate not configured between these partners.");
+      } else if (error.response?.data?.error) {
+        setErrorMessage(error.response.data.error);
+      } else {
+        setErrorMessage(
+          "Exchange request failed. Please check your selection."
+        );
       }
       setIsSubmitting(false);
     }
@@ -197,24 +256,19 @@ export default function ExchangePointsPage() {
     setExchangeAmount("10"); // Minimum exchange limit
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || !fromPartner || !toPartner) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="exchange"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -227,27 +281,16 @@ export default function ExchangePointsPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
+          breadcrumbs={[{ label: "Marketplace" }, { label: "Exchange" }]}
+          title="Exchange Center"
         />
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-24">
+        <div className="md:hidden flex-grow flex flex-col pb-24 overflow-y-auto">
           {/* Top Navbar */}
-          <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-2">
-              <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
-                LoyaltyHub
-              </span>
-            </div>
-            <button className="text-neutral-700 hover:text-neutral-900">
-              <Bell className="w-5 h-5" />
-            </button>
-          </header>
-
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
               Exchange Points
@@ -256,26 +299,44 @@ export default function ExchangePointsPage() {
             <div className="space-y-3 relative">
               {/* FROM PARTNER CARD */}
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">
                     From Partner
                   </p>
-                  <div className="flex items-center gap-2.5 mt-1">
-                    <div
-                      className={cn(
-                        "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs border shadow-inner",
-                        fromPartner.logoBg
-                      )}
+                  <div className="relative mt-1">
+                    <select
+                      value={fromPartner.id}
+                      onChange={(e) => {
+                        const selected = partners.find(
+                          (p) => p.id === e.target.value
+                        );
+                        if (selected) setFromPartner(selected);
+                      }}
+                      className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
                     >
-                      {fromPartner.logoChar}
+                      {partners.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({getBalanceForPartner(p.id)} pts)
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-neutral-800 leading-none">
-                        {fromPartner.name}
-                      </p>
-                      <p className="text-[10px] font-semibold text-neutral-400 mt-1">
-                        Balance: {fromBalance} pts
-                      </p>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -309,26 +370,44 @@ export default function ExchangePointsPage() {
 
               {/* TO PARTNER CARD */}
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between pt-6">
-                <div className="space-y-1">
+                <div className="space-y-1 w-full">
                   <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">
                     To Partner
                   </p>
-                  <div className="flex items-center gap-2.5 mt-1">
-                    <div
-                      className={cn(
-                        "w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs border shadow-inner",
-                        toPartner.logoBg
-                      )}
+                  <div className="relative mt-1">
+                    <select
+                      value={toPartner.id}
+                      onChange={(e) => {
+                        const selected = partners.find(
+                          (p) => p.id === e.target.value
+                        );
+                        if (selected) setToPartner(selected);
+                      }}
+                      className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
                     >
-                      {toPartner.logoChar}
+                      {partners.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({getBalanceForPartner(p.id)} pts)
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Coins className="w-4 h-4 text-neutral-400" />
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-neutral-800 leading-none">
-                        {toPartner.name}
-                      </p>
-                      <p className="text-[10px] font-semibold text-neutral-400 mt-1">
-                        Balance: {toBalance} pts
-                      </p>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
                     </div>
                   </div>
                 </div>
@@ -343,15 +422,14 @@ export default function ExchangePointsPage() {
               </span>
             </div>
 
-            {/* Insufficient Warning */}
-            {isInsufficient && (
+            {/* Same Partner Warning */}
+            {isSamePartner && (
               <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in duration-200">
                 <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
                 <div>
-                  <p className="font-bold">Insufficient Balance</p>
+                  <p className="font-bold">Invalid Partner Pair</p>
                   <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                    You have {fromBalance} {fromPartner.code} points, but
-                    entered {exchangeAmount}.
+                    Cannot exchange points within the same partner program.
                   </p>
                 </div>
               </div>
@@ -377,16 +455,42 @@ export default function ExchangePointsPage() {
               </div>
             </div>
 
+            {/* Mobile Warnings & Errors */}
+            <div className="space-y-2 mt-2">
+              {isInsufficient && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>
+                    Insufficient points in your {fromPartner.code} account.
+                  </span>
+                </div>
+              )}
+              {isSamePartner && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>
+                    Cannot exchange points within the same partner program.
+                  </span>
+                </div>
+              )}
+              {errorMessage && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+            </div>
+
             {/* Action button */}
             <button
-              onClick={handleConfirmExchange}
+              onClick={() => setShowConfirmModal(true)}
               disabled={!isValidAmount || isSubmitting}
               className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 shadow-sm"
             >
               {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                "Confirm Exchange"
+                "Exchange"
               )}
             </button>
           </div>
@@ -398,17 +502,6 @@ export default function ExchangePointsPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          {/* Greeting Header */}
-          <section className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Marketplace</span>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-neutral-600">Exchange Center</span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
-              Exchange Points
-            </h1>
-          </section>
 
           {/* Main double column grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -425,22 +518,48 @@ export default function ExchangePointsPage() {
                   {/* From Dropdown Selector */}
                   <div className="space-y-2">
                     <label className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wide">
-                      From Partner Program
+                      From Partner
                     </label>
                     <div className="relative">
-                      <div className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl px-4 py-3 flex items-center justify-between select-none">
-                        <div className="flex items-center gap-3">
-                          <Coins className="w-4 h-4 text-neutral-400" />
-                          <span className="text-xs font-bold text-neutral-700">
-                            {fromPartner.name} ({fromBalance} pts)
-                          </span>
-                        </div>
+                      <select
+                        value={fromPartner.id}
+                        onChange={(e) => {
+                          const selected = partners.find(
+                            (p) => p.id === e.target.value
+                          );
+                          if (selected) setFromPartner(selected);
+                        }}
+                        className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
+                      >
+                        {partners.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({getBalanceForPartner(p.id)} pts)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Coins className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
 
                   {/* Swap Button (Desktop position) */}
-                  <div className="flex justify-center absolute left-1/2 -translate-x-1/2 top-[47px] z-10">
+                  <div className="flex justify-center -my-2 z-10">
                     <button
                       onClick={handleSwapPartners}
                       className="w-10 h-10 rounded-full bg-[#8B3D06] hover:bg-[#723204] text-white flex items-center justify-center shadow-md border-2 border-white cursor-pointer active:scale-95 transition-transform"
@@ -453,16 +572,42 @@ export default function ExchangePointsPage() {
                   {/* To Dropdown Selector */}
                   <div className="space-y-2 pt-2">
                     <label className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wide">
-                      To Partner Program
+                      To Partner
                     </label>
                     <div className="relative">
-                      <div className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl px-4 py-3 flex items-center justify-between select-none">
-                        <div className="flex items-center gap-3">
-                          <Coins className="w-4 h-4 text-neutral-400" />
-                          <span className="text-xs font-bold text-neutral-700">
-                            {toPartner.name} ({toBalance} pts)
-                          </span>
-                        </div>
+                      <select
+                        value={toPartner.id}
+                        onChange={(e) => {
+                          const selected = partners.find(
+                            (p) => p.id === e.target.value
+                          );
+                          if (selected) setToPartner(selected);
+                        }}
+                        className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
+                      >
+                        {partners.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({getBalanceForPartner(p.id)} pts)
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Coins className="w-4 h-4 text-neutral-400" />
+                      </div>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -483,14 +628,6 @@ export default function ExchangePointsPage() {
                       <div className="flex items-center gap-2 text-[10px] font-bold text-brand-primary shrink-0 select-none">
                         <button
                           type="button"
-                          onClick={handleSetMin}
-                          className="hover:underline cursor-pointer"
-                        >
-                          Min
-                        </button>
-                        <span className="text-neutral-200">|</span>
-                        <button
-                          type="button"
                           onClick={handleSetMax}
                           className="hover:underline cursor-pointer"
                         >
@@ -499,21 +636,6 @@ export default function ExchangePointsPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Bottom Info Banner: Exchange rates explanation */}
-              <div className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-neutral-200/50 shadow-sm border-l-4 border-l-[#8B3D06]">
-                <Info className="w-5 h-5 text-[#8B3D06] shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-neutral-800">
-                    Exchange Rates
-                  </h4>
-                  <p className="text-[11px] text-neutral-400 font-semibold leading-relaxed">
-                    Conversion rates are updated live based on partner
-                    agreements. The current rate is guaranteed for the next 15
-                    minutes.
-                  </p>
                 </div>
               </div>
             </div>
@@ -578,10 +700,24 @@ export default function ExchangePointsPage() {
                       </span>
                     </div>
                   )}
+                  {isSamePartner && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                      <span>
+                        Cannot exchange points within the same partner program.
+                      </span>
+                    </div>
+                  )}
+                  {errorMessage && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3 animate-in fade-in duration-150">
+                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
 
                   {/* Confirm Button */}
                   <button
-                    onClick={handleConfirmExchange}
+                    onClick={() => setShowConfirmModal(true)}
                     disabled={!isValidAmount || isSubmitting}
                     className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 mt-4 shadow-sm"
                   >
@@ -589,40 +725,11 @@ export default function ExchangePointsPage() {
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Confirm Exchange
+                        Exchange
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
-
-                  <p className="text-[9px] text-center text-neutral-400 font-semibold mt-3">
-                    By confirming, you agree to the{" "}
-                    <span className="underline cursor-pointer">
-                      Terms of Exchange
-                    </span>
-                    .
-                  </p>
-                </div>
-              </div>
-
-              {/* Popular Pairs Widget */}
-              <div className="bg-[#FAF9F9] rounded-2xl border border-dashed border-neutral-300 p-5 shadow-inner space-y-3.5 select-none">
-                <h4 className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">
-                  Popular Pairs Today
-                </h4>
-                <div className="space-y-2">
-                  <div className="bg-white border border-neutral-100 rounded-xl px-4 py-2.5 flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-neutral-600">
-                      KFC &rarr; McDonald's
-                    </span>
-                    <span className="text-neutral-900">1 : 0.80</span>
-                  </div>
-                  <div className="bg-white border border-neutral-100 rounded-xl px-4 py-2.5 flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-neutral-600">
-                      McDonald's &rarr; KFC
-                    </span>
-                    <span className="text-neutral-900">1 : 0.80</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -633,50 +740,63 @@ export default function ExchangePointsPage() {
       {/* ========================================================
           EXCHANGE SUCCESS MODAL (Slides in over dashboard)
           ======================================================== */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
-          {/* Backdrop */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            onClick={() => setShowSuccessModal(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+            onClick={() => setShowConfirmModal(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
 
-          {/* Modal Container */}
-          <div className="absolute w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center relative z-10 animate-in zoom-in-95 duration-200 select-none">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4 shadow-inner">
-              <CheckCircle2 className="w-9 h-9" />
+          <div className="relative z-10 w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-5">
+              <ArrowUpDown className="w-8 h-8 text-[#8B3D06]" />
             </div>
 
-            <h3 className="text-base font-black text-neutral-900">
-              Exchange Complete!
+            <h3 className="text-lg font-black text-center text-neutral-900">
+              Confirm Exchange
             </h3>
-            <p className="text-xs text-neutral-500 mt-2 leading-relaxed max-w-[280px]">
-              You have successfully converted **{amountNumber}{" "}
-              {fromPartner.code} points** into **{receiveAmount}{" "}
-              {toPartner.code} points**.
+
+            <p className="text-sm text-neutral-500 text-center mt-2 leading-relaxed">
+              Are you sure you want to exchange your points?
             </p>
 
-            <div className="w-full border border-neutral-100 rounded-2xl bg-neutral-50/50 p-4 mt-5 space-y-2 text-xs font-semibold text-neutral-500">
-              <div className="flex justify-between items-center">
-                <span>{fromPartner.code} Remaining Balance</span>
-                <span className="font-extrabold text-neutral-800">
-                  {fromBalance - amountNumber} pts
+            <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">From</span>
+                <span className="font-bold">
+                  {amountNumber} {fromPartner.code} pts
                 </span>
               </div>
-              <div className="flex justify-between items-center border-t border-neutral-100/50 pt-2">
-                <span>{toPartner.code} New Balance</span>
-                <span className="font-extrabold text-brand-primary">
-                  {toBalance + receiveAmount} pts
+
+              <div className="flex justify-between text-sm">
+                <span className="text-neutral-500">To</span>
+                <span className="font-bold text-[#8B3D06]">
+                  {receiveAmount} {toPartner.code} pts
                 </span>
+              </div>
+
+              <div className="flex justify-between text-sm border-t pt-3">
+                <span className="text-neutral-500">Rate</span>
+                <span className="font-bold">1 : {activeRate}</span>
               </div>
             </div>
 
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3.5 font-bold cursor-pointer transition-colors text-xs mt-5 shadow-sm"
-            >
-              Done
-            </button>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="cursor-pointer flex-1 border border-neutral-300 rounded-xl py-3 font-semibold hover:bg-neutral-100 transition"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleConfirmExchange}
+                disabled={isSubmitting}
+                className="cursor-pointer flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3 font-bold transition disabled:opacity-50"
+              >
+                {isSubmitting ? "Processing..." : "Confirm"}
+              </button>
+            </div>
           </div>
         </div>
       )}

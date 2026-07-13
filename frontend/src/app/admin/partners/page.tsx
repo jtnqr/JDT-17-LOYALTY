@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
@@ -22,30 +23,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock Fallback Partner Data matching TSD specs
-const MOCK_PARTNERS = [
-  {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    name: "KFC",
-    code: "KFC",
-    pointsPerThousandIDR: 1,
-    expiryDays: 365,
-    status: "ACTIVE",
-    targetPartnerName: "McDonald's",
-    exchangeRate: 0.8,
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440002",
-    name: "McDonald's",
-    code: "MCD",
-    pointsPerThousandIDR: 1,
-    expiryDays: 365,
-    status: "ACTIVE",
-    targetPartnerName: "KFC",
-    exchangeRate: 0.8,
-  },
-];
-
 interface Partner {
   id: string;
   name: string;
@@ -62,7 +39,7 @@ export default function AdminPartnersPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
-  
+
   // Local form state for Edit Partner modal
   const [formPointsRate, setFormPointsRate] = useState<number>(1);
   const [formExpiryDays, setFormExpiryDays] = useState<number>(365);
@@ -114,36 +91,6 @@ export default function AdminPartnersPage() {
     } catch (error: any) {
       console.error("Failed to create partner:", error);
 
-      if (!error.response) {
-        console.warn("Backend offline. Simulating local partner creation.");
-
-        const newPartner = {
-          id: `partner-mock-${Math.random().toString(36).substr(2, 9)}`,
-          name: createName,
-          code: createCode.toUpperCase(),
-          pointsPerThousandIDR: createPointsRate,
-          expiryDays: createExpiryDays,
-          status: "ACTIVE",
-          targetPartnerName: "KFC",
-          exchangeRate: 1.0,
-        };
-
-        MOCK_PARTNERS.push(newPartner);
-
-        setCreateSuccess(true);
-        setTimeout(() => {
-          setIsCreating(false);
-          setIsCreateModalOpen(false);
-          setCreateSuccess(false);
-          setCreateName("");
-          setCreateCode("");
-          setCreatePointsRate(1);
-          setCreateExpiryDays(365);
-          refetch();
-        }, 1000);
-        return;
-      }
-
       if (error.response?.data?.message) {
         setCreateApiError(error.response.data.message);
       } else {
@@ -154,7 +101,11 @@ export default function AdminPartnersPage() {
   };
 
   // Fetch Partner List via React Query
-  const { data: partnerData, isLoading, refetch } = useQuery({
+  const {
+    data: partnerData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-partners"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
@@ -164,7 +115,7 @@ export default function AdminPartnersPage() {
       });
       // In MVP, we attach exchange rates to partner objects for display simplicity
       const partnersList = response.data.data as any[];
-      return partnersList.map(p => ({
+      return partnersList.map((p) => ({
         ...p,
         targetPartnerName: p.code === "KFC" ? "McDonald's" : "KFC",
         exchangeRate: 0.8, // Default rate
@@ -181,7 +132,7 @@ export default function AdminPartnersPage() {
     );
   }
 
-  const partners = partnerData || MOCK_PARTNERS;
+  const partners = partnerData || [];
 
   // Search filtering
   const filteredPartners = partners.filter(
@@ -235,36 +186,6 @@ export default function AdminPartnersPage() {
       }, 1000);
     } catch (error: any) {
       console.error("Failed to update partner config:", error);
-      
-      // If server is offline / fallback mode, simulate success!
-      if (!error.response) {
-        console.warn("Backend offline. Simulating local partner config update.");
-        
-        // Update mock partner values in local cache for visual accuracy
-        const partnerIndex = MOCK_PARTNERS.findIndex(p => p.id === editingPartner?.id);
-        if (partnerIndex !== -1) {
-          MOCK_PARTNERS[partnerIndex] = {
-            ...MOCK_PARTNERS[partnerIndex],
-            pointsPerThousandIDR: formPointsRate,
-            expiryDays: formExpiryDays,
-            status: formStatus,
-            exchangeRate: formExchangeRate,
-          };
-          
-          // Also update bidirectional rate for McDonald's/KFC if applicable
-          const targetIndex = MOCK_PARTNERS.findIndex(p => p.name === MOCK_PARTNERS[partnerIndex].targetPartnerName);
-          if (targetIndex !== -1) {
-            // Outbound rate update
-          }
-        }
-        
-        setSaveSuccess(true);
-        setTimeout(() => {
-          setIsSaving(false);
-          closeEditModal();
-        }, 1000);
-        return;
-      }
 
       if (error.response?.data?.message) {
         setApiError(error.response.data.message);
@@ -289,52 +210,33 @@ export default function AdminPartnersPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50 flex font-sans">
-      
       {/* Sidebar Navigation */}
       <AdminSidebar activeTab="partners" />
 
       {/* Main CMS Layout */}
       <main className="flex-1 flex flex-col min-w-0">
-        
         {/* Top Header */}
-        <header className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-30">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Admin</span>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-neutral-600">Partners</span>
-            </div>
-            <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
-              Partner Merchants
-            </h2>
-          </div>
+        <AdminHeader
+          breadcrumbs={[{ label: "Partners" }]}
+          title="Partner Merchants"
+          showSearch={true}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchPlaceholder="Search partners..."
+        />
 
-          <div className="flex items-center gap-6">
-            <div className="relative w-60">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+        {/* Content Body */}
+        <div className="p-8 flex-grow flex flex-col space-y-6">
+          <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative w-64">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search partners..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#F1F3F4] text-neutral-700 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 transition-colors font-medium placeholder:text-neutral-400"
+                className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
               />
-            </div>
-            <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
-            </button>
-          </div>
-        </header>
-
-        {/* Content Body */}
-        <div className="p-8 flex-grow flex flex-col space-y-6">
-          <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="space-y-1">
-              <h1 className="text-xl font-bold text-neutral-950 tracking-tight">Merchants & Exchange Configurations</h1>
-              <p className="text-xs font-semibold text-neutral-400">
-                Manage points accumulation rates, expiry periods, and cross-merchant point exchange rates for active loyalty partners.
-              </p>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
@@ -351,35 +253,67 @@ export default function AdminPartnersPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">Merchant Name</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28">Code</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">Accumulation Rate</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36">Expiry Days</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 text-center">Edit</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
+                      Merchant Name
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28">
+                      Code
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
+                      Accumulation Rate
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36">
+                      Expiry Days
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 text-center">
+                      Edit
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {isLoading && filteredPartners.length === 0 ? (
                     Array.from({ length: 2 }).map((_, idx) => (
                       <tr key={idx} className="animate-pulse">
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-28" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-12" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-24" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-16" /></td>
-                        <td className="px-6 py-5"><div className="h-6 bg-neutral-200 rounded w-20" /></td>
-                        <td className="px-6 py-5"><div className="h-6 bg-neutral-200 rounded w-8 mx-auto" /></td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-28" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-12" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-24" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-16" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-6 bg-neutral-200 rounded w-20" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-6 bg-neutral-200 rounded w-8 mx-auto" />
+                        </td>
                       </tr>
                     ))
                   ) : filteredPartners.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-neutral-400">
-                        <p className="text-sm font-semibold">No partners found.</p>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-12 text-center text-neutral-400"
+                      >
+                        <p className="text-sm font-semibold">
+                          No partners found.
+                        </p>
                       </td>
                     </tr>
                   ) : (
                     filteredPartners.map((partner) => (
-                      <tr key={partner.id} className="hover:bg-neutral-50/20 transition-colors">
+                      <tr
+                        key={partner.id}
+                        className="hover:bg-neutral-50/20 transition-colors"
+                      >
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-800 font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0">
@@ -390,14 +324,18 @@ export default function AdminPartnersPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-5 text-sm font-extrabold text-[#8B3D06]">{partner.code}</td>
+                        <td className="px-6 py-5 text-sm font-extrabold text-[#8B3D06]">
+                          {partner.code}
+                        </td>
                         <td className="px-6 py-5 text-xs text-neutral-600 font-semibold">
                           {partner.pointsPerThousandIDR} pt / Rp 1.000
                         </td>
                         <td className="px-6 py-5 text-xs text-neutral-600 font-semibold">
                           {partner.expiryDays} days
                         </td>
-                        <td className="px-6 py-5">{getStatusBadge(partner.status)}</td>
+                        <td className="px-6 py-5">
+                          {getStatusBadge(partner.status)}
+                        </td>
                         <td className="px-6 py-5">
                           <button
                             onClick={() => openEditModal(partner)}
@@ -413,14 +351,14 @@ export default function AdminPartnersPage() {
                 </tbody>
               </table>
             </div>
-            
+
             {/* Table Footer summary */}
             <div className="border-t border-neutral-100 px-6 py-4 bg-neutral-50/20 text-xs font-bold text-neutral-400">
-              Total {filteredPartners.length} active loyalty partner merchants configured.
+              Total {filteredPartners.length} active loyalty partner merchants
+              configured.
             </div>
           </section>
         </div>
-
       </main>
 
       {/* ========================================================
@@ -429,8 +367,11 @@ export default function AdminPartnersPage() {
       {editingPartner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
           {/* Backdrop */}
-          <div onClick={closeEditModal} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-          
+          <div
+            onClick={closeEditModal}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+
           {/* Modal Card */}
           <form
             onSubmit={handleSaveConfig}
@@ -460,9 +401,12 @@ export default function AdminPartnersPage() {
                   <CheckCircle className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">Configuration Saved!</h3>
+                  <h3 className="text-sm font-bold text-neutral-900">
+                    Configuration Saved!
+                  </h3>
                   <p className="text-[11px] text-neutral-500 mt-1">
-                    Partner settings and directional exchange rates have been updated successfully.
+                    Partner settings and directional exchange rates have been
+                    updated successfully.
                   </p>
                 </div>
               </div>
@@ -556,8 +500,11 @@ export default function AdminPartnersPage() {
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
           {/* Backdrop */}
-          <div onClick={() => setIsCreateModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-          
+          <div
+            onClick={() => setIsCreateModalOpen(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+
           {/* Modal Card */}
           <form
             onSubmit={handleCreatePartner}
@@ -587,9 +534,12 @@ export default function AdminPartnersPage() {
                   <CheckCircle className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">Partner Created!</h3>
+                  <h3 className="text-sm font-bold text-neutral-900">
+                    Partner Created!
+                  </h3>
                   <p className="text-[11px] text-neutral-500 mt-1">
-                    The new loyalty partner program has been added and configured successfully.
+                    The new loyalty partner program has been added and
+                    configured successfully.
                   </p>
                 </div>
               </div>
@@ -629,7 +579,9 @@ export default function AdminPartnersPage() {
                     maxLength={10}
                     placeholder="e.g. SBUX"
                     value={createCode}
-                    onChange={(e) => setCreateCode(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setCreateCode(e.target.value.toUpperCase())
+                    }
                     className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
                   />
                 </div>
@@ -645,7 +597,9 @@ export default function AdminPartnersPage() {
                     min="1"
                     max="10"
                     value={createPointsRate}
-                    onChange={(e) => setCreatePointsRate(Number(e.target.value))}
+                    onChange={(e) =>
+                      setCreatePointsRate(Number(e.target.value))
+                    }
                     className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
                   />
                 </div>
@@ -661,7 +615,9 @@ export default function AdminPartnersPage() {
                     min="30"
                     max="730"
                     value={createExpiryDays}
-                    onChange={(e) => setCreateExpiryDays(Number(e.target.value))}
+                    onChange={(e) =>
+                      setCreateExpiryDays(Number(e.target.value))
+                    }
                     className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
                   />
                 </div>
@@ -692,7 +648,6 @@ export default function AdminPartnersPage() {
           </form>
         </div>
       )}
-
     </div>
   );
 }

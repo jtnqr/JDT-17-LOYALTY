@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
+import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import {
@@ -65,7 +66,7 @@ interface Member {
   name: string;
   email: string;
   phone: string;
-  status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  status: "ACTIVE" | "INACTIVE";
   createdAt: string;
 }
 
@@ -80,7 +81,7 @@ const editMemberSchema = z.object({
     .min(1, "Phone number is required")
     .regex(/^[0-9]+$/, "Phone number must contain only numbers")
     .min(8, "Phone number must be at least 8 digits"),
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]),
+  status: z.enum(["ACTIVE", "INACTIVE"]),
 });
 
 type EditMemberSchemaType = z.infer<typeof editMemberSchema>;
@@ -171,7 +172,7 @@ export default function AdminMembersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-members"] });
       setIsEditOpen(false);
     } catch (error: any) {
-      console.error("Failed to update member:", error);
+      console.error("Failed to update member config:", error);
       const responseData = error.response?.data;
       const errorCode = responseData?.code;
       const errorMessage = responseData?.message;
@@ -186,59 +187,12 @@ export default function AdminMembersPage() {
           type: "manual",
           message: "Phone number is already registered.",
         });
-      } else if (errorCode === "MEMBER_NOT_FOUND") {
-        setErrorEdit("root", {
-          type: "manual",
-          message: "Member not found.",
-        });
       } else if (errorMessage) {
         setErrorEdit("root", {
           type: "manual",
           message: errorMessage,
         });
       } else {
-        // Fallback for offline / mock testing:
-        if (!error.response) {
-          if (data.email === "duplicate@example.com") {
-            setErrorEdit("email", {
-              type: "manual",
-              message: "Email is already registered.",
-            });
-            return;
-          }
-          if (data.phone === "999999") {
-            setErrorEdit("phone", {
-              type: "manual",
-              message: "Phone number is already registered.",
-            });
-            return;
-          }
-          if (data.name === "notfound") {
-            setErrorEdit("root", {
-              type: "manual",
-              message: "Member not found.",
-            });
-            return;
-          }
-
-          // Simulate updating mock members
-          const index = MOCK_MEMBERS.findIndex(
-            (m) => m.id === selectedMember.id
-          );
-          if (index !== -1) {
-            MOCK_MEMBERS[index] = {
-              ...MOCK_MEMBERS[index],
-              name: data.name,
-              email: data.email,
-              phone: data.phone,
-              status: data.status,
-            };
-          }
-          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-          setIsEditOpen(false);
-          return;
-        }
-
         setErrorEdit("root", {
           type: "manual",
           message: "Failed to update member. Please try again.",
@@ -291,39 +245,6 @@ export default function AdminMembersPage() {
           message: errorMessage,
         });
       } else {
-        // Fallback for offline / mock testing:
-        if (!error.response) {
-          if (data.email === "duplicate@example.com") {
-            setErrorAdd("email", {
-              type: "manual",
-              message: "Email is already registered.",
-            });
-            return;
-          }
-          if (data.phone === "999999") {
-            setErrorAdd("phone", {
-              type: "manual",
-              message: "Phone number is already registered.",
-            });
-            return;
-          }
-
-          // Simulate adding to mock members list
-          const newMember: Member = {
-            id: `mock-id-${Date.now()}`,
-            name: data.name,
-            email: data.email,
-            phone: formattedPhone,
-            status: "ACTIVE",
-            createdAt: new Date().toISOString(),
-          };
-          MOCK_MEMBERS.push(newMember);
-          queryClient.invalidateQueries({ queryKey: ["admin-members"] });
-          resetAdd();
-          setIsAddOpen(false);
-          return;
-        }
-
         setErrorAdd("root", {
           type: "manual",
           message: "Failed to add member. Please try again.",
@@ -382,9 +303,7 @@ export default function AdminMembersPage() {
       case "ACTIVE":
         return "bg-emerald-50 text-emerald-700 border-emerald-200/50";
       case "INACTIVE":
-        return "bg-neutral-100 text-neutral-500 border-neutral-200/30";
-      case "SUSPENDED":
-        return "bg-red-50 text-red-700 border-red-200/50";
+        return "bg-neutral-100 text-red-500 border-neutral-200/30";
       default:
         return "bg-neutral-100 text-neutral-500";
     }
@@ -399,37 +318,14 @@ export default function AdminMembersPage() {
         {/* Main CMS Content Container */}
         <main className="flex-1 flex flex-col min-w-0">
           {/* Top Header Bar */}
-          <header className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-30">
-            <div>
-              {/* Breadcrumbs */}
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-                <span>Admin</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-neutral-600">Members</span>
-              </div>
-              <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
-                Members Directory
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-6">
-              {/* Search Bar in Header */}
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search members by name, email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#F1F3F4] text-neutral-700 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 transition-colors font-medium placeholder:text-neutral-400"
-                />
-              </div>
-              <button className="relative text-neutral-600 hover:text-neutral-800 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-brand-primary" />
-              </button>
-            </div>
-          </header>
+          <AdminHeader
+            breadcrumbs={[{ label: "Members" }]}
+            title="Members Directory"
+            showSearch={true}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchPlaceholder="Search members by name, email..."
+          />
 
           {/* Inner Content Area */}
           <div className="p-8 flex-grow flex flex-col space-y-6">
@@ -448,9 +344,18 @@ export default function AdminMembersPage() {
                     <option value="ALL">All Statuses</option>
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
-                    <option value="SUSPENDED">Suspended</option>
                   </select>
                   <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+                </div>
+                <div className="relative w-64">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search members..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
+                  />
                 </div>
               </div>
 
@@ -579,12 +484,6 @@ export default function AdminMembersPage() {
                             </td>
                             <td className="px-6 py-4.5">
                               <div className="flex items-center justify-center gap-2">
-                                <button
-                                  className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg cursor-pointer transition-colors"
-                                  title="View details"
-                                >
-                                  <Eye className="w-4.5 h-4.5" />
-                                </button>
                                 <button
                                   onClick={() => {
                                     setSelectedMember(member);
@@ -734,7 +633,6 @@ export default function AdminMembersPage() {
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
-                    <option value="SUSPENDED">Suspended</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
                 </div>

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Home, Gift, RefreshCw, Clock, CircleUser } from "lucide-react";
+import { useMember } from "@/lib/hooks/useMember";
+import Avatar from "../atoms/Avatar";
 
 interface NavItemProps {
   href: string;
@@ -38,6 +40,7 @@ function NavItem({ href, label, icon, active }: NavItemProps) {
 }
 
 export function BottomNavigation() {
+  const { member, memberId, isLoaded, logout } = useMember();
   const pathname = usePathname();
 
   const navItems = [
@@ -64,7 +67,7 @@ export function BottomNavigation() {
     {
       href: "/profile",
       label: "Profile",
-      icon: <CircleUser className="w-5.5 h-5.5" />,
+      icon: <Avatar name={member?.name} className="w-6 h-6" />,
     },
   ];
 

@@ -23,59 +23,34 @@ import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
 import Link from "next/link";
 
-// Mock catalog list matching public/Reward Catalog.png
-const MEMBER_REWARDS = [
-  {
-    id: "reward-1",
-    name: "KFC Original Bucket",
-    partnerName: "KFC",
-    pointCost: 500,
-    imageUrl:
-      "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=400&auto=format&fit=crop&q=80",
-    accentColor: "border-t-[#C8102E]",
-    badgeBg: "bg-red-50 text-[#C8102E]",
-    isLocked: false,
-  },
-  {
-    id: "reward-2",
-    name: "McDouble Meal",
-    partnerName: "MCD",
-    pointCost: 400,
-    imageUrl:
-      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&auto=format&fit=crop&q=80",
-    accentColor: "border-t-[#FFC72C]",
-    badgeBg: "bg-yellow-50 text-[#D89F0E]",
-    isLocked: false,
-  },
-  {
-    id: "reward-3",
-    name: "6pc McNuggets",
-    partnerName: "MCD",
-    pointCost: 250,
-    imageUrl:
-      "https://images.unsplash.com/photo-1562967914-608f82629710?w=400&auto=format&fit=crop&q=80",
-    accentColor: "border-t-[#FFC72C]",
-    badgeBg: "bg-yellow-50 text-[#D89F0E]",
-    isLocked: false,
-  },
-];
-
 export default function MemberRewardsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activePartnerFilter, setActivePartnerFilter] = useState("ALL");
   const [showPointsBanner, setShowPointsBanner] = useState(true);
 
   // Selected reward state for Screen 4 bottom sheet confirmation modal
-  const [selectedReward, setSelectedReward] = useState<
-    (typeof MEMBER_REWARDS)[0] | null
-  >(null);
+  const [selectedReward, setSelectedReward] = useState<any | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemSuccess, setRedeemSuccess] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+
+  // Fetch real reward catalog from backend
+  const { data: rewardsData, refetch: refetchRewards } = useQuery({
+    queryKey: ["rewards"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/rewards", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data.data as any[];
+    },
+  });
 
   // Fetch balances for calculating points availability (Budi has KFC: 350 pts, McD: 120 pts)
-  const { data: balanceData } = useQuery({
+  const { data: balanceData, refetch: refetchBalances } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
       const token = localStorage.getItem("token");
@@ -92,36 +67,79 @@ export default function MemberRewardsPage() {
     retry: 1,
   });
 
+  // Fetch active partner list from API
+  const { data: apiPartners } = useQuery({
+    queryKey: ["rewards-partners"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/partners", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.partners || response.data.data || []) as any[];
+    },
+    retry: 1,
+    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+  });
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedPartnerId = sessionStorage.getItem("selected_partner_filter");
+      if (storedPartnerId && apiPartners) {
+        const foundPartner = apiPartners.find(
+          (p: any) => p.id === storedPartnerId
+        );
+        if (foundPartner) {
+          setActivePartnerFilter(foundPartner.code);
+        } else {
+          setActivePartnerFilter(storedPartnerId);
+        }
+        sessionStorage.removeItem("selected_partner_filter");
+      }
+    }
+  }, [apiPartners]);
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const kfcPoints =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("kfc"))
-      ?.balance ?? 350;
-  const mcdPoints =
-    balanceData?.find((b) => b.partnerName.toLowerCase().includes("mcd"))
-      ?.balance ?? 120;
+  const rewardsList = rewardsData || [];
 
-  // Filter rewards
-  const filteredRewards = MEMBER_REWARDS.filter((reward) => {
+  // Filter rewards dynamically based on active filter
+  const filteredRewards = rewardsList.filter((reward) => {
     const matchesSearch = reward.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesPartner =
       activePartnerFilter === "ALL" ||
-      (activePartnerFilter === "KFC" && reward.partnerName === "KFC") ||
-      (activePartnerFilter === "MCD" && reward.partnerName === "MCD");
+      (reward.partnerName &&
+        reward.partnerName
+          .toLowerCase()
+          .includes(activePartnerFilter.toLowerCase())) ||
+      (reward.partnerCode &&
+        reward.partnerCode
+          .toLowerCase()
+          .includes(activePartnerFilter.toLowerCase()));
     return matchesSearch && matchesPartner;
   });
 
-  // Calculate variables for the selected redemption details
-  const currentBalance =
-    selectedReward?.partnerName === "KFC" ? kfcPoints : mcdPoints;
+  // Calculate variables for the selected redemption details dynamically
+  const currentBalance = (() => {
+    if (!selectedReward || !balanceData) return 0;
+    const found = balanceData.find(
+      (b) =>
+        b.partnerId === selectedReward.partnerId ||
+        (selectedReward.partnerName &&
+          b.partnerName
+            .toLowerCase()
+            .includes(selectedReward.partnerName.toLowerCase()))
+    );
+    return found ? found.balance : 0;
+  })();
+
   const neededPoints = selectedReward
     ? selectedReward.pointCost - currentBalance
     : 0;
@@ -130,30 +148,40 @@ export default function MemberRewardsPage() {
     ? currentBalance - selectedReward.pointCost
     : 0;
 
-  const handleRedeemConfirm = () => {
-    if (isInsufficient) return;
+  const combinedBalance =
+    balanceData?.reduce((sum, item) => sum + item.balance, 0) ?? 0;
+
+  const handleRedeemConfirm = async () => {
+    if (isInsufficient || !selectedReward) return;
     setIsRedeeming(true);
-    setTimeout(() => {
-      setIsRedeeming(false);
+    setRedeemError(null);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "/api/v1/redeem",
+        { rewardId: selectedReward.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setRedeemSuccess(true);
-    }, 1500);
+      refetchBalances();
+    } catch (err: any) {
+      setRedeemError(err.response?.data?.message || "Redemption failed");
+    } finally {
+      setIsRedeeming(false);
+    }
   };
 
   const closeRedeemModal = () => {
     setSelectedReward(null);
     setRedeemSuccess(false);
+    setRedeemError(null);
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="rewards"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -166,27 +194,20 @@ export default function MemberRewardsPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search rewards..."
+          showSearch={true}
+          breadcrumbs={[{ label: "Marketplace" }, { label: "Rewards" }]}
+          title="Rewards Catalog"
         />
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-32">
+        <div className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
           {/* Top Navbar */}
-          <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-2">
-              <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
-                LoyaltyHub
-              </span>
-            </div>
-            <button className="text-neutral-700 hover:text-neutral-900">
-              <Bell className="w-5 h-5" />
-            </button>
-          </header>
-
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
               Rewards
@@ -205,11 +226,11 @@ export default function MemberRewardsPage() {
             </div>
 
             {/* Filter Chips */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
                 onClick={() => setActivePartnerFilter("ALL")}
                 className={cn(
-                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent",
+                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
                   activePartnerFilter === "ALL"
                     ? "bg-[#8B3D06] text-white"
                     : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
@@ -217,28 +238,20 @@ export default function MemberRewardsPage() {
               >
                 All
               </button>
-              <button
-                onClick={() => setActivePartnerFilter("KFC")}
-                className={cn(
-                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent",
-                  activePartnerFilter === "KFC"
-                    ? "bg-[#8B3D06] text-white"
-                    : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
-                )}
-              >
-                KFC
-              </button>
-              <button
-                onClick={() => setActivePartnerFilter("MCD")}
-                className={cn(
-                  "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent",
-                  activePartnerFilter === "MCD"
-                    ? "bg-[#8B3D06] text-white"
-                    : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
-                )}
-              >
-                McDonald's
-              </button>
+              {apiPartners?.map((p: any) => (
+                <button
+                  key={p.id}
+                  onClick={() => setActivePartnerFilter(p.code)}
+                  className={cn(
+                    "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
+                    activePartnerFilter === p.code
+                      ? "bg-[#8B3D06] text-white"
+                      : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
+                  )}
+                >
+                  {p.name.split(" ")[0]}
+                </button>
+              ))}
             </div>
 
             {/* Mobile Grid */}
@@ -278,45 +291,6 @@ export default function MemberRewardsPage() {
                   </div>
                 </div>
               ))}
-
-              {/* Locked card matching mockup */}
-              <div className="bg-[#FAF9F9] rounded-2xl border border-dashed border-neutral-300 p-4 flex flex-col items-center justify-center text-center gap-2 h-44 opacity-85 select-none">
-                <Lock className="w-6 h-6 text-neutral-400" />
-                <span className="text-[10px] font-extrabold text-neutral-500 leading-tight">
-                  Unlock more at Silver Tier
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Sticky Bottom Balance bar */}
-          <div
-            className={cn(
-              "fixed bottom-16 left-0 right-0 h-10 bg-[#FDE8D8] border-t border-orange-100 flex items-center justify-between px-5 z-20 transition-all duration-300 ease-in-out transform",
-              showPointsBanner
-                ? "translate-y-0 opacity-100"
-                : "translate-y-12 opacity-0 pointer-events-none"
-            )}
-          >
-            <div className="flex items-center gap-1.5 text-[11px] font-black text-[#8B3D06]">
-              <Coins className="w-3.5 h-3.5" />
-              <span>Your KFC Points: {kfcPoints} pts</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                className="text-[10px] font-black text-[#8B3D06] underline tracking-wider"
-              >
-                DETAILS
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowPointsBanner(false)}
-                className="text-[#8B3D06]/70 hover:text-[#8B3D06] cursor-pointer p-0.5"
-                title="Dismiss notification"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
 
@@ -339,82 +313,11 @@ export default function MemberRewardsPage() {
             </div>
 
             {/* Desktop points display */}
-            <div className="flex gap-4">
-              <div className="bg-white border border-neutral-200/50 rounded-2xl px-5 py-3 shadow-sm text-left">
-                <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest leading-none">
-                  KFC Balance
-                </p>
-                <p className="text-lg font-black text-neutral-800 mt-1">
-                  {kfcPoints} pts
-                </p>
-              </div>
-              <div className="bg-white border border-neutral-200/50 rounded-2xl px-5 py-3 shadow-sm text-left">
-                <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest leading-none">
-                  McD Balance
-                </p>
-                <p className="text-lg font-black text-neutral-800 mt-1">
-                  {mcdPoints} pts
-                </p>
-              </div>
-            </div>
           </header>
 
           <div className="grid grid-cols-4 gap-6 items-stretch">
-            {/* Left Sidebar Category filters */}
-            <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
-                  Filter Partner
-                </h3>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "ALL"}
-                      onChange={() => setActivePartnerFilter("ALL")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>All Merchants</span>
-                  </label>
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "KFC"}
-                      onChange={() => setActivePartnerFilter("KFC")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>KFC</span>
-                  </label>
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "MCD"}
-                      onChange={() => setActivePartnerFilter("MCD")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>McDonald's</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
             {/* Right Main Grid */}
             <div className="col-span-3 space-y-6">
-              {/* Search tool */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search rewards..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white text-sm text-neutral-800 pl-11 pr-4 py-3 rounded-2xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors placeholder:text-neutral-400 font-semibold"
-                />
-              </div>
-
               {/* Desktop Catalog Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredRewards.map((reward) => (
@@ -458,21 +361,40 @@ export default function MemberRewardsPage() {
                     </div>
                   </div>
                 ))}
-
-                {/* Locked Tier card on desktop */}
-                <div className="bg-[#FAF9F9] rounded-2xl border border-dashed border-neutral-300 p-6 flex flex-col items-center justify-center text-center gap-3 h-64 opacity-80 select-none">
-                  <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-800">
-                      Unlock more at Silver Tier
-                    </p>
-                    <p className="text-[10px] text-neutral-400 mt-1">
-                      Reach 2,500 points at KFC or McDonald's to view more
-                      rewards.
-                    </p>
-                  </div>
+              </div>
+            </div>
+            {/* Left Sidebar Category filters */}
+            <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
+                  Filter Partner
+                </h3>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="partner"
+                      checked={activePartnerFilter === "ALL"}
+                      onChange={() => setActivePartnerFilter("ALL")}
+                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                    />
+                    <span>All Merchants</span>
+                  </label>
+                  {apiPartners?.map((p: any) => (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="partner"
+                        checked={activePartnerFilter === p.code}
+                        onChange={() => setActivePartnerFilter(p.code)}
+                        className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>
@@ -571,6 +493,19 @@ export default function MemberRewardsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* API Error Banner */}
+                {redeemError && (
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Redemption Failed</p>
+                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
+                        {redeemError}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Insufficient Warning Banner */}
                 {isInsufficient && (

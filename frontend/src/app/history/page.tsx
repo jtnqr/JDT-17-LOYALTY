@@ -23,55 +23,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock Fallback transactions matching public/Transaction History.png and seed data
-const MOCK_HISTORY_TRANSACTIONS = [
-  {
-    id: "tx-history-1",
-    type: "EXCHANGE_OUT",
-    partnerName: "KFC",
-    points: -100,
-    trxAmountIDR: 0,
-    createdAt: new Date().toISOString(), // Today
-    detailText: "Exchange to McDonald's",
-  },
-  {
-    id: "tx-history-2",
-    type: "EARN",
-    partnerName: "KFC",
-    points: 150,
-    trxAmountIDR: 150000,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-    detailText: "Purchase at KFC Store",
-  },
-  {
-    id: "tx-history-3",
-    type: "REDEEM",
-    partnerName: "McDonald's",
-    points: -300,
-    trxAmountIDR: 0,
-    createdAt: "2026-06-28T14:30:00Z", // 28 Jun
-    detailText: "McDouble Meal Redemption",
-  },
-  {
-    id: "tx-history-4",
-    type: "EARN",
-    partnerName: "McDonald's",
-    points: 450,
-    trxAmountIDR: 450000,
-    createdAt: "2026-06-25T12:00:00Z",
-    detailText: "Purchase at McDonald's Store",
-  },
-  {
-    id: "tx-history-5",
-    type: "EXPIRED",
-    partnerName: "KFC",
-    points: -50,
-    trxAmountIDR: 0,
-    createdAt: "2026-06-20T00:00:00Z",
-    detailText: "Unused Points Expired",
-  },
-];
-
 interface Transaction {
   id: string;
   type: string;
@@ -84,8 +35,8 @@ interface Transaction {
 
 export default function HistoryPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE
+
+  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -99,8 +50,8 @@ export default function HistoryPage() {
       let typeParam = "";
       if (activeFilter === "EARN") typeParam = "&type=EARN";
       if (activeFilter === "REDEEM") typeParam = "&type=REDEEM";
-      if (activeFilter === "EXCHANGE")
-        typeParam = "&type=EXCHANGE_OUT,EXCHANGE_IN";
+      if (activeFilter === "EXCHANGE_IN") typeParam = "&type=EXCHANGE_IN";
+      if (activeFilter === "EXCHANGE_OUT") typeParam = "&type=EXCHANGE_OUT";
 
       const response = await axios.get(
         `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`,
@@ -112,6 +63,15 @@ export default function HistoryPage() {
     },
     enabled: !!memberId,
     retry: 1,
+
+    // polling tiap 5 detik
+    refetchInterval: 5000,
+
+    // berhenti kalau tab/browser tidak aktif
+    refetchIntervalInBackground: false,
+
+    // jangan refetch saat user balik ke tab
+    refetchOnWindowFocus: false,
   });
 
   if (!isLoaded) {
@@ -122,7 +82,7 @@ export default function HistoryPage() {
     );
   }
 
-  const rawTransactions = transactionData || MOCK_HISTORY_TRANSACTIONS;
+  const rawTransactions = transactionData || [];
 
   // Client-side filtering (handles fallback lists and searches)
   const filteredTransactions = rawTransactions.filter((tx) => {
@@ -136,8 +96,8 @@ export default function HistoryPage() {
       activeFilter === "ALL" ||
       (activeFilter === "EARN" && tx.type === "EARN") ||
       (activeFilter === "REDEEM" && tx.type === "REDEEM") ||
-      (activeFilter === "EXCHANGE" &&
-        (tx.type === "EXCHANGE_OUT" || tx.type === "EXCHANGE_IN"));
+      (activeFilter === "EXCHANGE_IN" && tx.type === "EXCHANGE_IN") ||
+      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT");
 
     return matchesSearch && matchesFilter;
   });
@@ -210,15 +170,10 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex">
+    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
       <MemberSidebar
-        className={cn(
-          "hidden md:flex transition-all duration-300 ease-in-out",
-          isSidebarOpen
-            ? "w-60 border-r border-neutral-200"
-            : "w-0 overflow-hidden border-r-0"
-        )}
+        className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
         userTier="Gold Member"
@@ -231,27 +186,20 @@ export default function HistoryPage() {
           userName={member?.name || "Budi Santoso"}
           userTier="Gold Member"
           onLogout={logout}
-          onToggleMenu={() => setIsSidebarOpen((prev) => !prev)}
-          showBrand={!isSidebarOpen}
+          showBrand={false}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search transactions..."
+          showSearch={true}
+          breadcrumbs={[{ label: "Account" }, { label: "History" }]}
+          title="Transaction History"
         />
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200">
+        <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200 overflow-y-auto">
           {/* Top Header */}
-          <header className="h-14 border-b border-neutral-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-2">
-              <Avatar name={member?.name} className="w-8 h-8" />
-              <span className="font-extrabold text-sm text-[#8B3D06] tracking-tight">
-                LoyaltyHub
-              </span>
-            </div>
-            <button className="text-neutral-700 hover:text-neutral-900">
-              <Bell className="w-5 h-5" />
-            </button>
-          </header>
-
           <div className="px-5 pt-6 space-y-5">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
               History
@@ -263,7 +211,8 @@ export default function HistoryPage() {
                 { filter: "ALL", label: "All active" },
                 { filter: "EARN", label: "EARN" },
                 { filter: "REDEEM", label: "REDEEM" },
-                { filter: "EXCHANGE", label: "EXCHANGE" },
+                { filter: "EXCHANGE_IN", label: "EXCHANGE IN" },
+                { filter: "EXCHANGE_OUT", label: "EXCHANGE OUT" },
               ].map((chip) => (
                 <button
                   key={chip.filter}
@@ -322,15 +271,15 @@ export default function HistoryPage() {
                                       tx.type === "EARN"
                                         ? "bg-[#E8F5E9] text-[#2E7D32]"
                                         : tx.type === "REDEEM"
-                                        ? "bg-[#FFEBEE] text-[#C62828]"
-                                        : tx.type.startsWith("EXCHANGE")
+                                        ? "bg-[#FFEBEE] text-red-800"
+                                        : tx.type === "EXCHANGE_IN"
                                         ? "bg-[#E3F2FD] text-[#1565C0]"
+                                        : tx.type === "EXCHANGE_OUT"
+                                        ? "bg-[#FFE0B2] text-[#E65100]"
                                         : "bg-[#F5F5F5] text-[#9E9E9E]"
                                     )}
                                   >
-                                    {tx.type
-                                      .replace("_OUT", "")
-                                      .replace("_IN", "")}
+                                    {tx.type.replace("_", " ")}
                                   </span>
                                   {tx.type === "EARN" && tx.trxAmountIDR && (
                                     <span className="text-[9px] font-semibold text-neutral-400">
@@ -367,59 +316,44 @@ export default function HistoryPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          <header className="flex justify-between items-start">
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-                <span>Account</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-neutral-600">History</span>
-              </div>
-              <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
-                Transaction History
-              </h1>
-              <p className="text-xs font-semibold text-neutral-400">
-                Track all your point earnings, redemptions, and conversion
-                transfers in one place.
-              </p>
+          {/* Desktop filter row */}
+          <div className="flex gap-2 justify-between">
+            <div className="flex flex-row gap-4">
+              {[
+                { filter: "ALL", label: "All Transactions" },
+                { filter: "EARN", label: "Earnings" },
+                { filter: "REDEEM", label: "Redemptions" },
+                { filter: "EXCHANGE_IN", label: "Exchange In" },
+                { filter: "EXCHANGE_OUT", label: "Exchange Out" },
+              ].map((chip) => (
+                <button
+                  key={chip.filter}
+                  onClick={() => {
+                    setActiveFilter(chip.filter);
+                    setCurrentPage(0);
+                  }}
+                  className={cn(
+                    "px-5 py-2.5 rounded-xl text-xs font-bold transition-all border border-neutral-200/50 cursor-pointer",
+                    activeFilter === chip.filter
+                      ? "bg-[#8B3D06] border-[#8B3D06] text-white shadow-sm"
+                      : "bg-white text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
-
             {/* Desktop Quick Search */}
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search transactions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white text-neutral-700 border border-neutral-200 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#8B3D06] transition-colors font-medium placeholder:text-neutral-400 font-semibold"
+                className="w-full bg-white text-neutral-700 border border-neutral-200 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#8B3D06] transition-colors font-semibold placeholder:text-neutral-400"
               />
             </div>
-          </header>
-
-          {/* Desktop filter row */}
-          <div className="flex gap-2">
-            {[
-              { filter: "ALL", label: "All Transactions" },
-              { filter: "EARN", label: "Earnings (EARN)" },
-              { filter: "REDEEM", label: "Redemptions (REDEEM)" },
-              { filter: "EXCHANGE", label: "Point Exchanges" },
-            ].map((chip) => (
-              <button
-                key={chip.filter}
-                onClick={() => {
-                  setActiveFilter(chip.filter);
-                  setCurrentPage(0);
-                }}
-                className={cn(
-                  "px-5 py-2.5 rounded-xl text-xs font-bold transition-all border border-neutral-200/50 cursor-pointer",
-                  activeFilter === chip.filter
-                    ? "bg-[#8B3D06] border-[#8B3D06] text-white shadow-sm"
-                    : "bg-white text-neutral-600 hover:bg-neutral-50"
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
           </div>
 
           {/* Desktop Table View */}
@@ -501,15 +435,19 @@ export default function HistoryPage() {
                           <td className="px-6 py-4.5">
                             <span
                               className={cn(
-                                "inline-block text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border",
+                                "whitespace-nowrap inline-block text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border",
                                 isEarn
                                   ? "bg-emerald-50 border-emerald-200/50 text-emerald-700"
                                   : tx.type === "REDEEM"
-                                  ? "bg-neutral-50 border-neutral-200 text-neutral-700"
+                                  ? "bg-red-100 border-neutral-300 text-red-800"
+                                  : tx.type === "EXCHANGE_IN"
+                                  ? "bg-blue-50 border-blue-200/50 text-blue-700"
+                                  : tx.type === "EXCHANGE_OUT"
+                                  ? "bg-orange-50 border-orange-200/50 text-orange-700"
                                   : "bg-red-50 border-red-200/50 text-red-700"
                               )}
                             >
-                              {tx.type}
+                              {tx.type.replace("_", " ")}
                             </span>
                           </td>
                           <td className="px-6 py-4.5">
