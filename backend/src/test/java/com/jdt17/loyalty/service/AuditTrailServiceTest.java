@@ -25,7 +25,7 @@ class AuditTrailServiceTest {
 
     @BeforeEach
     void setUp() {
-        auditTrailService = new AuditTrailServiceImpl(auditTrailRepository);
+        auditTrailService = new AuditTrailService(auditTrailRepository);
     }
 
     @Test
