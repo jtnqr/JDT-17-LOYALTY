@@ -50,7 +50,6 @@ interface Transaction {
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
 
-
   // 1. Fetch Balances via React Query
   const { data: balanceData, isLoading: isBalancesLoading } = useQuery({
     queryKey: ["balances", memberId],
@@ -218,6 +217,8 @@ export default function DashboardPage() {
           userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
+          breadcrumbs={[{ label: "Home" }]}
+          title="Dashboard"
         />
 
         {/* ========================================================
@@ -290,7 +291,10 @@ export default function DashboardPage() {
                       key={b.partnerId}
                       href="/rewards"
                       onClick={() => {
-                        sessionStorage.setItem("selected_partner_filter", b.partnerId);
+                        sessionStorage.setItem(
+                          "selected_partner_filter",
+                          b.partnerId
+                        );
                       }}
                       className={cn(
                         "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start active:scale-98 transition-all hover:shadow-md cursor-pointer",
@@ -378,7 +382,7 @@ export default function DashboardPage() {
                   href="/history"
                   className="text-xs font-semibold text-brand-primary flex items-center gap-0.5 hover:underline"
                 >
-                  See All
+                  See All <ArrowRight height={16} width={16} />
                 </Link>
               </div>
 

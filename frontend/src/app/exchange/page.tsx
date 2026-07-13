@@ -282,6 +282,8 @@ export default function ExchangePointsPage() {
           userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
+          breadcrumbs={[{ label: "Marketplace" }, { label: "Exchange" }]}
+          title="Exchange Center"
         />
 
         {/* ========================================================
@@ -500,17 +502,6 @@ export default function ExchangePointsPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          {/* Greeting Header */}
-          <section className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-              <span>Marketplace</span>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-neutral-600">Exchange Center</span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
-              Exchange Points
-            </h1>
-          </section>
 
           {/* Main double column grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

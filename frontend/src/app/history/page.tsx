@@ -23,64 +23,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mock Fallback transactions matching public/Transaction History.png and seed data
-const MOCK_HISTORY_TRANSACTIONS = [
-  {
-    id: "tx-history-1",
-    type: "EXCHANGE_OUT",
-    partnerName: "KFC",
-    points: -100,
-    trxAmountIDR: 0,
-    createdAt: new Date().toISOString(), // Today
-    detailText: "Exchange to McDonald's",
-  },
-  {
-    id: "tx-history-1-in",
-    type: "EXCHANGE_IN",
-    partnerName: "McDonald's",
-    points: 80,
-    trxAmountIDR: 0,
-    createdAt: new Date().toISOString(), // Today
-    detailText: "Exchange from KFC",
-  },
-  {
-    id: "tx-history-2",
-    type: "EARN",
-    partnerName: "KFC",
-    points: 150,
-    trxAmountIDR: 150000,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
-    detailText: "Purchase at KFC Store",
-  },
-  {
-    id: "tx-history-3",
-    type: "REDEEM",
-    partnerName: "McDonald's",
-    points: -300,
-    trxAmountIDR: 0,
-    createdAt: "2026-06-28T14:30:00Z", // 28 Jun
-    detailText: "McDouble Meal Redemption",
-  },
-  {
-    id: "tx-history-4",
-    type: "EARN",
-    partnerName: "McDonald's",
-    points: 450,
-    trxAmountIDR: 450000,
-    createdAt: "2026-06-25T12:00:00Z",
-    detailText: "Purchase at McDonald's Store",
-  },
-  {
-    id: "tx-history-5",
-    type: "EXPIRED",
-    partnerName: "KFC",
-    points: -50,
-    trxAmountIDR: 0,
-    createdAt: "2026-06-20T00:00:00Z",
-    detailText: "Unused Points Expired",
-  },
-];
-
 interface Transaction {
   id: string;
   type: string;
@@ -93,7 +35,6 @@ interface Transaction {
 
 export default function HistoryPage() {
   const { member, memberId, isLoaded, logout } = useMember();
-
 
   const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,6 +63,15 @@ export default function HistoryPage() {
     },
     enabled: !!memberId,
     retry: 1,
+
+    // polling tiap 5 detik
+    refetchInterval: 5000,
+
+    // berhenti kalau tab/browser tidak aktif
+    refetchIntervalInBackground: false,
+
+    // jangan refetch saat user balik ke tab
+    refetchOnWindowFocus: false,
   });
 
   if (!isLoaded) {
@@ -241,6 +191,8 @@ export default function HistoryPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search transactions..."
           showSearch={true}
+          breadcrumbs={[{ label: "Account" }, { label: "History" }]}
+          title="Transaction History"
         />
 
         {/* ========================================================
@@ -319,7 +271,7 @@ export default function HistoryPage() {
                                       tx.type === "EARN"
                                         ? "bg-[#E8F5E9] text-[#2E7D32]"
                                         : tx.type === "REDEEM"
-                                        ? "bg-[#FFEBEE] text-[#C62828]"
+                                        ? "bg-[#FFEBEE] text-red-800"
                                         : tx.type === "EXCHANGE_IN"
                                         ? "bg-[#E3F2FD] text-[#1565C0]"
                                         : tx.type === "EXCHANGE_OUT"
@@ -364,19 +316,9 @@ export default function HistoryPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          <header className="flex justify-between items-start">
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-                <span>Account</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-neutral-600">History</span>
-              </div>
-            </div>
-          </header>
-
           {/* Desktop filter row */}
           <div className="flex gap-2 justify-between">
-            <div>
+            <div className="flex flex-row gap-4">
               {[
                 { filter: "ALL", label: "All Transactions" },
                 { filter: "EARN", label: "Earnings" },
@@ -497,7 +439,7 @@ export default function HistoryPage() {
                                 isEarn
                                   ? "bg-emerald-50 border-emerald-200/50 text-emerald-700"
                                   : tx.type === "REDEEM"
-                                  ? "bg-neutral-50 border-neutral-200 text-neutral-700"
+                                  ? "bg-red-100 border-neutral-300 text-red-800"
                                   : tx.type === "EXCHANGE_IN"
                                   ? "bg-blue-50 border-blue-200/50 text-blue-700"
                                   : tx.type === "EXCHANGE_OUT"

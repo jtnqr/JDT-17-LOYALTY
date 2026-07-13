@@ -2,30 +2,36 @@
 
 import React from "react";
 import { Avatar } from "../atoms/Avatar";
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search, Menu, ChevronRight } from "lucide-react";
+
+export interface BreadcrumbItem {
+  label: string;
+}
 
 interface DesktopNavbarProps {
   userName?: string;
   userTier?: string;
   onLogout?: () => void;
-  onToggleMenu?: () => void;
   showBrand?: boolean;
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
   searchPlaceholder?: string;
   showSearch?: boolean;
+  breadcrumbs?: BreadcrumbItem[];
+  title?: string;
 }
 
 export function DesktopNavbar({
   userName = "Alex Thompson",
   userTier = "Gold Member",
   onLogout,
-  onToggleMenu,
   showBrand = true,
   searchQuery = "",
   onSearchChange,
   searchPlaceholder = "Search...",
   showSearch = false,
+  breadcrumbs = [],
+  title = "",
 }: DesktopNavbarProps) {
   const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
@@ -48,15 +54,40 @@ export function DesktopNavbar({
 
   return (
     <header className="hidden md:flex h-16 border-b border-neutral-200/50 bg-white px-8 items-center justify-between sticky top-0 z-50 shadow-sm">
-      {/* Left: Brand Logo & Hamburger Menu */}
-      <div className="flex items-center gap-4">
-        {showBrand && (
+      {/* Left: Brand Logo / Breadcrumbs */}
+      <div className="flex items-center gap-4 animate-in fade-in duration-200">
+        {breadcrumbs && breadcrumbs.length > 0 ? (
+          <div>
+            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider select-none">
+              <span>Member</span>
+              {breadcrumbs.map((item, idx) => (
+                <React.Fragment key={idx}>
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+                  <span
+                    className={
+                      idx === breadcrumbs.length - 1
+                        ? "text-neutral-600 font-bold"
+                        : "text-neutral-500"
+                    }
+                  >
+                    {item.label}
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
+            {title && (
+              <h2 className="text-lg font-black text-neutral-900 mt-0.5 leading-none">
+                {title}
+              </h2>
+            )}
+          </div>
+        ) : showBrand ? (
           <div className="flex items-center gap-2 text-brand-primary animate-in fade-in duration-300">
             <span className="font-extrabold text-xl tracking-tight">
               Pistos APP
             </span>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Right: Notification & User Info */}

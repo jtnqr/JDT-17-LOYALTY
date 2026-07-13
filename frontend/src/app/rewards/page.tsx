@@ -199,6 +199,8 @@ export default function MemberRewardsPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search rewards..."
           showSearch={true}
+          breadcrumbs={[{ label: "Marketplace" }, { label: "Rewards" }]}
+          title="Rewards Catalog"
         />
 
         {/* ========================================================

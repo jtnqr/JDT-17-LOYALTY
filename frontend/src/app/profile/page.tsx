@@ -17,7 +17,6 @@ import Avatar from "@/components/atoms/Avatar";
 export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
 
-
   // Fetch Member Balances via React Query
   const { data: balanceData } = useQuery({
     queryKey: ["balances", memberId],
@@ -64,6 +63,8 @@ export default function ProfilePage() {
           userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
+          breadcrumbs={[{ label: "Profile" }]}
+          title="My Profile"
         />
 
         {/* Outer Scroll Container */}
@@ -82,7 +83,7 @@ export default function ProfilePage() {
               {/* Large Centered Avatar Area */}
               <div className="flex flex-col items-center">
                 <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-neutral-200">
-                  <Avatar name={member?.name} className="w-24 h-24" />
+                  <Avatar name={member?.name} className="w-24 h-24 text-3xl" />
                 </div>
                 <h3 className="text-lg font-black text-neutral-900 mt-4 leading-none">
                   {member?.name || "Budi Santoso"}
@@ -153,24 +154,12 @@ export default function ProfilePage() {
               DESKTOP VIEW (Visible on Desktop, Hidden on Mobile)
               ======================================================== */}
           <div className="hidden md:block max-w-5xl mx-auto px-8 py-8 space-y-6">
-            {/* Title / Breadcrumbs */}
-            <div>
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-                <span>Member</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-neutral-600">Profile</span>
-              </div>
-              <h2 className="text-2xl font-black text-neutral-900 mt-1 leading-none">
-                My Profile
-              </h2>
-            </div>
-
             {/* Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
               {/* Column 1: Profile Summary Card */}
               <div className="bg-white rounded-3xl border border-neutral-200/50 p-6 flex flex-col items-center text-center shadow-xs">
                 <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-neutral-200">
-                  <Avatar name={member?.name} className="w-28 h-28" />
+                  <Avatar name={member?.name} className="w-28 h-28 text-4xl" />
                 </div>
                 <h3 className="text-lg font-black text-neutral-900 mt-4 leading-none">
                   {member?.name || "Budi Santoso"}
