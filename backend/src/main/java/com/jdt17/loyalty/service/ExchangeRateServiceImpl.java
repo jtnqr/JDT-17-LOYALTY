@@ -76,7 +76,7 @@ public class ExchangeRateServiceImpl implements ExchangeRateService {
                 "ADMIN",
                 "EXCHANGE_RATE",
                 saved.getId(),
-                saved
+                null
         );
 
         return mapToResponse(saved);
