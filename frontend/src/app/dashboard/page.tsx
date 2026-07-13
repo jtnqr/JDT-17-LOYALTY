@@ -27,6 +27,7 @@ import {
   Bell,
   ArrowLeftRight,
   History,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
@@ -372,171 +373,113 @@ export default function DashboardPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          {/* Greeting Header */}
-          <section className="space-y-1">
-            <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
-              Good afternoon, {member?.name?.split(" ")[0] || "Budi"}!
-            </h1>
+          {/* Welcome Hero Banner (Full Width) */}
+          <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#8B3D06] via-[#A65B28] to-[#C17A4A] text-white p-6 shadow-md shadow-[#8B3D06]/10">
+            <div className="absolute right-0 bottom-0 top-0 w-1/3 opacity-15 pointer-events-none">
+              <svg
+                className="w-full h-full"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <path
+                  d="M0,100 C30,40 70,60 100,0 L100,100 Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
+            <div className="relative z-10 space-y-2">
+              <h1 className="text-3xl font-black tracking-tight mt-2">
+                Good afternoon, {member?.name || "Budi Santoso"}!
+              </h1>
+              <p className="text-sm text-neutral-100 max-w-xl font-medium leading-relaxed">
+                Track, exchange, and redeem your reward points across all
+                partner loyalty programs instantly.
+              </p>
+            </div>
           </section>
 
-          {/* Main Layout Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* Left Area (Columns 1 & 2) */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Partner Balance Cards row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <BalanceCardDesktop
-                  partnerName="McDonald's MyRewards"
-                  balance={mcdPoints}
-                  badgeText="REDEEM NOW"
-                  isKfc={false}
-                />
-                <BalanceCardDesktop
-                  partnerName="KFC Colonel's Club"
-                  balance={kfcPoints}
-                  badgeText="EARNING"
-                  isKfc={true}
-                />
-              </div>
-
-              {/* Quick Actions */}
+          {/* Main Layout Grid (3 Columns: QA, Points, Recent Activity) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {/* Column 1: Quick Actions (QA) */}
+            <div className="space-y-6">
               <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm space-y-4">
                 <h2 className="text-sm font-bold text-neutral-900">
                   Quick Actions
                 </h2>
-                <div className="grid grid-cols-4 gap-4">
-                  <button className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-brand-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
-                      <QrCode className="w-5 h-5" />
+                <div className="grid grid-cols-2 gap-3.5">
+                  <Link
+                    href="/rewards"
+                    className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                      <Gift className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-bold text-neutral-700 mt-2.5">
-                      Scan to Earn
+                    <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                      Rewards Catalog
                     </span>
-                  </button>
+                  </Link>
 
                   <Link
                     href="/exchange"
                     className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                   >
-                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-brand-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                       <RefreshCw className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-bold text-neutral-700 mt-2.5">
+                    <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
                       Exchange Points
                     </span>
                   </Link>
 
-                  <button className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-brand-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
-                      <Gift className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold text-neutral-700 mt-2.5">
-                      Send Gift
-                    </span>
-                  </button>
-
-                  <button className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer">
-                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-brand-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
-                      <Plus className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-bold text-neutral-700 mt-2.5">
-                      Link Account
-                    </span>
-                  </button>
-                </div>
-              </section>
-
-              {/* Bottom split: Recent Activity & Exclusive Offers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Exclusive Offers Card */}
-                <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-[360px]">
-                  <div>
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
-                      <h3 className="text-sm font-bold text-neutral-900">
-                        Exclusive Offers
-                      </h3>
-                      <Link
-                        href="/rewards"
-                        className="text-xs font-bold text-brand-primary hover:underline"
-                      >
-                        Explore
-                      </Link>
-                    </div>
-
-                    <div className="space-y-3">
-                      {/* Offer Item 1: Burger Card */}
-                      <div className="relative h-24 rounded-xl overflow-hidden bg-neutral-950 group cursor-pointer">
-                        <img
-                          src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&auto=format&fit=crop&q=80"
-                          alt="Burger"
-                          className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 p-3 flex flex-col justify-end text-white">
-                          <p className="text-xs font-bold leading-tight">
-                            Double Points Tuesday
-                          </p>
-                          <p className="text-[9px] text-neutral-200 mt-0.5 leading-none">
-                            Earn 2x at McDonald's tomorrow
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Offer Item 2: Chicken Card */}
-                      <div className="relative h-24 rounded-xl overflow-hidden bg-neutral-950 group cursor-pointer">
-                        <img
-                          src="https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=400&auto=format&fit=crop&q=80"
-                          alt="Fried Chicken"
-                          className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 p-3 flex flex-col justify-end text-white">
-                          <p className="text-xs font-bold leading-tight">
-                            Colonel's Surprise
-                          </p>
-                          <p className="text-[9px] text-neutral-200 mt-0.5 leading-none">
-                            Redeem wings for 50% less
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            {/* Right Sidebar Area */}
-            <div className="space-y-6">
-              {/* Sponsored Card */}
-              <section className="bg-white rounded-2xl border border-neutral-200/50 shadow-sm overflow-hidden flex flex-col justify-between group cursor-pointer">
-                <div className="h-44 relative bg-neutral-900">
-                  <img
-                    src="https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=500&auto=format&fit=crop&q=80"
-                    alt="Coffee Machine"
-                    className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-102 transition-transform duration-300"
-                  />
-                  <span className="absolute top-3 left-3 text-[8px] font-black uppercase text-neutral-800 bg-white/90 border border-neutral-200 px-2 py-0.5 rounded-sm tracking-wider">
-                    SPONSORED
-                  </span>
-                </div>
-
-                <div className="p-4 space-y-2">
-                  <h4 className="text-sm font-bold text-neutral-900">
-                    Coffee Morning Boost
-                  </h4>
-                  <p className="text-xs text-neutral-500 leading-relaxed">
-                    Link your Starbucks card today and get a 500 point welcome
-                    bonus instantly.
-                  </p>
                   <Link
-                    href="/exchange"
-                    className="text-xs font-extrabold text-brand-primary flex items-center gap-0.5 hover:underline mt-2"
+                    href="/history"
+                    className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                   >
-                    Link Account
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                      Point History
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/profile"
+                    className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                      My Profile
+                    </span>
                   </Link>
                 </div>
               </section>
+            </div>
 
-              {/* Recent Activity Card */}
+            {/* Column 2: Points (P) */}
+            <div className="space-y-4">
+              <h2 className="text-sm font-bold text-neutral-900 px-1">
+                Your Point Balances
+              </h2>
+              {apiBalances.length === 0 ? (
+                <p className="text-xs text-neutral-400 italic px-1">No active partner balances found.</p>
+              ) : (
+                apiBalances.map((b) => (
+                  <BalanceCardDesktop
+                    key={b.partnerId}
+                    partnerName={b.partnerName}
+                    balance={b.balance}
+                    badgeText={b.partnerName.toLowerCase().includes("kfc") ? "EARNING" : "REDEEM NOW"}
+                    partnerCode={b.partnerName.toLowerCase().includes("kfc") ? "KFC" : b.partnerName.toLowerCase().includes("mcd") ? "MCD" : "GENERIC"}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Column 3: Recent Activity (R) */}
+            <div className="space-y-6">
               <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-[360px]">
                 <div>
                   <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
@@ -552,7 +495,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {transactions.map((tx) => {
+                    {transactions.slice(0, 4).map((tx) => {
                       const isEarn = tx.type === "EARN";
                       return (
                         <div
@@ -560,25 +503,25 @@ export default function DashboardPage() {
                           className="flex items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center shrink-0">
                               {isEarn ? (
                                 <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
                               ) : (
                                 <ArrowUpRight className="w-4 h-4 text-red-500" />
                               )}
                             </div>
-                            <div>
-                              <p className="text-[13px] font-bold text-neutral-800 leading-tight">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
                                 {tx.partnerName}
                               </p>
-                              <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 block">
+                              <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 block truncate">
                                 {tx.timeText || "Transaction"}
                               </span>
                             </div>
                           </div>
                           <span
                             className={cn(
-                              "text-xs font-extrabold",
+                              "text-xs font-extrabold shrink-0",
                               isEarn ? "text-emerald-600" : "text-red-500"
                             )}
                           >
