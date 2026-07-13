@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Settings,
   ArrowLeftRight,
+  Gift,
 } from "lucide-react";
 
 interface SidebarItemProps {
@@ -51,7 +52,8 @@ interface AdminSidebarProps {
     | "members"
     | "partners"
     | "transactions"
-    | "exchange";
+    | "exchange"
+    | "rewards";
 }
 
 export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
@@ -81,6 +83,12 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
       href: "/admin/partners",
       label: "Partners",
       icon: <Building2 className="w-5 h-5" />,
+    },
+    {
+      tab: "rewards",
+      href: "/admin/rewards",
+      label: "Rewards",
+      icon: <Gift className="w-5 h-5" />,
     },
     {
       tab: "exchange",

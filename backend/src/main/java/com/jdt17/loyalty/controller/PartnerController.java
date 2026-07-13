@@ -8,9 +8,12 @@ import com.jdt17.loyalty.service.PartnerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @RestController
@@ -37,6 +40,15 @@ public class PartnerController {
             @Valid @RequestBody UpdatePartnerRequest request
     ) {
         PartnerResponse response = partnerService.updatePartner(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PartnerResponse> uploadPartnerImage(
+            @PathVariable UUID id,
+            @RequestParam("image") MultipartFile file
+    ) throws IOException {
+        PartnerResponse response = partnerService.uploadPartnerImage(id, file);
         return ResponseEntity.ok(response);
     }
 }

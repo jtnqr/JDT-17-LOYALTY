@@ -483,6 +483,39 @@ The system automatically logs all critical business actions. Each row contains: 
 
 ---
 
+## RWD.1 — Reward Management
+
+Admin CMS module for managing reward catalogs and partner merchant settings.
+
+### Use Cases
+
+**UC: Create Reward**
+- Actor: CMS Admin
+- Pre-condition: Admin authenticated; partner merchant exists and is ACTIVE.
+- Normal Flow: Admin enters reward name, points cost, and merchant → system validates inputs → saves reward to database in ACTIVE status.
+
+**UC: Edit Reward**
+- Actor: CMS Admin
+- Pre-condition: Admin authenticated; reward exists.
+- Normal Flow: Admin edits reward name, points cost, or status (ACTIVE/INACTIVE) → system updates database → invalidates rewards query cache.
+
+**UC: Upload Reward Image**
+- Actor: CMS Admin
+- Pre-condition: Admin authenticated; reward exists; file size <= 2MB; type is JPEG, PNG, or WEBP.
+- Normal Flow: Admin uploads image file → system renames file using a random UUID and saves it to local volume storage (`/app/uploads/rewards/`) → saves the relative URL path (`/uploads/rewards/{uuid}.png`) to the reward database record.
+
+**UC: Upload Partner Logo**
+- Actor: CMS Admin
+- Pre-condition: Admin authenticated; partner merchant exists; file size <= 2MB; type is JPEG, PNG, or WEBP.
+- Normal Flow: Admin uploads logo file → system renames file using a random UUID and saves it to local volume storage (`/app/uploads/partners/`) → saves relative URL path (`/uploads/partners/{uuid}.png`) to the partner database record.
+
+### Business Rules
+1. Only JPEG, PNG, and WEBP formats are accepted for image uploads.
+2. Max image file size is restricted to 2MB (enforced at both application and web container configuration layers).
+3. Rewards list, partners list, and exchange rates endpoints are cached using Redis in production with a 10-minute TTL. Any write operation (create/edit/image upload) immediately invalidates the respective cache.
+
+---
+
 ## Appendix
 
 ### Exchange Rates (Final)

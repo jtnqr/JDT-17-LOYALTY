@@ -18,4 +18,5 @@ public class PartnerResponse {
     private Integer pointsPerThousandIDR;
     private Integer expiryDays;
     private String status;
+    private String logoUrl;
 }

@@ -7,12 +7,16 @@ import com.jdt17.loyalty.repository.PartnerRepository;
 import com.jdt17.loyalty.repository.PointBalanceRepository;
 import com.jdt17.loyalty.security.JWTService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,6 +31,7 @@ public class PartnerService {
     private final PointBalanceRepository pointBalanceRepository;
     private final AuditTrailService auditTrailService;
     private final JWTService jwtService;
+    private final ImageStorageService imageStorageService;
 
     private void verifyAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -50,6 +55,7 @@ public class PartnerService {
     }
 
     @Transactional
+    @CacheEvict(value = "partners", allEntries = true)
     public PartnerResponse createPartner(CreatePartnerRequest request) {
         verifyAdmin();
 
@@ -80,10 +86,12 @@ public class PartnerService {
                 .pointsPerThousandIDR(savedPartner.getPointPerThousandIdr())
                 .expiryDays(savedPartner.getExpiryDays())
                 .status(savedPartner.getStatus())
+                .logoUrl(savedPartner.getLogoUrl())
                 .build();
     }
 
     @Transactional
+    @CacheEvict(value = "partners", allEntries = true)
     public PartnerResponse updatePartner(UUID id, UpdatePartnerRequest request) {
         verifyAdmin();
 
@@ -115,6 +123,7 @@ public class PartnerService {
                 .pointsPerThousandIDR(updatedPartner.getPointPerThousandIdr())
                 .expiryDays(updatedPartner.getExpiryDays())
                 .status(updatedPartner.getStatus())
+                .logoUrl(updatedPartner.getLogoUrl())
                 .build();
     }
 
@@ -168,6 +177,7 @@ public class PartnerService {
         }
     }
 
+    @Cacheable("partners")
     public ListPartnerResponse getAllPartners() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -189,11 +199,42 @@ public class PartnerService {
                         .pointsPerThousandIDR(p.getPointPerThousandIdr())
                         .expiryDays(p.getExpiryDays())
                         .status(p.getStatus())
+                        .logoUrl(p.getLogoUrl())
                         .build())
                 .collect(Collectors.toList());
 
         return ListPartnerResponse.builder()
                 .data(partnerResponses)
+                .build();
+    }
+
+    @Transactional
+    @CacheEvict(value = "partners", allEntries = true)
+    public PartnerResponse uploadPartnerImage(UUID id, MultipartFile file) throws IOException {
+        verifyAdmin();
+
+        Partner partner = partnerRepository.findById(id)
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Partner does not exist", "PARTNER_NOT_FOUND"));
+
+        if (partner.getLogoUrl() != null) {
+            imageStorageService.delete(partner.getLogoUrl());
+        }
+
+        String logoUrl = imageStorageService.store(file, "partners");
+        partner.setLogoUrl(logoUrl);
+        Partner saved = partnerRepository.save(partner);
+
+        // Audit Trail
+        auditTrailService.logEvent("PARTNER_LOGO_UPLOADED", getActorId(), "ADMIN", "PARTNER", saved.getId(), null);
+
+        return PartnerResponse.builder()
+                .id(saved.getId())
+                .name(saved.getName())
+                .code(saved.getCode())
+                .pointsPerThousandIDR(saved.getPointPerThousandIdr())
+                .expiryDays(saved.getExpiryDays())
+                .status(saved.getStatus())
+                .logoUrl(saved.getLogoUrl())
                 .build();
     }
 }

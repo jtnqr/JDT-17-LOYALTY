@@ -29,6 +29,9 @@ public class Reward {
     @Column(nullable = false)
     private String status; // 'ACTIVE', 'INACTIVE'
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 

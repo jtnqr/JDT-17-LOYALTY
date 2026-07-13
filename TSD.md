@@ -809,7 +809,16 @@ Access: Any authenticated user (MEMBER or ADMIN)
 ```json
 {
   "data": [
-    { "id": "880e8400-...001", "partnerId": "660e8400-...001", "partnerName": "KFC Indonesia", "name": "KFC Original Recipe Chicken 1pc", "pointCost": 250, "status": "ACTIVE" }
+    {
+      "id": "880e8400-...001",
+      "partnerId": "660e8400-...001",
+      "partnerName": "KFC Indonesia",
+      "partnerCode": "KFC",
+      "name": "KFC Original Recipe Chicken 1pc",
+      "pointCost": 250,
+      "status": "ACTIVE",
+      "imageUrl": "/uploads/rewards/kfc_chicken.png"
+    }
   ],
   "total": 11
 }
@@ -857,6 +866,106 @@ Access: MEMBER only (memberId resolved from JWT sub)
 
 ---
 
+### Reward Management (Admin)
+
+#### POST /api/v1/rewards
+Access: ADMIN only
+
+**Request:**
+```json
+{
+  "name": "KFC Bucket 9 Pcs",
+  "pointCost": 900,
+  "partnerId": "660e8400-e29b-41d4-a716-446655440001"
+}
+```
+
+**Success (201):**
+```json
+{
+  "id": "880e8400-e29b-41d4-a716-446655440012",
+  "name": "KFC Bucket 9 Pcs",
+  "pointCost": 900,
+  "status": "ACTIVE",
+  "imageUrl": null,
+  "partnerCode": "KFC"
+}
+```
+
+**Errors:**
+- 404 PARTNER_NOT_FOUND
+
+---
+
+#### PUT /api/v1/rewards/{id}
+Access: ADMIN only
+
+**Request:**
+```json
+{
+  "name": "KFC Bucket 9 Pcs Special",
+  "pointCost": 950,
+  "status": "INACTIVE"
+}
+```
+
+**Success (200):**
+```json
+{
+  "id": "880e8400-e29b-41d4-a716-446655440012",
+  "name": "KFC Bucket 9 Pcs Special",
+  "pointCost": 950,
+  "status": "INACTIVE",
+  "imageUrl": null,
+  "partnerCode": "KFC"
+}
+```
+
+**Errors:**
+- 404 REWARD_NOT_FOUND
+
+---
+
+#### PUT /api/v1/rewards/{id}/image
+Access: ADMIN only
+Content-Type: multipart/form-data
+
+**Request:**
+- `file`: MultipartFile (max 2MB, JPEG/PNG/WEBP only)
+
+**Success (200):**
+```json
+{
+  "imageUrl": "/uploads/rewards/e57bc080-d128-4bc2-9653-e8bb65715201.png"
+}
+```
+
+**Errors:**
+- 404 REWARD_NOT_FOUND
+- 400 (Invalid file size / format)
+
+---
+
+#### PUT /api/v1/partners/{id}/logo
+Access: ADMIN only
+Content-Type: multipart/form-data
+
+**Request:**
+- `file`: MultipartFile (max 2MB, JPEG/PNG/WEBP only)
+
+**Success (200):**
+```json
+{
+  "logoUrl": "/uploads/partners/d58cb123-d345-42bc-8653-d8bb41235122.png"
+}
+```
+
+**Errors:**
+- 404 PARTNER_NOT_FOUND
+- 400 (Invalid file size / format)
+
+---
+
 ## Authorization Matrix
 
 | Endpoint | Public | MEMBER | ADMIN | PARTNER |
@@ -876,6 +985,10 @@ Access: MEMBER only (memberId resolved from JWT sub)
 | GET /partners | — | ✓ | ✓ | — |
 | POST /partners | — | — | ✓ | — |
 | PUT /partners/{id} | — | — | ✓ | — |
+| PUT /partners/{id}/logo | — | — | ✓ | — |
+| POST /rewards | — | — | ✓ | — |
+| PUT /rewards/{id} | — | — | ✓ | — |
+| PUT /rewards/{id}/image | — | — | ✓ | — |
 | GET /exchange-rates | — | ✓ | ✓ | — |
 | POST /exchange-rates | — | — | ✓ | — |
 
