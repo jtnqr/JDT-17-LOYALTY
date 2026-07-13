@@ -2,6 +2,8 @@
 
 import React from "react";
 import { ChevronRight, Search, Bell } from "lucide-react";
+import Avatar from "../atoms/Avatar";
+import { useAdmin } from "@/lib/hooks/useAdmin";
 
 export interface BreadcrumbItem {
   label: string;
@@ -24,6 +26,26 @@ export function AdminHeader({
   searchPlaceholder = "Search...",
   showSearch = false,
 }: AdminHeaderProps) {
+  const { admin, isLoaded, logout } = useAdmin();
+  const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node)
+      ) {
+        setIsPopoverOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <header className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-30">
       <div>
@@ -51,19 +73,49 @@ export function AdminHeader({
       </div>
 
       <div className="flex items-center gap-6">
-        {/* Search Bar in Header */}
-        {showSearch && setSearchQuery && (
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input
-              type="text"
-              placeholder={searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#F1F3F4] text-neutral-700 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none border border-transparent focus:bg-white focus:border-neutral-200 transition-colors font-medium placeholder:text-neutral-400"
-            />
-          </div>
-        )}
+        <div className="relative" ref={popoverRef}>
+          <button
+            onClick={() => setIsPopoverOpen((prev) => !prev)}
+            className="group flex items-center gap-3 cursor-pointer hover:ring-2 hover:ring-neutral-200 hover:rounded-xl p-1 transition-all focus:outline-none"
+            aria-expanded={isPopoverOpen}
+            aria-haspopup="true"
+          >
+            <div>
+              <p className="text-xs font-bold text-neutral-700">
+                {admin?.name || "Admin"}
+              </p>
+            </div>
+            <Avatar name={admin?.name || "Admin"} className="w-9 h-9" />
+          </button>
+
+          {/* User Actions Popover */}
+          {isPopoverOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200/60 rounded-2xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <button
+                onClick={() => {
+                  setIsPopoverOpen(false);
+                  logout();
+                }}
+                className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

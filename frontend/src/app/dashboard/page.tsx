@@ -30,40 +30,6 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import Avatar from "@/components/atoms/Avatar";
-
-// Mock Fallback Data (per docs/seed-data.sql & design brief)
-const MOCK_BALANCES = [
-  {
-    partnerId: "660e8400-e29b-41d4-a716-446655440001",
-    partnerName: "KFC Colonel's Club",
-    balance: 1200,
-  },
-  {
-    partnerId: "660e8400-e29b-41d4-a716-446655440002",
-    partnerName: "McDonald's MyRewards",
-    balance: 4850,
-  },
-];
-
-const MOCK_TRANSACTIONS = [
-  {
-    id: "tx-uuid-001",
-    type: "EXCHANGE_OUT",
-    partnerName: "McDonald's Purchase",
-    points: 450,
-    timeText: "2 hours ago",
-    createdAt: "2026-07-07T08:00:00Z",
-  },
-  {
-    id: "tx-uuid-002",
-    type: "REDEEM",
-    partnerName: "Free Coffee Reward",
-    points: -200,
-    timeText: "Yesterday",
-    createdAt: "2026-07-06T10:00:00Z",
-  },
-];
 
 interface PointBalance {
   partnerId: string;
@@ -114,13 +80,13 @@ export default function DashboardPage() {
     retry: 1,
   });
 
-  // 2. Fetch Recent Transactions via React Query
+  // 2. Fetch Recent Transactions via React Query (Requesting 8 items for recent list)
   const { data: transactionData, isLoading: isTrxsLoading } = useQuery({
     queryKey: ["recent-transactions", memberId],
     queryFn: async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `/api/v1/members/${memberId}/transactions?page=0&size=4`,
+        `/api/v1/members/${memberId}/transactions?page=0&size=8`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -129,6 +95,19 @@ export default function DashboardPage() {
     },
     enabled: !!memberId,
     retry: 1,
+  });
+
+  // Fetch rewards catalog for transaction detail mapping
+  const { data: rewardsData } = useQuery({
+    queryKey: ["rewards-catalog-list"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/v1/rewards", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (response.data.data || []) as any[];
+    },
+    enabled: !!memberId,
   });
 
   if (!isLoaded) {
@@ -152,12 +131,89 @@ export default function DashboardPage() {
   const estimatedValue = combinedBalance * 0.01; // $60.50 style
 
   const transactions = transactionData || [];
+  const rewardsList = rewardsData || [];
 
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 17) return "Good afternoon";
     return "Good evening";
+  };
+
+  const getTransactionDetails = (tx: any, allTxs: any[]) => {
+    const isEarn = tx.type === "EARN";
+    const isRedeem = tx.type === "REDEEM";
+    const isExchangeIn = tx.type === "EXCHANGE_IN";
+    const isExchangeOut = tx.type === "EXCHANGE_OUT";
+    const isExpired = tx.type === "EXPIRED";
+
+    let label = "Transaction";
+    let color = "text-neutral-900";
+    let sign = "";
+
+    if (isEarn) {
+      label = tx.trxAmountIDR
+        ? `Earned points Spend: Rp ${tx.trxAmountIDR.toLocaleString()}`
+        : "Earned points";
+      color = "text-emerald-600";
+      sign = "+";
+    } else if (isRedeem) {
+      // Find matching reward by pointCost and partnerName similarity
+      const matchedReward = rewardsList.find(
+        (r) =>
+          r.pointCost === Math.abs(tx.points) &&
+          (r.partnerName
+            ?.toLowerCase()
+            .includes(tx.partnerName?.toLowerCase()) ||
+            tx.partnerName
+              ?.toLowerCase()
+              .includes(r.partnerName?.toLowerCase()))
+      );
+      label = matchedReward ? `${matchedReward.name}` : "Redeemed reward";
+      color = "text-red-500";
+      sign = "-";
+    } else if (isExchangeIn) {
+      // Find corresponding EXCHANGE_OUT sibling to see where it came from
+      const related = allTxs.find(
+        (t) =>
+          t.type === "EXCHANGE_OUT" &&
+          t.id !== tx.id &&
+          Math.abs(
+            new Date(t.createdAt).getTime() - new Date(tx.createdAt).getTime()
+          ) < 5000
+      );
+      label = related ? `from ${related.partnerName}` : "Exchanged points in";
+      color = "text-emerald-600";
+      sign = "+";
+    } else if (isExchangeOut) {
+      // Find corresponding EXCHANGE_IN sibling to see where it went
+      const related = allTxs.find(
+        (t) =>
+          t.type === "EXCHANGE_IN" &&
+          t.id !== tx.id &&
+          Math.abs(
+            new Date(t.createdAt).getTime() - new Date(tx.createdAt).getTime()
+          ) < 5000
+      );
+      label = related ? `to ${related.partnerName}` : "Exchanged points out";
+      color = "text-red-500";
+      sign = "-";
+    } else if (isExpired) {
+      label = "Points expired";
+      color = "text-red-400";
+      sign = "-";
+    }
+
+    const dateText = tx.createdAt
+      ? new Date(tx.createdAt)
+          .toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+          })
+          .toUpperCase()
+      : "";
+
+    return { label, color, sign, dateText };
   };
 
   return (
@@ -229,13 +285,17 @@ export default function DashboardPage() {
                   </div>
                 ))
               ) : apiBalances.length === 0 ? (
-                <p className="text-xs text-neutral-400 italic py-4 px-2">No active wallets.</p>
+                <p className="text-xs text-neutral-400 italic py-4 px-2">
+                  No active wallets.
+                </p>
               ) : (
                 apiBalances.map((b) => {
-                  const firstChar = b.partnerName ? b.partnerName.trim().charAt(0).toUpperCase() : "P";
+                  const firstChar = b.partnerName
+                    ? b.partnerName.trim().charAt(0).toUpperCase()
+                    : "P";
                   const isKfc = b.partnerName.toLowerCase().includes("kfc");
                   const isMcd = b.partnerName.toLowerCase().includes("mcd");
-                  
+
                   let borderTop = "border-t-[#8B3D06]";
                   let iconBg = "bg-[#FCF5F1] text-[#8B3D06]";
                   if (isKfc) {
@@ -254,7 +314,12 @@ export default function DashboardPage() {
                         borderTop
                       )}
                     >
-                      <div className={cn("w-8 h-8 rounded-full flex items-center justify-center font-black text-xs mb-2 shadow-inner", iconBg)}>
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center font-black text-xs mb-2 shadow-inner",
+                          iconBg
+                        )}
+                      >
                         {firstChar}
                       </div>
                       <p className="text-[11px] font-semibold text-neutral-500 truncate">
@@ -321,7 +386,7 @@ export default function DashboardPage() {
 
           {/* Activity List */}
           <section className="px-5 mt-6 flex-grow">
-            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex-1 flex flex-col">
+            <div className="rounded-2xl p-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold text-black uppercase tracking-wider">
                   Recent Activity
@@ -334,7 +399,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              <div className="space-y-4 bg-gray-100/70 rounded-xl p-2">
+              <div className="space-y-4 bg-gray-100/70 rounded-xl p-3">
                 {isTrxsLoading
                   ? Array.from({ length: 3 }).map((_, idx) => (
                       <div
@@ -342,29 +407,39 @@ export default function DashboardPage() {
                         className="flex items-center gap-3 animate-pulse py-1"
                       />
                     ))
-                  : transactions.map((tx) => {
-                      const isEarn = tx.type === "EARN";
+                  : transactions.slice(0, 8).map((tx) => {
+                      const details = getTransactionDetails(tx, transactions);
                       return (
                         <div
                           key={tx.id}
-                          className="flex items-center justify-between gap-3 border-b border-neutral-50 pb-3 last:border-0 last:pb-0"
+                          className="flex items-center justify-between gap-3 border-b border-neutral-200/50 pb-3 last:border-0 last:pb-0"
                         >
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-bold text-neutral-900 leading-none">
-                              {tx.partnerName}
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-[13px] font-black text-neutral-900 leading-none truncate">
+                              {tx.type
+                                .toLowerCase()
+                                .split("_")
+                                .map(
+                                  (word) =>
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                )
+                                .join(" ")}
                             </span>
-                            <span className="text-[10px] text-neutral-400 mt-1">
-                              {tx.timeText || "Transaction"}
+                            <span className="text-[10px] text-neutral-500 font-semibold mt-1 truncate">
+                              {details.label}
+                            </span>
+                            <span className="text-[9px] text-neutral-400 font-bold mt-0.5">
+                              {details.dateText}
                             </span>
                           </div>
                           <span
                             className={cn(
-                              "text-sm font-black",
-                              isEarn ? "text-emerald-600" : "text-red-500"
+                              "text-xs font-black shrink-0",
+                              details.color
                             )}
                           >
-                            {isEarn ? "+" : ""}
-                            {tx.points} pts
+                            {details.sign}
+                            {Math.abs(tx.points).toLocaleString()} pts
                           </span>
                         </div>
                       );
@@ -472,15 +547,27 @@ export default function DashboardPage() {
                 Your Point Balances
               </h2>
               {apiBalances.length === 0 ? (
-                <p className="text-xs text-neutral-400 italic px-1">No active partner balances found.</p>
+                <p className="text-xs text-neutral-400 italic px-1">
+                  No active partner balances found.
+                </p>
               ) : (
                 apiBalances.map((b) => (
                   <BalanceCardDesktop
                     key={b.partnerId}
                     partnerName={b.partnerName}
                     balance={b.balance}
-                    badgeText={b.partnerName.toLowerCase().includes("kfc") ? "EARNING" : "REDEEM NOW"}
-                    partnerCode={b.partnerName.toLowerCase().includes("kfc") ? "KFC" : b.partnerName.toLowerCase().includes("mcd") ? "MCD" : "GENERIC"}
+                    badgeText={
+                      b.partnerName.toLowerCase().includes("kfc")
+                        ? "EARNING"
+                        : "REDEEM NOW"
+                    }
+                    partnerCode={
+                      b.partnerName.toLowerCase().includes("kfc")
+                        ? "KFC"
+                        : b.partnerName.toLowerCase().includes("mcd")
+                        ? "MCD"
+                        : "GENERIC"
+                    }
                   />
                 ))
               )}
@@ -488,7 +575,7 @@ export default function DashboardPage() {
 
             {/* Column 3: Recent Activity (R) */}
             <div className="space-y-6">
-              <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-[360px]">
+              <section className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
                     <h3 className="text-sm font-bold text-neutral-900">
@@ -503,15 +590,22 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {transactions.slice(0, 4).map((tx) => {
-                      const isEarn = tx.type === "EARN";
+                    {transactions.slice(0, 8).map((tx) => {
+                      const details = getTransactionDetails(tx, transactions);
+                      const isEarn =
+                        tx.type === "EARN" || tx.type === "EXCHANGE_IN";
                       return (
                         <div
                           key={tx.id}
-                          className="flex items-center justify-between gap-3"
+                          className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 last:border-0 last:pb-0"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-600 flex items-center justify-center shrink-0">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div
+                              className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner",
+                                isEarn ? "bg-emerald-50" : "bg-red-50"
+                              )}
+                            >
                               {isEarn ? (
                                 <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
                               ) : (
@@ -520,21 +614,32 @@ export default function DashboardPage() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
-                                {tx.partnerName}
+                                {tx.type
+                                  .toLowerCase()
+                                  .split("_")
+                                  .map(
+                                    (word) =>
+                                      word.charAt(0).toUpperCase() +
+                                      word.slice(1)
+                                  )
+                                  .join(" ")}
                               </p>
-                              <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 block truncate">
-                                {tx.timeText || "Transaction"}
+                              <span className="text-[10px] text-neutral-500 font-semibold mt-0.5 block truncate">
+                                {details.label}
+                              </span>
+                              <span className="text-[9px] text-neutral-400 font-bold block mt-0.5">
+                                {details.dateText}
                               </span>
                             </div>
                           </div>
                           <span
                             className={cn(
-                              "text-xs font-extrabold shrink-0",
-                              isEarn ? "text-emerald-600" : "text-red-500"
+                              "text-xs font-black shrink-0",
+                              details.color
                             )}
                           >
-                            {isEarn ? "+" : ""}
-                            {tx.points.toLocaleString()} pts
+                            {details.sign}
+                            {Math.abs(tx.points).toLocaleString()} pts
                           </span>
                         </div>
                       );

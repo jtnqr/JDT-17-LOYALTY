@@ -88,7 +88,7 @@ export function DesktopNavbar({
         <div className="relative" ref={popoverRef}>
           <button
             onClick={() => setIsPopoverOpen((prev) => !prev)}
-            className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition-all focus:outline-none"
+            className="group flex items-center gap-3 hover:ring-2 cursor-pointer hover:ring-neutral-200 hover:rounded-xl p-1 transition-all focus:outline-none"
             aria-expanded={isPopoverOpen}
             aria-haspopup="true"
           >
@@ -103,14 +103,6 @@ export function DesktopNavbar({
           {/* User Actions Popover */}
           {isPopoverOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-neutral-200/60 rounded-2xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              {/* <div className="px-4 py-2 border-b border-neutral-100 mb-1"> */}
-              {/* <p className="text-xs font-bold text-neutral-800 truncate">
-                  {userName}
-                </p>
-                <p className="text-[10px] text-neutral-400 font-semibold truncate mt-0.5">
-                  {userTier}
-                </p> */}
-              {/* </div> */}
               {onLogout && (
                 <button
                   onClick={() => {

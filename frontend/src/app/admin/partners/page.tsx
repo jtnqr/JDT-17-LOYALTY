@@ -228,14 +228,15 @@ export default function AdminPartnersPage() {
         {/* Content Body */}
         <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="space-y-1">
-              <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
-                Merchants & Exchange Configurations
-              </h1>
-              <p className="text-xs font-semibold text-neutral-400">
-                Manage points accumulation rates, expiry periods, and
-                cross-merchant point exchange rates for active loyalty partners.
-              </p>
+            <div className="relative w-64">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search partners..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
+              />
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}

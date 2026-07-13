@@ -122,21 +122,6 @@ export function MemberSidebar({
             ))}
           </nav>
         </div>
-
-        {/* Member Profile Bottom section */}
-        <div className="p-6 border-t border-neutral-200/80 bg-white">
-          <div className="flex items-center gap-3">
-            <Avatar name={userName} className="w-10 h-10 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-neutral-900 leading-none truncate">
-                {userName}
-              </p>
-              <p className="text-[10px] text-neutral-400 font-semibold mt-1 truncate">
-                {userTier}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </aside>
   );

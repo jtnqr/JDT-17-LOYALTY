@@ -520,7 +520,7 @@ export default function HistoryPage() {
                           <td className="px-6 py-4.5">
                             <span
                               className={cn(
-                                "inline-block text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border",
+                                "whitespace-nowrap inline-block text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border",
                                 isEarn
                                   ? "bg-emerald-50 border-emerald-200/50 text-emerald-700"
                                   : tx.type === "REDEEM"

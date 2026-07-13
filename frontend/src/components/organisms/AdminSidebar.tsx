@@ -83,12 +83,6 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
       icon: <Building2 className="w-5 h-5" />,
     },
     {
-      tab: "transactions",
-      href: "/admin/transactions",
-      label: "Transactions",
-      icon: <FileSpreadsheet className="w-5 h-5" />,
-    },
-    {
       tab: "exchange",
       href: "/admin/exchange",
       label: "Exchange",
@@ -125,24 +119,6 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
             />
           ))}
         </nav>
-      </div>
-
-      {/* Admin User Profile Bottom section */}
-      <div className="p-6 border-t border-neutral-200/80 bg-white">
-        <div className="flex items-center gap-3">
-          {/* AD Solid Badge */}
-          <div className="w-10 h-10 rounded-full bg-[#8B3D06] flex items-center justify-center font-extrabold text-white text-sm select-none shadow-sm shadow-[#8B3D06]/15 shrink-0">
-            AD
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-neutral-900 leading-none truncate">
-              Admin User
-            </p>
-            <p className="text-[10px] text-neutral-400 font-semibold mt-1 truncate">
-              Super Administrator
-            </p>
-          </div>
-        </div>
       </div>
     </aside>
   );
