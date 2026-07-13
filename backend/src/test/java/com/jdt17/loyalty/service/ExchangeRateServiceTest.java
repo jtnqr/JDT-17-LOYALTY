@@ -39,7 +39,7 @@ class ExchangeRateServiceTest {
     private AuditTrailService auditTrailService;
 
     @InjectMocks
-    private ExchangeRateServiceImpl exchangeRateService;
+    private ExchangeRateService exchangeRateService;
 
     private Partner partnerA;
     private Partner partnerB;
