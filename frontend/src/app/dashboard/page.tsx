@@ -307,10 +307,14 @@ export default function DashboardPage() {
                   }
 
                   return (
-                    <div
+                    <Link
                       key={b.partnerId}
+                      href="/rewards"
+                      onClick={() => {
+                        sessionStorage.setItem("selected_partner_filter", b.partnerId);
+                      }}
                       className={cn(
-                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start",
+                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start active:scale-98 transition-all hover:shadow-md cursor-pointer",
                         borderTop
                       )}
                     >
@@ -331,7 +335,7 @@ export default function DashboardPage() {
                           pts
                         </span>
                       </p>
-                    </div>
+                    </Link>
                   );
                 })
               )}
@@ -554,13 +558,10 @@ export default function DashboardPage() {
                 apiBalances.map((b) => (
                   <BalanceCardDesktop
                     key={b.partnerId}
+                    partnerId={b.partnerId}
                     partnerName={b.partnerName}
                     balance={b.balance}
-                    badgeText={
-                      b.partnerName.toLowerCase().includes("kfc")
-                        ? "EARNING"
-                        : "REDEEM NOW"
-                    }
+                    badgeText="REDEEM NOW"
                     partnerCode={
                       b.partnerName.toLowerCase().includes("kfc")
                         ? "KFC"

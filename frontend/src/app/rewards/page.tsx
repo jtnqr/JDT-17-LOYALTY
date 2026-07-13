@@ -96,6 +96,21 @@ export default function MemberRewardsPage() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
   });
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedPartnerId = sessionStorage.getItem("selected_partner_filter");
+      if (storedPartnerId && apiPartners) {
+        const foundPartner = apiPartners.find((p: any) => p.id === storedPartnerId);
+        if (foundPartner) {
+          setActivePartnerFilter(foundPartner.code);
+        } else {
+          setActivePartnerFilter(storedPartnerId);
+        }
+        sessionStorage.removeItem("selected_partner_filter");
+      }
+    }
+  }, [apiPartners]);
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">

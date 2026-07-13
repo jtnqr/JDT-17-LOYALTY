@@ -10,6 +10,7 @@ interface BalanceCardDesktopProps {
   balance: number;
   badgeText: string;
   partnerCode?: string;
+  partnerId?: string;
 }
 
 export function BalanceCardDesktop({
@@ -17,6 +18,7 @@ export function BalanceCardDesktop({
   balance,
   badgeText,
   partnerCode,
+  partnerId,
 }: BalanceCardDesktopProps) {
   // Normalize partner code
   const code =
@@ -96,49 +98,67 @@ export function BalanceCardDesktop({
   const activeTheme = theme[code as keyof typeof theme] || theme.GENERIC;
 
   return (
-    <div
-      className={cn(
-        "bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-44 transition-all hover:shadow-md border-t-4",
-        activeTheme.borderTop
-      )}
+    <Link
+      href="/rewards"
+      onClick={() => {
+        if (partnerId) {
+          sessionStorage.setItem("selected_partner_filter", partnerId);
+        }
+      }}
+      className="block"
     >
-      {/* Top row: Icon and Badge */}
-      <div className="flex items-center justify-between">
-        {/* Brand Icon Container */}
-        <div
-          className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shadow-inner",
-            activeTheme.iconBg
-          )}
-        >
-          {activeTheme.icon}
+      <div
+        className={cn(
+          "bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between h-44 transition-all hover:shadow-md hover:-translate-y-0.5 border-t-4 cursor-pointer",
+          activeTheme.borderTop
+        )}
+      >
+        {/* Top row */}
+        <div className="flex items-center justify-between">
+          <div
+            className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shadow-inner",
+              activeTheme.iconBg
+            )}
+          >
+            {activeTheme.icon}
+          </div>
+
+          <span
+            className={cn(
+              "text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm",
+              activeTheme.badge
+            )}
+          >
+            {badgeText || "Redeem Now"}
+          </span>
         </div>
 
-        {/* Status Pill Badge */}
-        <span
-          className={cn(
-            "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide",
-            activeTheme.badge
-          )}
-        >
-          Redeem Now
-        </span>
-      </div>
+        {/* Middle */}
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-neutral-500">
+            {partnerName}
+          </p>
 
-      {/* Middle: Brand Title & Balance */}
-      <div className="mt-3">
-        <p className="text-xs font-semibold text-neutral-500">{partnerName}</p>
-        <p className="text-2xl font-black text-neutral-900 mt-0.5 tracking-tight">
-          {balance.toLocaleString()}{" "}
-          <span className="text-xs font-bold text-neutral-400">pts</span>
-        </p>
-      </div>
+          <p className="text-2xl font-black text-neutral-900 mt-0.5 tracking-tight">
+            {balance.toLocaleString()}{" "}
+            <span className="text-xs font-bold text-neutral-400">pts</span>
+          </p>
+        </div>
 
-      {/* Bottom row: Conditional details */}
-      <div className="border-t border-neutral-100 pt-3 flex items-center justify-between">
-        {activeTheme.bottom}
+        {/* Bottom */}
+        <div className="border-t border-neutral-100 pt-3 flex items-center justify-between">
+          <div className="flex items-center gap-1 text-neutral-400">
+            <Info className="w-4 h-4" />
+          </div>
+
+          <div className="text-xs font-extrabold text-[#8B3D06] flex items-center gap-1 group">
+            View Details
+            <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
