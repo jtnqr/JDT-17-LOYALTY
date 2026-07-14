@@ -653,7 +653,7 @@ class PartnerServiceTest {
      }
 
     @Test
-    void testUploadPartnerImage_Success() throws IOException {
+    void testUploadPartnerImage_Success_WithExistingLogo() throws IOException {
         UUID partnerId = UUID.randomUUID();
         MockMultipartFile file = new MockMultipartFile("image", "logo.png", "image/png", new byte[]{1, 2, 3});
 
@@ -681,6 +681,40 @@ class PartnerServiceTest {
         assertNotNull(response);
         assertEquals("/uploads/partners/new.png", response.getLogoUrl());
         verify(imageStorageService).delete("/uploads/partners/old.png");
+        verify(auditTrailService).logEvent(eq("PARTNER_LOGO_UPLOADED"), any(), eq("ADMIN"), eq("PARTNER"), eq(partnerId), any());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUploadPartnerImage_Success_NoExistingLogo() throws IOException {
+        UUID partnerId = UUID.randomUUID();
+        MockMultipartFile file = new MockMultipartFile("image", "logo.png", "image/png", new byte[]{1, 2, 3});
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(UUID.randomUUID().toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("KFC")
+                .code("KFC")
+                .logoUrl(null)
+                .status("ACTIVE")
+                .build();
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.of(partner));
+        when(imageStorageService.store(file, "partners")).thenReturn("/uploads/partners/new.png");
+        when(partnerRepository.save(any(Partner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PartnerResponse response = partnerService.uploadPartnerImage(partnerId, file);
+
+        assertNotNull(response);
+        assertEquals("/uploads/partners/new.png", response.getLogoUrl());
+        verify(imageStorageService, never()).delete(anyString());
         verify(auditTrailService).logEvent(eq("PARTNER_LOGO_UPLOADED"), any(), eq("ADMIN"), eq("PARTNER"), eq(partnerId), any());
 
         SecurityContextHolder.clearContext();
