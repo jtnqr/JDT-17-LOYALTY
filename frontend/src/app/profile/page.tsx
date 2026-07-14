@@ -29,6 +29,7 @@ export default function ProfilePage() {
   const POLLING_INTERVAL =
     Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
 
+
   // Fetch Member Details via React Query
   const { data: memberDetail } = useQuery({
     queryKey: ["memberDetail", memberId],
