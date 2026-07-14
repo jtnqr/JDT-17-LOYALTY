@@ -3,11 +3,19 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useMember } from "@/lib/hooks/useMember";
+import { useRouter } from "next/navigation";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import axios from "axios";
-import { LogOut, ChevronRight, User, Building2, RefreshCw } from "lucide-react";
+import {
+  LogOut,
+  ChevronRight,
+  User,
+  Building2,
+  RefreshCw,
+  ArrowRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -16,6 +24,21 @@ import Avatar from "@/components/atoms/Avatar";
 
 export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
+  const router = useRouter();
+
+  // Fetch Member Details via React Query
+  const { data: memberDetail } = useQuery({
+    queryKey: ["memberDetail", memberId],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`/api/v1/members/${memberId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    enabled: !!memberId,
+    retry: 1,
+  });
 
   // Fetch Member Balances via React Query
   const { data: balanceData } = useQuery({
@@ -46,21 +69,28 @@ export default function ProfilePage() {
     ? balanceData.reduce((sum, item) => sum + item.balance, 0)
     : 0;
 
+  const displayMember = memberDetail || member;
+
+  const handleViewRewards = (partnerId: string) => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("selected_partner_filter", partnerId);
+    }
+    router.push("/rewards");
+  };
+
   return (
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* 1. DESKTOP SIDEBAR NAVIGATION */}
       <MemberSidebar
         className="hidden md:flex"
         activeTab="profile"
-        userName={member?.name || "Budi Santoso"}
-        userTier="Gold Member"
+        userName={displayMember?.name || "Budi Santoso"}
       />
 
       {/* 2. MAIN LAYOUT WRAPPER */}
       <div className="flex-grow flex flex-col min-w-0">
         <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          userTier="Gold Member"
+          userName={displayMember?.name || "Budi Santoso"}
           onLogout={logout}
           showBrand={false}
           breadcrumbs={[{ label: "Profile" }]}
@@ -73,24 +103,39 @@ export default function ProfilePage() {
               MOBILE VIEW (Visible on Mobile, Hidden on Desktop)
               ======================================================== */}
           <div className="md:hidden max-w-md mx-auto px-5 py-6 pb-24">
-            {/* Top Bar Header */}
-            {/* <div className="flex items-center justify-center gap-3.5 mb-6 px-1">
-              <h2 className="text-xl font-black text-[#8B3D06]">Profile</h2>
-            </div> */}
-
             {/* Profile Content Container */}
             <div className="bg-white rounded-3xl p-1 space-y-6">
               {/* Large Centered Avatar Area */}
               <div className="flex flex-col items-center">
                 <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-neutral-200">
-                  <Avatar name={member?.name} className="w-24 h-24 text-3xl" />
+                  <Avatar
+                    name={displayMember?.name}
+                    className="w-24 h-24 text-3xl"
+                  />
                 </div>
                 <h3 className="text-lg font-black text-neutral-900 mt-4 leading-none">
-                  {member?.name || "Budi Santoso"}
+                  {displayMember?.name || "Budi Santoso"}
                 </h3>
-                <p className="text-xs font-semibold text-neutral-400 mt-2">
-                  Member since July 2026
-                </p>
+
+                {/* Mobile Info Badges */}
+                <div className="flex flex-wrap justify-center gap-2 mt-3">
+                  <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
+                    {displayMember?.email || "budi.santoso@example.com"}
+                  </span>
+                  <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full">
+                    {displayMember?.phone || "081234567890"}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold px-2.5 py-1 rounded-full",
+                      displayMember?.status === "ACTIVE"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-red-50 text-red-700"
+                    )}
+                  >
+                    {displayMember?.status || "ACTIVE"}
+                  </span>
+                </div>
               </div>
 
               {/* Available Points Card */}
@@ -112,25 +157,36 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={bal.partnerId}
-                      className="bg-[#FCF5F1] border border-[#8B3D06]/5 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all hover:bg-[#FBECE3]"
+                      className="bg-[#FCF5F1] border border-[#8B3D06]/5 rounded-2xl p-4 flex items-center gap-4 hover:bg-[#FBECE3]"
                     >
-                      <div className="w-12 h-12 rounded-2xl bg-[#8B3D06] text-white flex items-center justify-center shrink-0 shadow-sm shadow-[#8B3D06]/20 font-black text-lg select-none">
-                        {firstChar}
+                      <div
+                        onClick={() => handleViewRewards(bal.partnerId)}
+                        className="flex flex-1 min-w-0 items-center gap-4 cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-[#8B3D06] text-white flex items-center justify-center shrink-0">
+                          {firstChar}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-sm font-black text-neutral-800">
+                            {bal.partnerName}
+                          </p>
+
+                          <p className="text-xs text-neutral-500 font-semibold mt-1.5">
+                            Balance:
+                            <span className="font-extrabold text-[#8B3D06] ml-1">
+                              {bal.balance.toLocaleString()}
+                            </span>{" "}
+                            pts
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-neutral-800 leading-none truncate">
-                          {bal.partnerName}
-                        </p>
-                        <p className="text-xs text-neutral-500 font-semibold mt-1.5">
-                          Balance:{" "}
-                          <span className="font-extrabold text-[#8B3D06]">
-                            {bal.balance.toLocaleString()}
-                          </span>{" "}
-                          pts
-                        </p>
-                      </div>
-                      <Link href="/exchange">
-                        <RefreshCw className="w-4 h-4 text-neutral-400/80" />
+
+                      <Link
+                        href="/exchange"
+                        className="shrink-0 p-2 hover:bg-[#8B3D06]/10 rounded-full"
+                      >
+                        <ArrowRight className="w-4 h-4 text-[#8B3D06]/80" />
                       </Link>
                     </div>
                   );
@@ -159,10 +215,13 @@ export default function ProfilePage() {
               {/* Column 1: Profile Summary Card */}
               <div className="bg-white rounded-3xl border border-neutral-200/50 p-6 flex flex-col items-center text-center shadow-xs">
                 <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg shadow-neutral-200">
-                  <Avatar name={member?.name} className="w-28 h-28 text-4xl" />
+                  <Avatar
+                    name={displayMember?.name}
+                    className="w-28 h-28 text-4xl"
+                  />
                 </div>
                 <h3 className="text-lg font-black text-neutral-900 mt-4 leading-none">
-                  {member?.name || "Budi Santoso"}
+                  {displayMember?.name || "Budi Santoso"}
                 </h3>
 
                 {/* Account Details */}
@@ -172,7 +231,7 @@ export default function ProfilePage() {
                       Email Address
                     </span>
                     <span className="font-semibold text-neutral-700 mt-1 block">
-                      {member?.email || "budi.santoso@example.com"}
+                      {displayMember?.email || "budi.santoso@example.com"}
                     </span>
                   </div>
                   <div>
@@ -180,15 +239,39 @@ export default function ProfilePage() {
                       Phone Number
                     </span>
                     <span className="font-semibold text-neutral-700 mt-1 block">
-                      {member?.phone || "081234567890"}
+                      {displayMember?.phone || "081234567890"}
                     </span>
                   </div>
                   <div>
                     <span className="font-bold text-neutral-400 uppercase tracking-wider block text-[10px]">
-                      Registered Since
+                      Status
                     </span>
-                    <span className="font-semibold text-neutral-500 mt-1 block">
-                      July 2026
+                    <span
+                      className={cn(
+                        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold mt-1",
+                        displayMember?.status === "ACTIVE"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-red-50 text-red-700 border border-red-200"
+                      )}
+                    >
+                      {displayMember?.status || "ACTIVE"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-neutral-400 uppercase tracking-wider block text-[10px]">
+                      Member Since
+                    </span>
+                    <span className="font-semibold text-neutral-700 mt-1 block">
+                      {displayMember?.createdAt
+                        ? new Date(displayMember.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            }
+                          )
+                        : "July 3, 2026"}
                     </span>
                   </div>
                 </div>
@@ -243,7 +326,7 @@ export default function ProfilePage() {
                       return (
                         <div
                           key={bal.partnerId}
-                          className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-xs flex flex-col justify-between h-40 transition-all hover:shadow-md border-t-4 border-t-[#8B3D06]"
+                          className="group bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-xs flex flex-col justify-between h-40 transition-all hover:shadow-md border-t-4 border-t-[#8B3D06]"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -256,9 +339,6 @@ export default function ProfilePage() {
                                 </p>
                               </div>
                             </div>
-                            <span className="text-[9px] font-bold px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-full border border-neutral-200/30">
-                              ACTIVE
-                            </span>
                           </div>
 
                           <div className="mt-4">
@@ -271,12 +351,12 @@ export default function ProfilePage() {
                           </div>
 
                           <div className="border-t border-neutral-100 pt-3 flex items-center justify-between text-[10px] text-neutral-500 font-bold">
-                            <Link
-                              href="/rewards"
-                              className="text-[#8B3D06] hover:underline"
+                            <button
+                              onClick={() => handleViewRewards(bal.partnerId)}
+                              className="group-hover:underline underline-offset-2 text-[#8B3D06] hover:underline cursor-pointer bg-transparent border-none p-0 text-left font-bold"
                             >
                               View Rewards
-                            </Link>
+                            </button>
                           </div>
                         </div>
                       );

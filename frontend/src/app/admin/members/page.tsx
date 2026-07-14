@@ -25,42 +25,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FormField } from "@/components/molecules/FormField";
 
-// Mock Fallback Data matching Flyway seed migrations and spec requirements
-const MOCK_MEMBERS = [
-  {
-    id: "550e8400-e29b-41d4-a716-446655440001",
-    name: "Budi Santoso",
-    email: "budi.santoso@example.com",
-    phone: "081234567890",
-    status: "ACTIVE",
-    createdAt: "2026-07-02T10:00:00Z",
-  },
-  {
-    id: "550e8400-e29b-41d4-a716-446655440002",
-    name: "Jane Doe",
-    email: "jane.doe@example.com",
-    phone: "081298765432",
-    status: "ACTIVE",
-    createdAt: "2026-07-03T11:15:00Z",
-  },
-  {
-    id: "550e8400-e29b-41d4-a716-446655440003",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    phone: "085612345678",
-    status: "INACTIVE",
-    createdAt: "2026-07-04T09:30:00Z",
-  },
-  {
-    id: "550e8400-e29b-41d4-a716-446655440004",
-    name: "Alice Cooper",
-    email: "alice.c@example.com",
-    phone: "081388882222",
-    status: "ACTIVE",
-    createdAt: "2026-07-05T16:45:00Z",
-  },
-];
-
 interface Member {
   id: string;
   name: string;
@@ -284,9 +248,9 @@ export default function AdminMembersPage() {
     );
   }
 
-  const rawMembers = (memberData?.data as Member[]) || MOCK_MEMBERS;
+  const rawMembers = (memberData?.data as Member[]) || [];
 
-  // Client-side search filtering (useful when API is offline / mock fallback)
+  // Client-side search filtering
   const filteredMembers = rawMembers.filter((m) => {
     const matchesSearch =
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -7,7 +7,6 @@ import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
 import { ChevronRight, ShieldAlert, Search, Clock, Bell } from "lucide-react";
-import Link from "next/link";
 
 import { Member } from "@/types";
 
