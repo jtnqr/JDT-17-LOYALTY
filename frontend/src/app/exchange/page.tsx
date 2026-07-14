@@ -29,8 +29,7 @@ export default function ExchangePointsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const POLLING_INTERVAL =
-    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
 
   // Fetch all active partners from API
   const { data: apiPartners } = useQuery({
@@ -92,12 +91,7 @@ export default function ExchangePointsPage() {
 
   // Ensure dropdown selection values are never the same
   useEffect(() => {
-    if (
-      fromPartner &&
-      toPartner &&
-      fromPartner.id === toPartner.id &&
-      partners.length >= 2
-    ) {
+    if (fromPartner && toPartner && fromPartner.id === toPartner.id && partners.length >= 2) {
       const other = partners.find((p) => p.id !== fromPartner.id);
       if (other) {
         setToPartner(other);
