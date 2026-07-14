@@ -50,3 +50,10 @@
 - Admin CMS member list UI 🟢
 - History page UI (Filter & groups transaction history) 🟢
 - Integration: E2E smoke tests and actual API wiring 🟢
+
+## 6. Reward Management & Caching
+
+- Admin Rewards CRUD endpoints & Management UI 🟢
+- Image validation & local uploads (Rewards & Partner logos) 🟢
+- Redis caching for rewards listing with eviction on changes 🟢
+
