@@ -36,6 +36,9 @@ export default function MemberRewardsPage() {
   const [redeemSuccess, setRedeemSuccess] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
 
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+
   // Fetch real reward catalog from backend
   const { data: rewardsData, refetch: refetchRewards } = useQuery({
     queryKey: ["rewards"],
@@ -56,6 +59,9 @@ export default function MemberRewardsPage() {
         };
       });
     },
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch balances for calculating points availability (Budi has KFC: 350 pts, McD: 120 pts)
@@ -74,6 +80,9 @@ export default function MemberRewardsPage() {
     },
     enabled: !!memberId,
     retry: 1,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch active partner list from API
@@ -88,6 +97,9 @@ export default function MemberRewardsPage() {
     },
     retry: 1,
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   React.useEffect(() => {
@@ -400,29 +412,30 @@ export default function MemberRewardsPage() {
             {/* Right Sidebar Category filters */}
             <div className="space-y-2">
               {activePartnerFilter === "ALL" ? (
-                <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm text-center">
-                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
-                    My Points
+                <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm h-[135px] flex flex-col justify-between text-center select-none">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2 leading-none shrink-0">
+                    My Balance
                   </h3>
-                  <div className="py-4 space-y-2">
-                    <div className="w-10 h-10 bg-neutral-50 rounded-full border border-neutral-100 flex items-center justify-center mx-auto text-neutral-400">
+                  <div className="flex items-center gap-3 py-1 flex-grow justify-center">
+                    <div className="w-10 h-10 bg-neutral-50 rounded-full border border-neutral-100 flex items-center justify-center shrink-0 text-neutral-400">
                       <Coins className="w-5 h-5" />
                     </div>
-                    <p className="text-[10px] font-semibold text-neutral-500 leading-snug px-2">
-                      Please select a partner filter to see your points balance.
+                    <p className="text-[10px] font-semibold text-neutral-500 leading-snug text-left max-w-[130px]">
+                      Select a partner filter to see your points.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-2">
-                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
+                <div className="items-center bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm h-[135px] flex flex-col justify-between select-none">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2 leading-none shrink-0">
                     My Balance
                   </h3>
-                  <div className="py-1">
-                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                  <div className="flex flex-1 flex-col items-center justify-center">
+                    <p className="w-full text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                       {selectedPartnerName}
                     </p>
-                    <p className="text-3xl font-black text-neutral-900 mt-1 tracking-tight flex items-baseline gap-1.5">
+
+                    <p className="flex items-baseline justify-center gap-1.5 text-center text-3xl font-black text-neutral-900 mt-1">
                       {(selectedPartnerBalance ?? 0).toLocaleString()}
                       <span className="text-xs font-bold text-neutral-500">
                         pts
@@ -495,7 +508,7 @@ export default function MemberRewardsPage() {
                 onClick={closeRedeemModal}
                 className="text-neutral-400 hover:text-neutral-600 p-1"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 cursor-pointer" />
               </button>
             </div>
 
@@ -534,7 +547,7 @@ export default function MemberRewardsPage() {
               <div className="space-y-4">
                 {/* Reward Summary */}
                 <div className="flex gap-4">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-neutral-50 shrink-0 border border-neutral-100">
+                  <div className="w-28 h-28 rounded-xl overflow-hidden bg-neutral-50 shrink-0 border border-neutral-100">
                     <img
                       src={selectedReward.imageUrl}
                       alt={selectedReward.name}

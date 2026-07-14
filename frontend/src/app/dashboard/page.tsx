@@ -50,6 +50,9 @@ interface Transaction {
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
 
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+
   // 1. Fetch Balances via React Query
   const { data: balanceData, isLoading: isBalancesLoading } = useQuery({
     queryKey: ["balances", memberId],
@@ -62,6 +65,9 @@ export default function DashboardPage() {
     },
     enabled: !!memberId,
     retry: 1,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   // 2. Fetch Recent Transactions via React Query (Requesting 8 items for recent list)
@@ -79,7 +85,9 @@ export default function DashboardPage() {
     },
     enabled: !!memberId,
     retry: 1,
-    refetchInterval: 5000,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch rewards catalog for transaction detail mapping
@@ -93,6 +101,9 @@ export default function DashboardPage() {
       return (response.data.data || []) as any[];
     },
     enabled: !!memberId,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   if (!isLoaded) {
