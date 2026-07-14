@@ -66,20 +66,17 @@ cp .env.example .env
 # Edit .env with:
 #   - Strong POSTGRES_PASSWORD
 #   - JWT_SECRET (generate with: openssl rand -hex 64)
-#   - Partner API keys (see seed-data.sql)
+#   - Partner API keys (e.g. kfc_api_key_2026_secure_demo_only)
 
 chmod 600 .env
 
 # 3. Start services
 docker-compose up -d
 
-# 4. Verify migrations
+# 4. Verify migrations (Flyway auto-seeds the DB)
 docker-compose logs backend | grep Flyway
 
-# 5. Load seed data
-docker-compose exec db psql -U loyalty -d jdt17_loyalty -f /docker-entrypoint-initdb.d/seed-data.sql
-
-# 6. Access services
+# 5. Access services
 # Backend API: http://localhost:8080/api/v1
 # Frontend: http://localhost:3000
 # PostgreSQL: localhost:5432
@@ -327,8 +324,6 @@ Before deploying to production:
 ├── README.md                  # This file
 ├── .env.example               # Environment variables template
 ├── docker-compose.yml         # Service orchestration
-├── docs/
-│   └── seed-data.sql          # Demo data SQL
 ├── .hermes/
 │   └── plans/                 # Implementation roadmap
 ├── activity.diagram.md        # Use case flowcharts

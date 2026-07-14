@@ -1318,13 +1318,12 @@ public class PointExpiryScheduler {
 
 | No. | File | Description |
 |-----|------|-------------|
-| 1 | docs/seed-data.sql | Demo seed: 1 admin, 2 partners, 11 rewards, 3 members, transactions, audit entries |
-| 2 | erd.md | Entity Relationship Diagram |
-| 3 | FSD.md | Functional Specification Document |
-| 4 | TSD.md | This document |
-| 5 | .env.example | Environment variables template |
-| 6 | docker-compose.yml | Docker Compose stack |
-| 7 | AGENTS.md | AI agent development guidelines |
+| 1 | erd.md | Entity Relationship Diagram |
+| 2 | FSD.md | Functional Specification Document |
+| 3 | TSD.md | This document |
+| 4 | .env.example | Environment variables template |
+| 5 | docker-compose.yml | Docker Compose stack |
+| 6 | AGENTS.md | AI agent development guidelines |
 
 ### Swagger
 
