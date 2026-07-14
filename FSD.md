@@ -1,7 +1,7 @@
 # Functional Specification Document (FSD)
 # PISTOS – Loyalty App
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Created By:** Verry Kurniawan
 **Created Date:** 03/07/2026
 **Project:** PISTOS (Points Integration System for Transaction-Originated Services)
@@ -13,6 +13,7 @@
 | Version | Amendment | Updated By | Date |
 |---------|-----------|------------|------|
 | 1.0.0 | Initial Draft | Verry Kurniawan | 03/07/2026 |
+| 1.1.0 | Added Reward Management module specs & rules | Julius | 14/07/2026 |
 
 ---
 

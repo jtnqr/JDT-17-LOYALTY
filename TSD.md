@@ -2,8 +2,8 @@
 # PISTOS – Loyalty App
 
 **Author:** Julius (JDT-17 Apprentice)
-**Version:** 1.2
-**Last Update:** 08/Jul/2026
+**Version:** 1.3
+**Last Update:** 14/Jul/2026
 **Project:** PISTOS (Points Integration System for Transaction-Originated Services)
 
 ---
@@ -15,6 +15,7 @@
 | 1.0 | 03/Jul/2026 | Julius | Initial document |
 | 1.1 | 07/Jul/2026 | Julius | Corrected login request schema; fixed McD→KFC rate to 0.9; moved Point Exchange to member-scoped POST /api/v1/exchange; corrected metadata |
 | 1.2 | 08/Jul/2026 | Julius | memberId resolved from JWT in /redeem; phone UNIQUE + V6 migration; register response aligned to login shape; audit trail documented as DB-only; exchange-rate REST endpoints; reward catalog scope note; CORS config; PUT /partners/{id} explicit fields; Actuator note |
+| 1.3 | 14/Jul/2026 | Julius | Added Admin Reward CRUD, Image upload endpoints, and Redis caching specifications |
 
 ---
 
