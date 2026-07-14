@@ -26,7 +26,6 @@ import Link from "next/link";
 export default function MemberRewardsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
 
-
   const [searchQuery, setSearchQuery] = useState("");
   const [activePartnerFilter, setActivePartnerFilter] = useState("ALL");
   const [showPointsBanner, setShowPointsBanner] = useState(true);
@@ -107,6 +106,21 @@ export default function MemberRewardsPage() {
       }
     }
   }, [apiPartners]);
+
+  const selectedPartnerBalance = React.useMemo(() => {
+    if (!balanceData || !apiPartners || activePartnerFilter === "ALL")
+      return null;
+    const partnerObj = apiPartners.find((p) => p.code === activePartnerFilter);
+    if (!partnerObj) return 0;
+    const found = balanceData.find((b) => b.partnerId === partnerObj.id);
+    return found ? found.balance : 0;
+  }, [balanceData, apiPartners, activePartnerFilter]);
+
+  const selectedPartnerName = React.useMemo(() => {
+    if (!apiPartners || activePartnerFilter === "ALL") return "";
+    const partnerObj = apiPartners.find((p) => p.code === activePartnerFilter);
+    return partnerObj ? partnerObj.name : "";
+  }, [apiPartners, activePartnerFilter]);
 
   if (!isLoaded) {
     return (
@@ -194,7 +208,6 @@ export default function MemberRewardsPage() {
         className="hidden md:flex"
         activeTab="rewards"
         userName={member?.name || "Budi Santoso"}
-        userTier="Gold Member"
       />
 
       {/* MAIN LAYOUT WRAPPER */}
@@ -202,7 +215,6 @@ export default function MemberRewardsPage() {
         {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
         <DesktopNavbar
           userName={member?.name || "Budi Santoso"}
-          userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
           searchQuery={searchQuery}
@@ -219,9 +231,34 @@ export default function MemberRewardsPage() {
         <div className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
           {/* Top Navbar */}
           <div className="px-5 pt-6 space-y-5">
-            <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
-              Rewards
-            </h1>
+            <div className="flex justify-between">
+              <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
+                Rewards
+              </h1>
+
+              {activePartnerFilter === "ALL" ? (
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wide">
+                    Points
+                  </span>
+                  <span className="text-xs font-semibold text-neutral-500 italic">
+                    Select partner
+                  </span>
+                </div>
+              ) : (
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wide">
+                    {activePartnerFilter} Points
+                  </span>
+                  <span className="text-base font-black text-[#8B3D06]">
+                    {(selectedPartnerBalance ?? 0).toLocaleString()}{" "}
+                    <span className="text-[10px] font-bold text-neutral-500">
+                      pts
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Mobile Search Bar */}
             <div className="relative">
@@ -312,21 +349,8 @@ export default function MemberRewardsPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-          <header className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-extrabold text-neutral-950 tracking-tight">
-                Reward Catalog
-              </h1>
-              <p className="text-xs font-semibold text-neutral-400 mt-1">
-                Redeem your points for food, beverage, and exclusive vouchers.
-              </p>
-            </div>
-
-            {/* Desktop points display */}
-          </header>
-
           <div className="grid grid-cols-4 gap-6 items-stretch">
-            {/* Right Main Grid */}
+            {/* Left Main Grid */}
             <div className="col-span-3 space-y-6">
               {/* Desktop Catalog Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -373,38 +397,72 @@ export default function MemberRewardsPage() {
                 ))}
               </div>
             </div>
-            {/* Left Sidebar Category filters */}
-            <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
-                  Filter Partner
-                </h3>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="partner"
-                      checked={activePartnerFilter === "ALL"}
-                      onChange={() => setActivePartnerFilter("ALL")}
-                      className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                    />
-                    <span>All Merchants</span>
-                  </label>
-                  {apiPartners?.map((p: any) => (
-                    <label
-                      key={p.id}
-                      className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
-                    >
+            {/* Right Sidebar Category filters */}
+            <div className="space-y-2">
+              {activePartnerFilter === "ALL" ? (
+                <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm text-center">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
+                    My Points
+                  </h3>
+                  <div className="py-4 space-y-2">
+                    <div className="w-10 h-10 bg-neutral-50 rounded-full border border-neutral-100 flex items-center justify-center mx-auto text-neutral-400">
+                      <Coins className="w-5 h-5" />
+                    </div>
+                    <p className="text-[10px] font-semibold text-neutral-500 leading-snug px-2">
+                      Please select a partner filter to see your points balance.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-2">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
+                    My Balance
+                  </h3>
+                  <div className="py-1">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                      {selectedPartnerName}
+                    </p>
+                    <p className="text-3xl font-black text-neutral-900 mt-1 tracking-tight flex items-baseline gap-1.5">
+                      {(selectedPartnerBalance ?? 0).toLocaleString()}
+                      <span className="text-xs font-bold text-neutral-500">
+                        pts
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
+                <div className="space-y-4">
+                  <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
+                    Filter Partner
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer">
                       <input
                         type="radio"
                         name="partner"
-                        checked={activePartnerFilter === p.code}
-                        onChange={() => setActivePartnerFilter(p.code)}
+                        checked={activePartnerFilter === "ALL"}
+                        onChange={() => setActivePartnerFilter("ALL")}
                         className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
                       />
-                      <span>{p.name}</span>
+                      <span>All Merchants</span>
                     </label>
-                  ))}
+                    {apiPartners?.map((p: any) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name="partner"
+                          checked={activePartnerFilter === p.code}
+                          onChange={() => setActivePartnerFilter(p.code)}
+                          className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -426,7 +484,7 @@ export default function MemberRewardsPage() {
           {/* Bottom Sheet on Mobile, Centered Modal on Desktop */}
           <div className="absolute w-full max-w-md bg-white rounded-t-[32px] md:rounded-3xl p-6 shadow-2xl flex flex-col relative z-10 animate-in slide-in-from-bottom duration-300 md:duration-200 select-none">
             {/* Mobile Sheet Drag Handle */}
-            <div className="md:hidden w-10 h-1.5 bg-neutral-200 rounded-full mx-auto mb-5 mt-[-8px]" />
+            <div className="md:hidden rounded-full mx-auto mb-5 mt-[-8px]" />
 
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
@@ -524,7 +582,7 @@ export default function MemberRewardsPage() {
                     <div>
                       <p className="font-bold">Insufficient Balance</p>
                       <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                        You need **{neededPoints}** more{" "}
+                        You need {neededPoints} more{" "}
                         {selectedReward.partnerName} points to redeem this
                         reward.
                       </p>
