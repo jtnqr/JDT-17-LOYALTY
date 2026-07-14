@@ -52,8 +52,6 @@
 ├── FSD.md                  # Functional spec (use cases, scope, business rules)
 ├── TSD.md                  # Technical spec (ERD, API endpoints, auth matrix)
 ├── .hermes/plans/          # Implementation plan
-├── docs/
-│   └── seed-data.sql       # Demo data (1 admin, 2 partners, 11 rewards, 3 members)
 ├── backend/                # Spring Boot 4.1.0 (Maven)
 ├── frontend/               # Next.js 16
 ├── docker-compose.yml

@@ -25,7 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FormField } from "@/components/molecules/FormField";
 
-// Mock Fallback Data matching docs/seed-data.sql and spec requirements
+// Mock Fallback Data matching Flyway seed migrations and spec requirements
 const MOCK_MEMBERS = [
   {
     id: "550e8400-e29b-41d4-a716-446655440001",
