@@ -147,37 +147,22 @@ export default function ExchangePointsPage() {
       if (found) return found.rate;
     }
 
-    // 2. Try finding in localStorage rates as fallback
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("pistos_exchange_rates");
-      if (saved) {
-        try {
-          const parsedRates = JSON.parse(saved);
-
-          const codeToId: Record<string, string> = {
-            KFC: "660e8400-e29b-41d4-a716-446655440001",
-            MCD: "660e8400-e29b-41d4-a716-446655440002",
-            BK: "660e8400-e29b-41d4-a716-446655440003",
-          };
-
-          const fromAdminId = codeToId[fromPartner.code] || fromPartner.id;
-          const toAdminId = codeToId[toPartner.code] || toPartner.id;
-
-          const found = parsedRates.find(
-            (r: any) =>
-              r.fromPartnerId === fromAdminId && r.toPartnerId === toAdminId
-          );
-          if (found) return found.rate;
-        } catch (e) {
-          // Fallback
-        }
-      }
-    }
-
-    // 3. Default fallback rates
-    if (fromPartner.code === "KFC" && toPartner.code === "MCD") return 0.8;
-    if (fromPartner.code === "MCD" && toPartner.code === "KFC") return 0.9;
     return 1.0;
+  }, [fromPartner, toPartner, apiRates]);
+
+  const isRateConfigured = React.useMemo(() => {
+    if (!fromPartner || !toPartner) return false;
+    if (fromPartner.id === toPartner.id) return false;
+    if (apiRates) {
+      return apiRates.some(
+        (r: any) =>
+          r.fromPartnerId === fromPartner.id && r.toPartnerId === toPartner.id
+      );
+    }
+    const isKfcMcd =
+      (fromPartner.code === "KFC" && toPartner.code === "MCD") ||
+      (fromPartner.code === "MCD" && toPartner.code === "KFC");
+    return isKfcMcd;
   }, [fromPartner, toPartner, apiRates]);
 
   // Handle swapping the From and To partners
@@ -188,12 +173,15 @@ export default function ExchangePointsPage() {
   };
 
   const amountNumber = Number(exchangeAmount) || 0;
-  const receiveAmount = Math.floor(amountNumber * activeRate);
+  const receiveAmount = isRateConfigured
+    ? Math.floor(amountNumber * activeRate)
+    : 0;
 
   // Validation
   const isInsufficient = amountNumber > fromBalance;
   const isSamePartner = fromPartner?.id === toPartner?.id;
-  const isValidAmount = amountNumber > 0 && !isInsufficient && !isSamePartner;
+  const isValidAmount =
+    amountNumber > 0 && !isInsufficient && !isSamePartner && isRateConfigured;
 
   const handleConfirmExchange = async () => {
     if (!isValidAmount || isSubmitting) return;
@@ -271,7 +259,6 @@ export default function ExchangePointsPage() {
         className="hidden md:flex"
         activeTab="exchange"
         userName={member?.name || "Budi Santoso"}
-        userTier="Gold Member"
       />
 
       {/* MAIN CONTENT WRAPPER */}
@@ -279,7 +266,6 @@ export default function ExchangePointsPage() {
         {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
         <DesktopNavbar
           userName={member?.name || "Budi Santoso"}
-          userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
           breadcrumbs={[{ label: "Marketplace" }, { label: "Exchange" }]}
@@ -369,7 +355,14 @@ export default function ExchangePointsPage() {
               </div>
 
               {/* TO PARTNER CARD */}
-              <div className="bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between pt-6">
+              <div
+                className={cn(
+                  "bg-white border border-neutral-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between pt-6 transition-all",
+                  !isRateConfigured &&
+                    !isSamePartner &&
+                    "bg-neutral-100/70 border-neutral-300 opacity-60 grayscale"
+                )}
+              >
                 <div className="space-y-1 w-full">
                   <p className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">
                     To Partner
@@ -385,11 +378,13 @@ export default function ExchangePointsPage() {
                       }}
                       className="w-full bg-[#FDFDFD] border border-neutral-200 rounded-xl pl-10 pr-10 py-3 text-xs font-black text-neutral-800 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
                     >
-                      {partners.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({getBalanceForPartner(p.id)} pts)
-                        </option>
-                      ))}
+                      {partners
+                        .filter((p) => p.id !== fromPartner?.id)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({getBalanceForPartner(p.id)} pts)
+                          </option>
+                        ))}
                     </select>
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                       <Coins className="w-4 h-4 text-neutral-400" />
@@ -415,71 +410,89 @@ export default function ExchangePointsPage() {
             </div>
 
             {/* Exchange Rate Info Bar */}
-            <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-orange-50 border border-orange-100/50 text-[#8B3D06] text-xs font-bold shadow-sm">
-              <Info className="w-4 h-4 text-[#8B3D06]/80 shrink-0" />
+            <div
+              className={cn(
+                "flex items-center gap-2 px-4 py-3 rounded-2xl shadow-sm text-xs font-bold transition-colors",
+                isRateConfigured
+                  ? "bg-orange-50 border border-orange-100/50 text-[#8B3D06]"
+                  : "bg-neutral-100 border border-neutral-200 text-neutral-500"
+              )}
+            >
+              <Info
+                className={cn(
+                  "w-4 h-4 shrink-0",
+                  isRateConfigured ? "text-[#8B3D06]/80" : "text-neutral-400"
+                )}
+              />
               <span>
-                1 {fromPartner.code} pt = {activeRate} {toPartner.code} pts
+                {isRateConfigured
+                  ? `1 ${fromPartner.code} pt = ${activeRate} ${toPartner.code} pts`
+                  : `Exchange rate is not configured between ${fromPartner.name} and ${toPartner.name}.`}
               </span>
             </div>
 
-            {/* Same Partner Warning */}
-            {isSamePartner && (
-              <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in duration-200">
-                <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
-                <div>
-                  <p className="font-bold">Invalid Partner Pair</p>
-                  <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                    Cannot exchange points within the same partner program.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Summary */}
-            <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-200/30 space-y-3.5 text-xs font-semibold">
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                Exchange Summary
-              </p>
-
-              <div className="flex justify-between items-center text-neutral-600">
-                <span>You send</span>
-                <span className="font-black text-neutral-800">
-                  {amountNumber} {fromPartner.code} pts
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-neutral-600">
-                <span>You receive</span>
-                <span className="font-black text-brand-primary text-sm">
-                  {receiveAmount} {toPartner.code} pts
-                </span>
-              </div>
-            </div>
-
             {/* Mobile Warnings & Errors */}
-            <div className="space-y-2 mt-2">
+            <div className="space-y-3 mt-4">
               {isInsufficient && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
                   <span>
                     Insufficient points in your {fromPartner.code} account.
+                    Current balance is {fromBalance} pts.
                   </span>
                 </div>
               )}
               {isSamePartner && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
                   <span>
                     Cannot exchange points within the same partner program.
                   </span>
                 </div>
               )}
+              {!isRateConfigured && !isSamePartner && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-200">
+                  <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="font-bold">Rate Not Configured</p>
+                    <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
+                      No exchange rate has been configured between
+                      {fromPartner.name} ({fromPartner.code}) and{" "}
+                      {toPartner.name} ({toPartner.code}). Please contact your
+                      administrator.
+                    </p>
+                  </div>
+                </div>
+              )}
               {errorMessage && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-semibold animate-in fade-in duration-150">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
+                  <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
                   <span>{errorMessage}</span>
                 </div>
               )}
             </div>
+
+            {/* Summary */}
+            {isRateConfigured && (
+              <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-200/30 space-y-3.5 text-xs font-semibold mt-4">
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">
+                  Exchange Summary
+                </p>
+
+                <div className="flex justify-between items-center text-neutral-600">
+                  <span>You send</span>
+                  <span className="font-black text-neutral-800">
+                    {amountNumber} {fromPartner.code} pts
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-neutral-600">
+                  <span>You receive</span>
+                  <span className="font-black text-brand-primary text-sm">
+                    {receiveAmount} {toPartner.code} pts
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Action button */}
             <button
@@ -502,7 +515,6 @@ export default function ExchangePointsPage() {
             DESKTOP VIEW (Visible on Desktop, hidden on Mobile)
             ======================================================== */}
         <div className="hidden md:flex flex-col flex-1 px-8 py-8 space-y-6 overflow-y-auto">
-
           {/* Main double column grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Panel: Transfer Details */}
@@ -570,7 +582,14 @@ export default function ExchangePointsPage() {
                   </div>
 
                   {/* To Dropdown Selector */}
-                  <div className="space-y-2 pt-2">
+                  <div
+                    className={cn(
+                      "space-y-2 pt-2 transition-all",
+                      !isRateConfigured &&
+                        !isSamePartner &&
+                        "opacity-60 grayscale"
+                    )}
+                  >
                     <label className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wide">
                       To Partner
                     </label>
@@ -585,11 +604,13 @@ export default function ExchangePointsPage() {
                         }}
                         className="w-full bg-[#FDFDFD] border border-[#d4d4d8] rounded-xl pl-10 pr-10 py-3 text-xs font-bold text-neutral-700 outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
                       >
-                        {partners.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({getBalanceForPartner(p.id)} pts)
-                          </option>
-                        ))}
+                        {partners
+                          .filter((p) => p.id !== fromPartner?.id)
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({getBalanceForPartner(p.id)} pts)
+                            </option>
+                          ))}
                       </select>
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                         <Coins className="w-4 h-4 text-neutral-400" />
@@ -640,97 +661,117 @@ export default function ExchangePointsPage() {
               </div>
             </div>
 
-            {/* Right Panel: Summary Calc */}
-            <div className="space-y-6">
+            {/* Right Panel: Summary Calc & Warnings */}
+            <div className="col-span-1 space-y-6">
               {/* Calculations Box */}
-              <div className="bg-white border border-neutral-200/50 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-                {/* Dark Orange Header */}
-                <div className="bg-[#8B3D06] p-5 text-white space-y-1">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-orange-200">
-                    Conversion Summary
-                  </p>
-                  <h3 className="text-lg font-black tracking-tight">
-                    Final Calculation
-                  </h3>
-                </div>
-
-                {/* Calculation Details */}
-                <div className="p-5 space-y-4 text-xs font-semibold text-neutral-500">
-                  <div className="flex justify-between items-center">
-                    <span>Rate</span>
-                    <span className="font-extrabold text-neutral-800">
-                      1 : {activeRate}
-                    </span>
+              {isRateConfigured && !isSamePartner && (
+                <div className="bg-white border border-neutral-200/50 rounded-2xl overflow-hidden shadow-sm flex flex-col transition-all">
+                  {/* Dark Orange Header */}
+                  <div className="bg-[#8B3D06] p-5 text-white space-y-1 transition-colors">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-orange-200">
+                      Conversion Summary
+                    </p>
+                    <h3 className="text-lg font-black tracking-tight">
+                      Final Calculation
+                    </h3>
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <span>Giving</span>
-                    <span className="font-extrabold text-neutral-800">
-                      {amountNumber.toLocaleString()} {fromPartner.code} Points
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center border-t border-neutral-100 pt-3">
-                    <span>Receiving</span>
-                    <span className="font-black text-[#8B3D06] text-sm">
-                      {receiveAmount.toLocaleString()} {toPartner.code} Points
-                    </span>
-                  </div>
-
-                  <div className="h-[1px] bg-neutral-200/50 my-2" />
-
-                  {/* Processing guarantees */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2.5 text-[10px] text-neutral-400 font-bold">
-                      <TrendingUp className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Instant processing</span>
-                    </div>
-                    <div className="flex items-center gap-2.5 text-[10px] text-neutral-400 font-bold">
-                      <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Secure transaction</span>
-                    </div>
-                  </div>
-
-                  {/* Desktop Warning Alert */}
-                  {isInsufficient && (
-                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-                      <span>
-                        Insufficient points in your {fromPartner.code} account.
+                  {/* Calculation Details */}
+                  <div className="p-5 space-y-4 text-xs font-semibold text-neutral-500">
+                    <div className="flex justify-between items-center">
+                      <span>Rate</span>
+                      <span className="font-extrabold text-neutral-800">
+                        1 : {activeRate}
                       </span>
                     </div>
-                  )}
-                  {isSamePartner && (
-                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-                      <span>
-                        Cannot exchange points within the same partner program.
+
+                    <div className="flex justify-between items-center">
+                      <span>Giving</span>
+                      <span className="font-extrabold text-neutral-800">
+                        {amountNumber.toLocaleString()} {fromPartner.code}{" "}
+                        Points
                       </span>
                     </div>
-                  )}
-                  {errorMessage && (
-                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-[10px] font-medium mt-3 animate-in fade-in duration-150">
-                      <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
-                      <span>{errorMessage}</span>
-                    </div>
-                  )}
 
-                  {/* Confirm Button */}
-                  <button
-                    onClick={() => setShowConfirmModal(true)}
-                    disabled={!isValidAmount || isSubmitting}
-                    className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 mt-4 shadow-sm"
-                  >
-                    {isSubmitting ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        Exchange
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
+                    <div className="flex justify-between items-center border-t border-neutral-100 pt-3">
+                      <span>Receiving</span>
+                      <span className="font-black text-[#8B3D06] text-sm">
+                        {receiveAmount.toLocaleString()} {toPartner.code} Points
+                      </span>
+                    </div>
+
+                    <div className="h-[1px] bg-neutral-200/50 my-2" />
+
+                    {/* Processing guarantees */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2.5 text-[10px] text-neutral-400 font-bold">
+                        <TrendingUp className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Instant processing</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-[10px] text-neutral-400 font-bold">
+                        <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Secure transaction</span>
+                      </div>
+                    </div>
+
+                    {/* Confirm Button */}
+                    <button
+                      onClick={() => setShowConfirmModal(true)}
+                      disabled={!isValidAmount || isSubmitting}
+                      className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 mt-4 shadow-sm"
+                    >
+                      {isSubmitting ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Exchange
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              {/* Desktop Warning Alerts */}
+              <div className="space-y-3">
+                {isInsufficient && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                    <span>
+                      Insufficient points in your {fromPartner.code} account.
+                      Current balance is {fromBalance} pts.
+                    </span>
+                  </div>
+                )}
+                {isSamePartner && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                    <span>
+                      Cannot exchange points within the same partner program.
+                    </span>
+                  </div>
+                )}
+                {!isRateConfigured && !isSamePartner && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-200">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Rate Not Configured</p>
+                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
+                        No exchange rate has been configured between{" "}
+                        {fromPartner.name} ({fromPartner.code}) and{" "}
+                        {toPartner.name} ({toPartner.code}). Please contact your
+                        administrator.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {errorMessage && (
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
