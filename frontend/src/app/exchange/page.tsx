@@ -29,6 +29,8 @@ export default function ExchangePointsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+
   // Fetch all active partners from API
   const { data: apiPartners } = useQuery({
     queryKey: ["exchange-partners-list"],
@@ -41,6 +43,9 @@ export default function ExchangePointsPage() {
     },
     retry: 1,
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   const partners = React.useMemo(() => {
@@ -84,6 +89,16 @@ export default function ExchangePointsPage() {
     }
   }, [partners]);
 
+  // Ensure dropdown selection values are never the same
+  useEffect(() => {
+    if (fromPartner && toPartner && fromPartner.id === toPartner.id && partners.length >= 2) {
+      const other = partners.find((p) => p.id !== fromPartner.id);
+      if (other) {
+        setToPartner(other);
+      }
+    }
+  }, [fromPartner, toPartner, partners]);
+
   const [exchangeAmount, setExchangeAmount] = useState<string>("100");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -108,6 +123,9 @@ export default function ExchangePointsPage() {
       }[];
     },
     enabled: !!memberId,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch exchange rates from API
@@ -122,6 +140,9 @@ export default function ExchangePointsPage() {
     },
     retry: 1,
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   const getBalanceForPartner = (partnerId: string) => {

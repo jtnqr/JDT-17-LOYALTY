@@ -40,6 +40,8 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
 
+  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+
   // Fetch paginated transactions from API
   const { data: transactionData, isLoading } = useQuery({
     queryKey: ["transactions-history", memberId, activeFilter, currentPage],
@@ -64,8 +66,8 @@ export default function HistoryPage() {
     enabled: !!memberId,
     retry: 1,
 
-    // polling tiap 5 detik
-    refetchInterval: 5000,
+    // polling tiap 5 detik (konfigurasi di env)
+    refetchInterval: POLLING_INTERVAL,
 
     // berhenti kalau tab/browser tidak aktif
     refetchIntervalInBackground: false,
@@ -172,7 +174,7 @@ export default function HistoryPage() {
   return (
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-       <MemberSidebar
+      <MemberSidebar
         className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
@@ -262,10 +264,23 @@ export default function HistoryPage() {
                                 <p className="text-xs font-black text-neutral-800 leading-none">
                                   {isMcD ? "McD" : tx.partnerName}
                                 </p>
+                                <p className="text-[10px] text-neutral-500 font-semibold mt-1">
+                                  {tx.type === "EARN" && tx.trxAmountIDR
+                                    ? `Purchase of Rp ${(
+                                        tx.trxAmountIDR / 1000
+                                      ).toFixed(3)}`
+                                    : tx.type === "REDEEM"
+                                    ? `Redeemed points`
+                                    : tx.type === "EXCHANGE_OUT"
+                                    ? `Exchanged points out`
+                                    : tx.type === "EXCHANGE_IN"
+                                    ? `Exchanged points in`
+                                    : `Processed transaction`}
+                                </p>
                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                   <span
                                     className={cn(
-                                      "inline-block text-[8px] font-black uppercase px-2 py-1 rounded-full leading-none",
+                                      "flex items-center justify-center w-24 h-6 text-[8px] font-black uppercase rounded-full leading-none text-center",
                                       tx.type === "EARN"
                                         ? "bg-[#E8F5E9] text-[#2E7D32]"
                                         : tx.type === "REDEEM"
@@ -279,11 +294,11 @@ export default function HistoryPage() {
                                   >
                                     {tx.type.replace("_", " ")}
                                   </span>
-                                  {tx.type === "EARN" && tx.trxAmountIDR && (
+                                  {/* {tx.type === "EARN" && tx.trxAmountIDR && (
                                     <span className="text-[9px] font-semibold text-neutral-400">
                                       Rp {(tx.trxAmountIDR / 1000).toFixed(3)}
                                     </span>
-                                  )}
+                                  )} */}
                                 </div>
                               </div>
                             </div>
@@ -433,7 +448,7 @@ export default function HistoryPage() {
                           <td className="px-6 py-4.5">
                             <span
                               className={cn(
-                                "whitespace-nowrap inline-block text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border",
+                                "flex items-center justify-center w-24 h-6 text-[8px] font-black uppercase rounded-full border text-center leading-none",
                                 isEarn
                                   ? "bg-emerald-50 border-emerald-200/50 text-emerald-700"
                                   : tx.type === "REDEEM"
@@ -457,9 +472,15 @@ export default function HistoryPage() {
                           </td>
                           <td className="px-6 py-4.5 text-xs text-neutral-500 font-semibold">
                             {tx.detailText ||
-                              (isEarn && tx.trxAmountIDR
+                              (tx.type === "EARN" && tx.trxAmountIDR
                                 ? `Completed store purchase of Rp ${tx.trxAmountIDR.toLocaleString()}`
-                                : `Processed cross points transaction`)}
+                                : tx.type === "REDEEM"
+                                ? `Redeemed points at ${tx.partnerName}`
+                                : tx.type === "EXCHANGE_OUT"
+                                ? `Exchanged points out from ${tx.partnerName}`
+                                : tx.type === "EXCHANGE_IN"
+                                ? `Exchanged points in to ${tx.partnerName}`
+                                : `Processed transaction at ${tx.partnerName}`)}
                           </td>
                           <td
                             className={cn(

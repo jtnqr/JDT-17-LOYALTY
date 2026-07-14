@@ -26,6 +26,8 @@ export default function ProfilePage() {
   const { member, memberId, isLoaded, logout } = useMember();
   const router = useRouter();
 
+  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+
   // Fetch Member Details via React Query
   const { data: memberDetail } = useQuery({
     queryKey: ["memberDetail", memberId],
@@ -38,6 +40,9 @@ export default function ProfilePage() {
     },
     enabled: !!memberId,
     retry: 1,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch Member Balances via React Query
@@ -52,6 +57,9 @@ export default function ProfilePage() {
     },
     enabled: !!memberId,
     retry: 1,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   if (!isLoaded) {
