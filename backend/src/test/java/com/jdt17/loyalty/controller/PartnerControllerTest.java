@@ -13,7 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
@@ -138,5 +140,25 @@ class PartnerControllerTest {
                 .andExpect(jsonPath("$.pointsPerThousandIDR").value(2))
                 .andExpect(jsonPath("$.expiryDays").value(180))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void testUploadPartnerImage_Success() throws Exception {
+        UUID partnerId = UUID.randomUUID();
+        MockMultipartFile file = new MockMultipartFile("image", "logo.png", "image/png", new byte[]{1, 2, 3});
+
+        PartnerResponse response = PartnerResponse.builder()
+                .id(partnerId)
+                .name("KFC")
+                .logoUrl("/uploads/partners/logo.png")
+                .build();
+
+        when(partnerService.uploadPartnerImage(eq(partnerId), any())).thenReturn(response);
+
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/api/v1/partners/" + partnerId + "/image")
+                        .file(file)
+                        .with(request -> { request.setMethod("PUT"); return request; }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.logoUrl").value("/uploads/partners/logo.png"));
     }
 }

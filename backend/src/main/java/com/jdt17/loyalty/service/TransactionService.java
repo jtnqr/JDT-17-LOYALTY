@@ -134,6 +134,8 @@ public class TransactionService {
                         .name(r.getName())
                         .pointCost(r.getPointCost())
                         .status(r.getStatus())
+                        .imageUrl(r.getImageUrl())
+                        .partnerCode(r.getPartner().getCode())
                         .build())
                 .collect(Collectors.toList());
 

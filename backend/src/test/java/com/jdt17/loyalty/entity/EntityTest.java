@@ -222,7 +222,7 @@ class EntityTest {
         assertEquals(id, built.getId());
 
         // Test AllArgsConstructor
-        Partner partner2 = new Partner(id, "KFC", "KFC", 100, 365, "api_key", "ACTIVE", createdBy, updatedBy, now, now);
+        Partner partner2 = new Partner(id, "KFC", "KFC", 100, 365, "api_key", "ACTIVE", null, createdBy, updatedBy, now, now);
         assertEquals("KFC", partner2.getName());
 
         // Test Lifecycle callbacks

@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
     queryFn: async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get("/api/v1/members?page=0&size=1", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
       return response.data.total as number;
     },
@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
     queryFn: async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
       return (response.data.data as any[]).length;
     },

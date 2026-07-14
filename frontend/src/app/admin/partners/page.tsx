@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
@@ -32,6 +33,7 @@ interface Partner {
   status: string;
   targetPartnerName: string;
   exchangeRate: number;
+  logoUrl?: string;
 }
 
 export default function AdminPartnersPage() {
@@ -45,6 +47,46 @@ export default function AdminPartnersPage() {
   const [formExpiryDays, setFormExpiryDays] = useState<number>(365);
   const [formStatus, setFormStatus] = useState<string>("ACTIVE");
   const [formExchangeRate, setFormExchangeRate] = useState<number>(0.8);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingPartner) return;
+
+    setUploadingLogo(true);
+    setLogoError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await axios.put(
+        `/api/v1/partners/${editingPartner.id}/logo`,
+        formData,
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if (editingPartner) {
+        setEditingPartner({
+          ...editingPartner,
+          logoUrl: response.data.logoUrl,
+        });
+      }
+      refetch();
+    } catch (err: any) {
+      console.error("Logo upload failed:", err);
+      setLogoError(err.response?.data?.message || "Failed to upload logo.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -74,7 +116,7 @@ export default function AdminPartnersPage() {
 
     try {
       await axios.post("/api/v1/partners", payload, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
 
       setCreateSuccess(true);
@@ -316,8 +358,16 @@ export default function AdminPartnersPage() {
                       >
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-neutral-100 text-neutral-800 font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0">
-                              {partner.name.charAt(0)}
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-100 text-neutral-800 font-extrabold text-xs flex items-center justify-center border shadow-inner shrink-0">
+                              {(partner as any).logoUrl ? (
+                                <img
+                                  src={(partner as any).logoUrl}
+                                  alt={partner.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                partner.name.charAt(0)
+                              )}
                             </div>
                             <span className="text-sm font-extrabold text-neutral-800">
                               {partner.name}
@@ -435,6 +485,44 @@ export default function AdminPartnersPage() {
                   </select>
                 </div>
 
+                {/* Logo Upload */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
+                    Merchant Logo
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
+                      {(editingPartner as any)?.logoUrl ? (
+                        <img
+                          src={(editingPartner as any).logoUrl}
+                          alt="Logo preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="w-6 h-6 text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1">
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={handleLogoUpload}
+                        className="text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#8B3D06]/10 file:text-[#8B3D06] hover:file:bg-[#8B3D06]/20 file:cursor-pointer"
+                      />
+                      {uploadingLogo && (
+                        <span className="text-[10px] text-neutral-400 animate-pulse">
+                          Uploading logo...
+                        </span>
+                      )}
+                      {logoError && (
+                        <span className="text-[10px] text-red-500 font-bold">
+                          {logoError}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* 2. Points accumulation Rate */}
                 <div className="flex flex-col">
                   <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold flex items-center gap-1">
@@ -540,6 +628,13 @@ export default function AdminPartnersPage() {
                   <p className="text-[11px] text-neutral-500 mt-1">
                     The new loyalty partner program has been added and
                     configured successfully.
+                  </p>
+                  <p className="text-[11px] font-bold text-[#8B3D06] mt-2 bg-[#FCF5F1] p-2 rounded-lg">
+                    Notice: Please{" "}
+                    <Link href="/admin/exchange" className="underline hover:text-[#723204] cursor-pointer">
+                      navigate to the "Exchange" tab
+                    </Link>{" "}
+                    to configure directional exchange rates for this partner!
                   </p>
                 </div>
               </div>

@@ -21,6 +21,8 @@ import com.jdt17.loyalty.dto.partner.ListPartnerResponse;
 import com.jdt17.loyalty.dto.partner.PartnerResponse;
 import com.jdt17.loyalty.dto.partner.CreatePartnerRequest;
 import com.jdt17.loyalty.dto.partner.UpdatePartnerRequest;
+import org.springframework.mock.web.MockMultipartFile;
+import java.io.IOException;
 import java.util.List;
 
 import java.security.MessageDigest;
@@ -40,7 +42,16 @@ class PartnerServiceTest {
     private PartnerRepository partnerRepository;
 
     @Mock
+    private PointBalanceRepository pointBalanceRepository;
+
+    @Mock
+    private AuditTrailService auditTrailService;
+
+    @Mock
     private JWTService jwtService;
+
+    @Mock
+    private ImageStorageService imageStorageService;
 
     @InjectMocks
     private PartnerService partnerService;
@@ -327,12 +338,6 @@ class PartnerServiceTest {
         // Cleanup
         SecurityContextHolder.clearContext();
     }
-
-    @Mock
-    private PointBalanceRepository pointBalanceRepository;
-
-    @Mock
-    private AuditTrailService auditTrailService;
 
     @Test
     void testCreatePartner_Success() {
@@ -644,6 +649,58 @@ class PartnerServiceTest {
         PartnerResponse response = partnerService.updatePartner(partnerId, request);
         assertNotNull(response);
         verify(auditTrailService).logEvent("PARTNER_UPDATED", null, "ADMIN", "PARTNER", partnerId, null);
+        SecurityContextHolder.clearContext();
+     }
+
+    @Test
+    void testUploadPartnerImage_Success() throws IOException {
+        UUID partnerId = UUID.randomUUID();
+        MockMultipartFile file = new MockMultipartFile("image", "logo.png", "image/png", new byte[]{1, 2, 3});
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn(UUID.randomUUID().toString());
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        Partner partner = Partner.builder()
+                .id(partnerId)
+                .name("KFC")
+                .code("KFC")
+                .logoUrl("/uploads/partners/old.png")
+                .status("ACTIVE")
+                .build();
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.of(partner));
+        when(imageStorageService.store(file, "partners")).thenReturn("/uploads/partners/new.png");
+        when(partnerRepository.save(any(Partner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        PartnerResponse response = partnerService.uploadPartnerImage(partnerId, file);
+
+        assertNotNull(response);
+        assertEquals("/uploads/partners/new.png", response.getLogoUrl());
+        verify(imageStorageService).delete("/uploads/partners/old.png");
+        verify(auditTrailService).logEvent(eq("PARTNER_LOGO_UPLOADED"), any(), eq("ADMIN"), eq("PARTNER"), eq(partnerId), any());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testUploadPartnerImage_NotFound() {
+        UUID partnerId = UUID.randomUUID();
+        MockMultipartFile file = new MockMultipartFile("image", "logo.png", "image/png", new byte[]{1, 2, 3});
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))).when(authentication).getAuthorities();
+        SecurityContextHolder.setContext(securityContext);
+
+        when(partnerRepository.findById(partnerId)).thenReturn(Optional.empty());
+
+        assertThrows(LoyaltyException.class, () -> partnerService.uploadPartnerImage(partnerId, file));
+
         SecurityContextHolder.clearContext();
     }
 }

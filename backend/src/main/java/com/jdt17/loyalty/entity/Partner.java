@@ -36,6 +36,9 @@ public class Partner {
     @Column(nullable = false)
     private String status;
 
+    @Column(name = "logo_url")
+    private String logoUrl;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

@@ -43,9 +43,19 @@ export default function MemberRewardsPage() {
     queryFn: async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get("/api/v1/rewards", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
-      return response.data.data as any[];
+      const data = (response.data.data || response.data || []) as any[];
+      return data.map((r: any) => {
+        const code = r.partnerCode?.toUpperCase();
+        let badgeBg = "bg-brand-primary text-white";
+        if (code === "KFC") badgeBg = "bg-red-500 text-white";
+        else if (code === "MCD") badgeBg = "bg-yellow-500 text-black";
+        return {
+          ...r,
+          badgeBg,
+        };
+      });
     },
   });
 
@@ -55,7 +65,7 @@ export default function MemberRewardsPage() {
     queryFn: async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get(`/api/v1/members/${memberId}/points`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
       return response.data.balances as {
         partnerId: string;
@@ -73,7 +83,7 @@ export default function MemberRewardsPage() {
     queryFn: async () => {
       const token = localStorage.getItem("token");
       const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
       return (response.data.partners || response.data.data || []) as any[];
     },
@@ -160,7 +170,7 @@ export default function MemberRewardsPage() {
       await axios.post(
         "/api/v1/redeem",
         { rewardId: selectedReward.id },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: "Bearer " + token } }
       );
       setRedeemSuccess(true);
       refetchBalances();
