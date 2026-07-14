@@ -146,6 +146,23 @@ export default function MemberRewardsPage() {
 
   // Filter rewards dynamically based on active filter
   const filteredRewards = rewardsList.filter((reward) => {
+    // Only show ACTIVE rewards
+    if (reward.status !== "ACTIVE") return false;
+
+    // Only show rewards belonging to ACTIVE partners
+    if (apiPartners) {
+      const partnerObj = apiPartners.find(
+        (p: any) =>
+          p.id === reward.partnerId ||
+          p.code === reward.partnerCode ||
+          (reward.partnerName &&
+            p.name.toLowerCase() === reward.partnerName.toLowerCase())
+      );
+      if (partnerObj && partnerObj.status !== "ACTIVE") {
+        return false;
+      }
+    }
+
     const matchesSearch = reward.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -297,20 +314,22 @@ export default function MemberRewardsPage() {
               >
                 All
               </button>
-              {apiPartners?.map((p: any) => (
-                <button
-                  key={p.id}
-                  onClick={() => setActivePartnerFilter(p.code)}
-                  className={cn(
-                    "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
-                    activePartnerFilter === p.code
-                      ? "bg-[#8B3D06] text-white"
-                      : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
-                  )}
-                >
-                  {p.name.split(" ")[0]}
-                </button>
-              ))}
+              {apiPartners
+                ?.filter((p: any) => p.status === "ACTIVE")
+                .map((p: any) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setActivePartnerFilter(p.code)}
+                    className={cn(
+                      "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
+                      activePartnerFilter === p.code
+                        ? "bg-[#8B3D06] text-white"
+                        : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
+                    )}
+                  >
+                    {p.name.split(" ")[0]}
+                  </button>
+                ))}
             </div>
 
             {/* Mobile Grid */}
@@ -444,6 +463,16 @@ export default function MemberRewardsPage() {
                   </div>
                 </div>
               )}
+              <div className="relative bg-white border border-neutral-200/60 rounded-2xl shadow-sm justify-between text-center select-none">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search rewards..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white text-xs text-neutral-800 pl-10 pr-4 py-3 rounded-2xl border border-transparent outline-none focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-semibold placeholder:text-neutral-400"
+                />
+              </div>
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-5 h-fit">
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
@@ -460,21 +489,23 @@ export default function MemberRewardsPage() {
                       />
                       <span>All Merchants</span>
                     </label>
-                    {apiPartners?.map((p: any) => (
-                      <label
-                        key={p.id}
-                        className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="partner"
-                          checked={activePartnerFilter === p.code}
-                          onChange={() => setActivePartnerFilter(p.code)}
-                          className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                    ))}
+                    {apiPartners
+                      ?.filter((p: any) => p.status === "ACTIVE")
+                      .map((p: any) => (
+                        <label
+                          key={p.id}
+                          className="flex items-center gap-3 text-xs font-bold text-neutral-700 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name="partner"
+                            checked={activePartnerFilter === p.code}
+                            onChange={() => setActivePartnerFilter(p.code)}
+                            className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
+                          />
+                          <span>{p.name}</span>
+                        </label>
+                      ))}
                   </div>
                 </div>
               </div>
@@ -523,8 +554,8 @@ export default function MemberRewardsPage() {
                     Reward Redeemed!
                   </h3>
                   <p className="text-xs text-neutral-500 mt-1 max-w-[280px] mx-auto leading-relaxed">
-                    You have successfully claimed the **{selectedReward.name}**
-                    for **{selectedReward.pointCost} pts**.
+                    You have successfully claimed the {selectedReward.name}
+                    for {selectedReward.pointCost} pts.
                   </p>
                 </div>
 
