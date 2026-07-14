@@ -635,8 +635,7 @@ export default function AdminPartnersPage() {
                     configured successfully.
                   </p>
                   <p className="text-[11px] font-bold text-[#8B3D06] mt-2.5 bg-[#FCF5F1] p-2.5 rounded-lg border border-[#8B3D06]/10">
-                    Do you want to configure directional exchange rates for this
-                    partner now?
+                    Do you want to configure directional exchange rates for this partner now?
                   </p>
                 </div>
                 <div className="flex gap-3 pt-2">
