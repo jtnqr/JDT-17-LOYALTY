@@ -36,7 +36,8 @@ export default function MemberRewardsPage() {
   const [redeemSuccess, setRedeemSuccess] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
 
-  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
 
   // Fetch real reward catalog from backend
   const { data: rewardsData, refetch: refetchRewards } = useQuery({

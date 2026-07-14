@@ -50,7 +50,8 @@ interface Transaction {
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
 
-  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
 
   // 1. Fetch Balances via React Query
   const { data: balanceData, isLoading: isBalancesLoading } = useQuery({

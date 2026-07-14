@@ -174,7 +174,7 @@ export default function HistoryPage() {
   return (
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
+       <MemberSidebar
         className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
