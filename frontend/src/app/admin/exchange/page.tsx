@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import axios from "axios";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronRight,
   Search,
@@ -13,6 +14,7 @@ import {
   Save,
   RotateCcw,
   Bell,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,49 +35,37 @@ interface ExchangeRate {
   rate: number;
 }
 
-// Default seed data
-const DEFAULT_PARTNERS: Partner[] = [
-  {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    name: "KFC Indonesia",
-    code: "KFC",
-    status: "ACTIVE",
-    logoBg: "bg-red-50 text-[#C8102E] border-red-100",
-    logoChar: "K",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440002",
-    name: "McDonald's Indonesia",
-    code: "MCD",
-    status: "ACTIVE",
-    logoBg: "bg-yellow-50 text-[#D89F0E] border-yellow-100",
-    logoChar: "M",
-  },
-];
-
-const DEFAULT_RATES: ExchangeRate[] = [
-  {
-    id: "rate-kfc-mcd",
-    fromPartnerId: "660e8400-e29b-41d4-a716-446655440001", // KFC
-    toPartnerId: "660e8400-e29b-41d4-a716-446655440002", // MCD
-    rate: 0.8,
-  },
-  {
-    id: "rate-mcd-kfc",
-    fromPartnerId: "660e8400-e29b-41d4-a716-446655440002", // MCD
-    toPartnerId: "660e8400-e29b-41d4-a716-446655440001", // KFC
-    rate: 0.9,
-  },
-];
+// Removed DEFAULT_RATES configuration, reading strictly from API.
 
 export default function AdminExchangePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <ExchangePageContent />
+    </Suspense>
+  );
+}
+
+function ExchangePageContent() {
   const { isLoaded } = useAdmin();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
     null
   );
-  const [ratesState, setRatesState] = useState<ExchangeRate[]>([]);
+  const searchParams = useSearchParams();
+  const selectPartnerId = searchParams.get("selectPartnerId");
+
+  useEffect(() => {
+    if (selectPartnerId) {
+      setSelectedPartnerId(selectPartnerId);
+    }
+  }, [selectPartnerId]);
 
   // 1. Fetch Exchange Rates via React Query
   const { data: apiRates } = useQuery({
@@ -91,9 +81,9 @@ export default function AdminExchangePage() {
     enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
   });
 
-  // Combine API rates and local fallback state
+  // Combine API rates
   const rates = React.useMemo(() => {
-    if (apiRates && apiRates.length > 0) {
+    if (apiRates) {
       return apiRates.map((r, idx) => ({
         id: r.id || `rate-api-${idx}`,
         fromPartnerId: r.fromPartnerId,
@@ -101,8 +91,8 @@ export default function AdminExchangePage() {
         rate: r.rate,
       }));
     }
-    return ratesState.length > 0 ? ratesState : DEFAULT_RATES;
-  }, [apiRates, ratesState]);
+    return [];
+  }, [apiRates]);
 
   // Local input states for rates [fromId_toId]: string
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
@@ -161,23 +151,7 @@ export default function AdminExchangePage() {
     return partners.find((p) => p.id === selectedPartnerId) || null;
   }, [partners, selectedPartnerId]);
 
-  // 3. Load fallback exchange rates from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("pistos_exchange_rates");
-    if (saved) {
-      try {
-        setRatesState(JSON.parse(saved));
-      } catch (e) {
-        setRatesState(DEFAULT_RATES);
-      }
-    } else {
-      setRatesState(DEFAULT_RATES);
-      localStorage.setItem(
-        "pistos_exchange_rates",
-        JSON.stringify(DEFAULT_RATES)
-      );
-    }
-  }, []);
+  // Reading strictly from DB/API. No localStorage fallbacks.
 
   // 3. Initialize rate input fields when selected partner or rates change
   useEffect(() => {
@@ -197,7 +171,7 @@ export default function AdminExchangePage() {
       );
       inputs[`${selectedPartnerId}_${other.id}`] = outRate
         ? outRate.rate.toString()
-        : "1.0";
+        : "";
 
       // Rate: Other -> Selected
       const inRate = rates.find(
@@ -206,7 +180,7 @@ export default function AdminExchangePage() {
       );
       inputs[`${other.id}_${selectedPartnerId}`] = inRate
         ? inRate.rate.toString()
-        : "1.0";
+        : "";
     });
 
     setRateInputs(inputs);
@@ -221,11 +195,11 @@ export default function AdminExchangePage() {
   }
 
   // Get active rate helper
-  const getRateValue = (fromId: string, toId: string): number => {
+  const getRateValue = (fromId: string, toId: string): number | null => {
     const found = rates.find(
       (r) => r.fromPartnerId === fromId && r.toPartnerId === toId
     );
-    return found ? found.rate : 1.0;
+    return found ? found.rate : null;
   };
 
   // Search filtering
@@ -250,13 +224,24 @@ export default function AdminExchangePage() {
     const outKey = `${selectedPartnerId}_${otherPartnerId}`;
     const inKey = `${otherPartnerId}_${selectedPartnerId}`;
 
-    const rawOut =
-      rateInputs[outKey] !== undefined ? parseFloat(rateInputs[outKey]) : 1.0;
-    const rawIn =
-      rateInputs[inKey] !== undefined ? parseFloat(rateInputs[inKey]) : 1.0;
+    const rawOutStr = rateInputs[outKey];
+    const rawInStr = rateInputs[inKey];
 
-    const outRate = isNaN(rawOut) || rawOut <= 0 ? 1.0 : rawOut;
-    const inRate = isNaN(rawIn) || rawIn <= 0 ? 1.0 : rawIn;
+    if (!rawOutStr || !rawInStr) {
+      alert("Please enter a valid rate for both conversion directions.");
+      return;
+    }
+
+    const rawOut = parseFloat(rawOutStr);
+    const rawIn = parseFloat(rawInStr);
+
+    if (isNaN(rawOut) || rawOut <= 0 || isNaN(rawIn) || rawIn <= 0) {
+      alert("Please enter a valid positive decimal number for both rates.");
+      return;
+    }
+
+    const outRate = rawOut;
+    const inRate = rawIn;
 
     const token = localStorage.getItem("token");
 
@@ -297,52 +282,11 @@ export default function AdminExchangePage() {
       setTimeout(() => {
         setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
       }, 2000);
-    } catch (error) {
-      console.error(
-        "Failed to save pair rates to API, using localStorage fallback:",
-        error
-      );
-
-      // Filter out existing entries for these directions
-      let updatedRates = rates.filter(
-        (r) =>
-          !(
-            r.fromPartnerId === selectedPartnerId &&
-            r.toPartnerId === otherPartnerId
-          ) &&
-          !(
-            r.fromPartnerId === otherPartnerId &&
-            r.toPartnerId === selectedPartnerId
-          )
-      );
-
-      // Append updated ones
-      updatedRates.push(
-        {
-          id: `rate-${selectedPartnerId}-${otherPartnerId}`,
-          fromPartnerId: selectedPartnerId,
-          toPartnerId: otherPartnerId,
-          rate: outRate,
-        },
-        {
-          id: `rate-${otherPartnerId}-${selectedPartnerId}`,
-          fromPartnerId: otherPartnerId,
-          toPartnerId: selectedPartnerId,
-          rate: inRate,
-        }
-      );
-
-      setRatesState(updatedRates);
-      localStorage.setItem(
-        "pistos_exchange_rates",
-        JSON.stringify(updatedRates)
-      );
-
-      // Show temporary success feedback
-      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
-      setTimeout(() => {
-        setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
-      }, 2000);
+    } catch (error: any) {
+      console.error("Failed to save pair rates to API:", error);
+      const errMsg =
+        error.response?.data?.message || error.message || "Unknown error";
+      alert(`Failed to save exchange rates: ${errMsg}`);
     }
   };
 
@@ -412,50 +356,11 @@ export default function AdminExchangePage() {
       setTimeout(() => {
         setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
       }, 1500);
-    } catch (error) {
-      console.error(
-        "Failed to reset rates via API, using localStorage fallback:",
-        error
-      );
-
-      // Filter and update
-      let updatedRates = rates.filter(
-        (r) =>
-          !(
-            r.fromPartnerId === selectedPartnerId &&
-            r.toPartnerId === otherPartnerId
-          ) &&
-          !(
-            r.fromPartnerId === otherPartnerId &&
-            r.toPartnerId === selectedPartnerId
-          )
-      );
-
-      updatedRates.push(
-        {
-          id: `rate-${selectedPartnerId}-${otherPartnerId}`,
-          fromPartnerId: selectedPartnerId,
-          toPartnerId: otherPartnerId,
-          rate: defaultOut,
-        },
-        {
-          id: `rate-${otherPartnerId}-${selectedPartnerId}`,
-          fromPartnerId: otherPartnerId,
-          toPartnerId: selectedPartnerId,
-          rate: defaultIn,
-        }
-      );
-
-      setRatesState(updatedRates);
-      localStorage.setItem(
-        "pistos_exchange_rates",
-        JSON.stringify(updatedRates)
-      );
-
-      setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
-      setTimeout(() => {
-        setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: false }));
-      }, 1500);
+    } catch (error: any) {
+      console.error("Failed to reset rates via API:", error);
+      const errMsg =
+        error.response?.data?.message || error.message || "Unknown error";
+      alert(`Failed to reset exchange rates: ${errMsg}`);
     }
   };
 
@@ -586,9 +491,15 @@ export default function AdminExchangePage() {
                                       className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-50 border border-neutral-200/50 rounded-lg text-xs font-semibold text-neutral-600"
                                     >
                                       {partner.code} &rarr; {other.code}:{" "}
-                                      <span className="text-neutral-800 font-black">
-                                        {rate.toFixed(2)}
-                                      </span>
+                                      {rate !== null ? (
+                                        <span className="text-neutral-800 font-black">
+                                          {rate.toFixed(2)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-red-600 font-bold bg-amber-100 px-1.5 py-0.2 rounded border border-amber-100/50 text-[10px] uppercase">
+                                          Not Configured
+                                        </span>
+                                      )}
                                     </span>
                                   );
                                 })}
@@ -646,6 +557,20 @@ export default function AdminExchangePage() {
                 </div>
               </div>
 
+              {selectedPartner.status !== "ACTIVE" && (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="font-bold">Active Merchant is Inactive</p>
+                    <p className="text-[11px] mt-0.5 text-red-600/90 leading-tight">
+                      You cannot configure exchange rates for this partner
+                      because its status is set to INACTIVE. Please activate the
+                      partner first in the Partners tab.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Mappings Table */}
               <section className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                 <div className="overflow-x-auto flex-grow">
@@ -675,6 +600,9 @@ export default function AdminExchangePage() {
                           const outKey = `${selectedPartner.id}_${other.id}`;
                           const inKey = `${other.id}_${selectedPartner.id}`;
                           const isSaved = saveStatus[other.id] || false;
+                          const isActive =
+                            selectedPartner.status === "ACTIVE" &&
+                            other.status === "ACTIVE";
 
                           return (
                             <tr
@@ -696,9 +624,40 @@ export default function AdminExchangePage() {
                                     <p className="text-sm font-extrabold text-neutral-800">
                                       {other.name}
                                     </p>
-                                    <p className="text-[10px] font-bold text-neutral-400 tracking-wider uppercase mt-0.5">
-                                      Code: {other.code}
-                                    </p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="text-[10px] font-bold text-neutral-400 tracking-wider uppercase">
+                                        Code: {other.code}
+                                      </span>
+                                      <span className="text-neutral-300">
+                                        •
+                                      </span>
+                                      {getRateValue(
+                                        selectedPartner.id,
+                                        other.id
+                                      ) !== null &&
+                                      getRateValue(
+                                        other.id,
+                                        selectedPartner.id
+                                      ) !== null ? (
+                                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-100">
+                                          Configured
+                                        </span>
+                                      ) : (
+                                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.2 bg-amber-50 text-amber-700 rounded border border-amber-100">
+                                          Not Configured
+                                        </span>
+                                      )}
+                                      {other.status !== "ACTIVE" && (
+                                        <>
+                                          <span className="text-neutral-300">
+                                            •
+                                          </span>
+                                          <span className="inline-block text-[9px] font-bold px-1.5 py-0.2 bg-red-50 text-red-700 rounded border border-red-100 uppercase">
+                                            {other.status}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </td>
@@ -714,7 +673,15 @@ export default function AdminExchangePage() {
                                     step="0.01"
                                     min="0.01"
                                     max="5.0"
-                                    value={rateInputs[outKey] || "1.0"}
+                                    value={
+                                      rateInputs[outKey] !== undefined
+                                        ? rateInputs[outKey]
+                                        : ""
+                                    }
+                                    placeholder={
+                                      isActive ? "Not set" : "Disabled"
+                                    }
+                                    disabled={!isActive}
                                     onChange={(e) =>
                                       handleInputChange(
                                         selectedPartner.id,
@@ -722,7 +689,7 @@ export default function AdminExchangePage() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-24 bg-[#F9F9F9] border border-neutral-200 rounded-xl px-3 py-2 text-sm font-black text-neutral-800 outline-none focus:border-[#8B3D06] focus:bg-white text-center"
+                                    className="w-24 bg-[#F9F9F9] disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-200 rounded-xl px-3 py-2 text-sm font-black text-neutral-800 outline-none focus:border-[#8B3D06] focus:bg-white text-center"
                                   />
                                   <span className="text-neutral-400 text-xs font-bold shrink-0">
                                     {other.code} pts
@@ -741,7 +708,15 @@ export default function AdminExchangePage() {
                                     step="0.01"
                                     min="0.01"
                                     max="5.0"
-                                    value={rateInputs[inKey] || "1.0"}
+                                    value={
+                                      rateInputs[inKey] !== undefined
+                                        ? rateInputs[inKey]
+                                        : ""
+                                    }
+                                    placeholder={
+                                      isActive ? "Not set" : "Disabled"
+                                    }
+                                    disabled={!isActive}
                                     onChange={(e) =>
                                       handleInputChange(
                                         other.id,
@@ -749,7 +724,7 @@ export default function AdminExchangePage() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-24 bg-[#F9F9F9] border border-neutral-200 rounded-xl px-3 py-2 text-sm font-black text-neutral-800 outline-none focus:border-[#8B3D06] focus:bg-white text-center"
+                                    className="w-24 bg-[#F9F9F9] disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-200 rounded-xl px-3 py-2 text-sm font-black text-neutral-800 outline-none focus:border-[#8B3D06] focus:bg-white text-center"
                                   />
                                   <span className="text-neutral-400 text-xs font-bold shrink-0">
                                     {selectedPartner.code} pts
@@ -764,8 +739,9 @@ export default function AdminExchangePage() {
                                     onClick={() =>
                                       handleSavePairRates(other.id)
                                     }
+                                    disabled={!isActive}
                                     className={cn(
-                                      "inline-flex items-center gap-1.5 px-3 py-1.5 font-bold rounded-xl text-xs cursor-pointer shadow-sm transition-all border",
+                                      "inline-flex items-center gap-1.5 px-3 py-1.5 font-bold rounded-xl text-xs cursor-pointer shadow-sm transition-all border disabled:opacity-50 disabled:cursor-not-allowed",
                                       isSaved
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
                                         : "bg-[#8B3D06] hover:bg-[#723204] text-white border-transparent"
@@ -778,7 +754,8 @@ export default function AdminExchangePage() {
                                     onClick={() =>
                                       handleResetPairRates(other.id)
                                     }
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold border border-neutral-200 rounded-xl text-xs cursor-pointer transition-colors"
+                                    disabled={!isActive}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed text-neutral-700 font-bold border border-neutral-200 rounded-xl text-xs cursor-pointer transition-colors"
                                     title="Reset connection to default values"
                                   >
                                     <RotateCcw className="w-3.5 h-3.5 text-neutral-500" />

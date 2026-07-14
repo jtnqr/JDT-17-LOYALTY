@@ -10,7 +10,6 @@ export interface BreadcrumbItem {
 
 interface DesktopNavbarProps {
   userName?: string;
-  userTier?: string;
   onLogout?: () => void;
   showBrand?: boolean;
   searchQuery?: string;
@@ -23,7 +22,6 @@ interface DesktopNavbarProps {
 
 export function DesktopNavbar({
   userName = "Alex Thompson",
-  userTier = "Gold Member",
   onLogout,
   showBrand = true,
   searchQuery = "",

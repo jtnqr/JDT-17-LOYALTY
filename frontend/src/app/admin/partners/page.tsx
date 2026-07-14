@@ -31,8 +31,6 @@ interface Partner {
   pointsPerThousandIDR: number;
   expiryDays: number;
   status: string;
-  targetPartnerName: string;
-  exchangeRate: number;
   logoUrl?: string;
 }
 
@@ -46,7 +44,6 @@ export default function AdminPartnersPage() {
   const [formPointsRate, setFormPointsRate] = useState<number>(1);
   const [formExpiryDays, setFormExpiryDays] = useState<number>(365);
   const [formStatus, setFormStatus] = useState<string>("ACTIVE");
-  const [formExchangeRate, setFormExchangeRate] = useState<number>(0.8);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
 
@@ -99,6 +96,7 @@ export default function AdminPartnersPage() {
   const [createExpiryDays, setCreateExpiryDays] = useState<number>(365);
   const [isCreating, setIsCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
+  const [createdPartnerId, setCreatedPartnerId] = useState<string | null>(null);
   const [createApiError, setCreateApiError] = useState<string | null>(null);
 
   const handleCreatePartner = async (e: React.FormEvent) => {
@@ -115,21 +113,15 @@ export default function AdminPartnersPage() {
     };
 
     try {
-      await axios.post("/api/v1/partners", payload, {
+      const response = await axios.post("/api/v1/partners", payload, {
         headers: { Authorization: "Bearer " + token },
       });
 
+      const newPartner = response.data;
+      setCreatedPartnerId(newPartner.id || null);
       setCreateSuccess(true);
-      setTimeout(() => {
-        setIsCreating(false);
-        setIsCreateModalOpen(false);
-        setCreateSuccess(false);
-        setCreateName("");
-        setCreateCode("");
-        setCreatePointsRate(1);
-        setCreateExpiryDays(365);
-        refetch();
-      }, 1000);
+      setIsCreating(false);
+      refetch();
     } catch (error: any) {
       console.error("Failed to create partner:", error);
 
@@ -155,13 +147,7 @@ export default function AdminPartnersPage() {
       const response = await axios.get("/api/v1/partners", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // In MVP, we attach exchange rates to partner objects for display simplicity
-      const partnersList = response.data.data as any[];
-      return partnersList.map((p) => ({
-        ...p,
-        targetPartnerName: p.code === "KFC" ? "McDonald's" : "KFC",
-        exchangeRate: 0.8, // Default rate
-      })) as Partner[];
+      return response.data.data as Partner[];
     },
     retry: 1,
   });
@@ -188,7 +174,6 @@ export default function AdminPartnersPage() {
     setFormPointsRate(partner.pointsPerThousandIDR);
     setFormExpiryDays(partner.expiryDays);
     setFormStatus(partner.status);
-    setFormExchangeRate(partner.exchangeRate);
     setSaveSuccess(false);
     setApiError(null);
   };
@@ -617,7 +602,7 @@ export default function AdminPartnersPage() {
 
             {createSuccess ? (
               // Success Screen inside Modal
-              <div className="text-center py-8 space-y-4 animate-in zoom-in-95 duration-200 font-sans">
+              <div className="text-center py-6 space-y-4 animate-in zoom-in-95 duration-200 font-sans">
                 <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
                   <CheckCircle className="w-8 h-8" />
                 </div>
@@ -629,13 +614,32 @@ export default function AdminPartnersPage() {
                     The new loyalty partner program has been added and
                     configured successfully.
                   </p>
-                  <p className="text-[11px] font-bold text-[#8B3D06] mt-2 bg-[#FCF5F1] p-2 rounded-lg">
-                    Notice: Please{" "}
-                    <Link href="/admin/exchange" className="underline hover:text-[#723204] cursor-pointer">
-                      navigate to the "Exchange" tab
-                    </Link>{" "}
-                    to configure directional exchange rates for this partner!
+                  <p className="text-[11px] font-bold text-[#8B3D06] mt-2.5 bg-[#FCF5F1] p-2.5 rounded-lg border border-[#8B3D06]/10">
+                    Do you want to configure directional exchange rates for this partner now?
                   </p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Link
+                    href={`/admin/exchange?selectPartnerId=${createdPartnerId}`}
+                    className="flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white font-bold rounded-xl py-3 text-xs cursor-pointer shadow-md text-center hover:shadow-lg transition-all"
+                  >
+                    Configure Rates Now
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreateModalOpen(false);
+                      setCreateSuccess(false);
+                      setCreatedPartnerId(null);
+                      setCreateName("");
+                      setCreateCode("");
+                      setCreatePointsRate(1);
+                      setCreateExpiryDays(365);
+                    }}
+                    className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors"
+                  >
+                    Maybe Later
+                  </button>
                 </div>
               </div>
             ) : (

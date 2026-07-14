@@ -172,11 +172,10 @@ export default function HistoryPage() {
   return (
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
+       <MemberSidebar
         className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
-        userTier="Gold Member"
       />
 
       {/* MAIN CONTENT WRAPPER */}
@@ -184,7 +183,6 @@ export default function HistoryPage() {
         {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
         <DesktopNavbar
           userName={member?.name || "Budi Santoso"}
-          userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
           searchQuery={searchQuery}

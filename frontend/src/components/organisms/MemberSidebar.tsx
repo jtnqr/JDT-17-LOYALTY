@@ -42,14 +42,12 @@ interface MemberSidebarProps {
   className?: string;
   activeTab?: "home" | "rewards" | "exchange" | "history" | "profile";
   userName?: string;
-  userTier?: string;
 }
 
 export function MemberSidebar({
   className,
   activeTab,
   userName = "Budi Santoso",
-  userTier = "Gold Member",
 }: MemberSidebarProps) {
   const pathname = usePathname();
 

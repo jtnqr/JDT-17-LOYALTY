@@ -79,6 +79,7 @@ export default function DashboardPage() {
     },
     enabled: !!memberId,
     retry: 1,
+    refetchInterval: 5000,
   });
 
   // Fetch rewards catalog for transaction detail mapping
@@ -207,14 +208,12 @@ export default function DashboardPage() {
         className="hidden md:flex"
         activeTab="home"
         userName={member?.name || "Budi Santoso"}
-        userTier="Gold Member"
       />
 
       {/* 2. MAIN LAYOUT WRAPPER */}
       <div className="flex-grow flex flex-col min-w-0 h-full overflow-hidden">
         <DesktopNavbar
           userName={member?.name || "Budi Santoso"}
-          userTier="Gold Member"
           onLogout={logout}
           showBrand={false}
           breadcrumbs={[{ label: "Home" }]}
