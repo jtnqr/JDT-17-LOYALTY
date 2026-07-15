@@ -4,12 +4,24 @@ import React from 'react'
 import { LoginForm } from './LoginForm'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
+import apiClient from '@/lib/apiClient'
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }))
 
-vi.mock('axios')
+vi.mock('@/lib/apiClient', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    interceptors: {
+      request: { use: vi.fn() },
+      response: { use: vi.fn() },
+    },
+  },
+}))
 
 describe('LoginForm', () => {
   const mockPush = vi.fn()
@@ -36,7 +48,7 @@ describe('LoginForm', () => {
   })
 
   it('authenticates user and redirects to dashboard for MEMBER role', async () => {
-    vi.mocked(axios.post).mockResolvedValueOnce({
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
       data: {
         token: 'member-jwt-token',
         role: 'MEMBER',
@@ -62,7 +74,7 @@ describe('LoginForm', () => {
   })
 
   it('authenticates admin and redirects to admin console for ADMIN role', async () => {
-    vi.mocked(axios.post).mockResolvedValueOnce({
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
       data: {
         token: 'admin-jwt-token',
         role: 'ADMIN',
@@ -83,7 +95,7 @@ describe('LoginForm', () => {
   })
 
   it('shows error message on network failure', async () => {
-    vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'))
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new Error('Network Error'))
 
     render(<LoginForm />)
     fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'budi@test.com' } })
@@ -94,7 +106,7 @@ describe('LoginForm', () => {
   })
 
   it('shows API returned error message', async () => {
-    vi.mocked(axios.post).mockRejectedValueOnce({
+    vi.mocked(apiClient.post).mockRejectedValueOnce({
       response: {
         data: {
           message: 'Invalid email or password',
