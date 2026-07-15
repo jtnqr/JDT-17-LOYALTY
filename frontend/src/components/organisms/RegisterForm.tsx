@@ -82,9 +82,9 @@ export function RegisterForm() {
 
     try {
       const response = await apiClient.post("/api/v1/auth/register", payload);
-      
+
       const { token, role, user } = response.data;
-      
+
       // Store credentials in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("role", role || "MEMBER");
@@ -94,13 +94,15 @@ export function RegisterForm() {
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Registration failed:", error);
-      
+
       // Show connection error if server is offline
       if (!error.response) {
-        setApiError("Cannot connect to registration service. Please check if the server is running.");
+        setApiError(
+          "Cannot connect to registration service. Please check if the server is running."
+        );
         return;
       }
-      
+
       // Follow the Technical Spec error response schema
       if (error.response?.data?.message) {
         setApiError(error.response.data.message);
@@ -204,11 +206,7 @@ export function RegisterForm() {
         {isLoading ? (
           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         ) : (
-          <>
-            Create Account
-            {/* Simple circle icon matching the design brief (Create Account with a circle icon) */}
-            <div className="w-4.5 h-4.5 border-2 border-current rounded-full" />
-          </>
+          <>Create Account</>
         )}
       </Button>
     </form>
