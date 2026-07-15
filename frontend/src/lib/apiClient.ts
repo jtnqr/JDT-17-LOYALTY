@@ -41,11 +41,14 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     if (typeof window === "undefined") return Promise.reject(error);
 
-    if (error.response?.status === 401) {
+    const url = error.config?.url ?? "";
+    const isAuthEndpoint = url.includes("/api/v1/auth/");
+
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      if (window.location.pathname !== "/login") window.location.href = "/login";
       return Promise.reject(error);
     }
 
