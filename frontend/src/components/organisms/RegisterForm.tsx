@@ -66,13 +66,11 @@ export function RegisterForm() {
     setApiError(null);
 
     // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
-    let formattedPhone = data.phone;
-    if (!formattedPhone.startsWith("0")) {
-      if (formattedPhone.startsWith("62")) {
-        formattedPhone = "0" + formattedPhone.slice(2);
-      } else {
-        formattedPhone = "0" + formattedPhone;
-      }
+    let formattedPhone = data.phone.replace(/^\+/, "");
+    if (formattedPhone.startsWith("62")) {
+      formattedPhone = "0" + formattedPhone.slice(2);
+    } else if (!formattedPhone.startsWith("0")) {
+      formattedPhone = "0" + formattedPhone;
     }
 
     const payload = {
