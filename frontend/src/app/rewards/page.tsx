@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useMember } from "@/lib/hooks/useMember";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
@@ -14,10 +15,43 @@ import Link from "next/link";
 import { RewardRedeemModal } from "@/components/organisms/RewardRedeemModal";
 
 export default function MemberRewardsPage() {
-  const { member, memberId, isLoaded, logout } = useMember();
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RewardsPageContent />
+    </Suspense>
+  );
+}
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activePartnerFilter, setActivePartnerFilter] = useState("ALL");
+function RewardsPageContent() {
+  const { member, memberId, isLoaded, logout } = useMember();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const searchQuery = searchParams.get("q") || "";
+  const activePartnerFilter = searchParams.get("partner") || "ALL";
+
+  const setSearch = (q: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (q) params.set("q", q);
+    else params.delete("q");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const setPartnerFilter = (partner: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (partner === "ALL") params.delete("partner");
+    else params.set("partner", partner);
+    params.delete("q");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
   const [showPointsBanner, setShowPointsBanner] = useState(true);
 
   // Selected reward state for Screen 4 bottom sheet confirmation modal
@@ -90,11 +124,10 @@ export default function MemberRewardsPage() {
         const foundPartner = apiPartners.find(
           (p: any) => p.id === storedPartnerId
         );
-        if (foundPartner) {
-          setActivePartnerFilter(foundPartner.code);
-        } else {
-          setActivePartnerFilter(storedPartnerId);
-        }
+        const partnerCode = foundPartner ? foundPartner.code : storedPartnerId;
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("partner", partnerCode);
+        router.replace(`${pathname}?${params.toString()}`);
         sessionStorage.removeItem("selected_partner_filter");
       }
     }
@@ -127,9 +160,6 @@ export default function MemberRewardsPage() {
 
   // Filter rewards dynamically based on active filter
   const filteredRewards = rewardsList.filter((reward) => {
-    // Only show ACTIVE rewards
-    if (reward.status !== "ACTIVE") return false;
-
     // Only show rewards belonging to ACTIVE partners
     if (apiPartners) {
       const partnerObj = apiPartners.find(
@@ -226,7 +256,7 @@ export default function MemberRewardsPage() {
           onLogout={logout}
           showBrand={false}
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={setSearch}
           searchPlaceholder="Search rewards..."
           showSearch={true}
           breadcrumbs={[{ label: "Marketplace" }, { label: "Rewards" }]}
@@ -275,7 +305,7 @@ export default function MemberRewardsPage() {
                 type="text"
                 placeholder="Search rewards..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-[#F5F5F5] text-xs text-neutral-800 pl-10 pr-4 py-3 rounded-2xl border border-transparent outline-none focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-semibold placeholder:text-neutral-400"
               />
             </div>
@@ -283,7 +313,7 @@ export default function MemberRewardsPage() {
             {/* Filter Chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
-                onClick={() => setActivePartnerFilter("ALL")}
+                onClick={() => setPartnerFilter("ALL")}
                 className={cn(
                   "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
                   activePartnerFilter === "ALL"
@@ -298,7 +328,7 @@ export default function MemberRewardsPage() {
                 .map((p: any) => (
                   <button
                     key={p.id}
-                    onClick={() => setActivePartnerFilter(p.code)}
+                    onClick={() => setPartnerFilter(p.code)}
                     className={cn(
                       "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
                       activePartnerFilter === p.code
@@ -316,8 +346,11 @@ export default function MemberRewardsPage() {
               {filteredRewards.map((reward) => (
                 <div
                   key={reward.id}
-                  onClick={() => setSelectedReward(reward)}
-                  className="bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:border-t-brand-primary active:scale-98 transition-all"
+                  onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                  className={cn(
+                    "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:border-t-brand-primary active:scale-98 transition-all",
+                    reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:border-t-neutral-100 active:scale-100"
+                  )}
                 >
                   <div className="p-3">
                     {/* Food Image */}
@@ -332,17 +365,23 @@ export default function MemberRewardsPage() {
                     <span
                       className={cn(
                         "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                        reward.badgeBg
+                        reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
                       )}
                     >
-                      {reward.partnerName}
+                      {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
                     </span>
-                    <h3 className="text-xs font-black text-neutral-900 mt-2 leading-snug line-clamp-2">
+                    <h3 className={cn(
+                      "text-xs font-black mt-2 leading-snug line-clamp-2",
+                      reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
+                    )}>
                       {reward.name}
                     </h3>
                   </div>
 
-                  <div className="px-3 pb-3 pt-1 flex items-center gap-1.5 text-brand-primary font-bold text-xs">
+                  <div className={cn(
+                    "px-3 pb-3 pt-1 flex items-center gap-1.5 font-bold text-xs",
+                    reward.status !== "ACTIVE" ? "text-neutral-400" : "text-brand-primary"
+                  )}>
                     <Coins className="w-3.5 h-3.5" />
                     <span>{reward.pointCost} pts</span>
                   </div>
@@ -367,8 +406,11 @@ export default function MemberRewardsPage() {
                 {filteredRewards.map((reward) => (
                   <div
                     key={reward.id}
-                    onClick={() => setSelectedReward(reward)}
-                    className="bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:shadow-md transition-all group"
+                    onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                    className={cn(
+                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:shadow-md transition-all group",
+                      reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
+                    )}
                   >
                     <div className="p-4">
                       {/* Image */}
@@ -383,25 +425,37 @@ export default function MemberRewardsPage() {
                       <span
                         className={cn(
                           "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                          reward.badgeBg
+                          reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
                         )}
                       >
-                        {reward.partnerName}
+                        {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
                       </span>
-                      <h3 className="text-sm font-black text-neutral-900 mt-2.5 leading-snug">
+                      <h3 className={cn(
+                        "text-sm font-black mt-2.5 leading-snug",
+                        reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
+                      )}>
                         {reward.name}
                       </h3>
                     </div>
 
                     <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-neutral-50 mt-2 pt-3">
-                      <div className="flex items-center gap-1.5 text-brand-primary font-bold text-sm">
+                      <div className={cn(
+                        "flex items-center gap-1.5 font-bold text-sm",
+                        reward.status !== "ACTIVE" ? "text-neutral-400" : "text-brand-primary"
+                      )}>
                         <Coins className="w-4 h-4" />
                         <span>{reward.pointCost} pts</span>
                       </div>
-                      <span className="text-xs font-bold text-[#8B3D06] hover:underline flex items-center gap-0.5">
-                        Redeem Now
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
+                      {reward.status !== "ACTIVE" ? (
+                        <span className="text-xs font-bold text-neutral-400">
+                          Inactive
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-[#8B3D06] hover:underline flex items-center gap-0.5">
+                          Redeem Now
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -448,7 +502,7 @@ export default function MemberRewardsPage() {
                   type="text"
                   placeholder="Search rewards..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-white text-xs text-neutral-800 pl-10 pr-4 py-3 rounded-2xl border border-transparent outline-none focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-semibold placeholder:text-neutral-400"
                 />
               </div>
@@ -463,7 +517,7 @@ export default function MemberRewardsPage() {
                         type="radio"
                         name="partner"
                         checked={activePartnerFilter === "ALL"}
-                        onChange={() => setActivePartnerFilter("ALL")}
+                        onChange={() => setPartnerFilter("ALL")}
                         className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
                       />
                       <span>All Merchants</span>
@@ -479,7 +533,7 @@ export default function MemberRewardsPage() {
                             type="radio"
                             name="partner"
                             checked={activePartnerFilter === p.code}
-                            onChange={() => setActivePartnerFilter(p.code)}
+                            onChange={() => setPartnerFilter(p.code)}
                             className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
                           />
                           <span>{p.name}</span>

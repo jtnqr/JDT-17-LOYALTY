@@ -514,22 +514,31 @@ export default function DashboardPage() {
                   No active partner balances found.
                 </p>
               ) : (
-                apiBalances.map((b) => (
-                  <BalanceCardDesktop
-                    key={b.partnerId}
-                    partnerId={b.partnerId}
-                    partnerName={b.partnerName}
-                    balance={b.balance}
-                    badgeText="REDEEM NOW"
-                    partnerCode={
-                      b.partnerName.toLowerCase().includes("kfc")
-                        ? "KFC"
-                        : b.partnerName.toLowerCase().includes("mcd")
-                        ? "MCD"
-                        : "GENERIC"
-                    }
-                  />
-                ))
+                apiBalances.map((b) => {
+                  const cardPartnerCode = b.partnerName.toLowerCase().includes("kfc")
+                    ? "KFC"
+                    : b.partnerName.toLowerCase().includes("mcd")
+                    ? "MCD"
+                    : "GENERIC";
+                  const count = rewardsList.filter(
+                    (r) =>
+                      r.status === "ACTIVE" &&
+                      (r.partnerId === b.partnerId ||
+                        r.partnerName?.toLowerCase() === b.partnerName?.toLowerCase() ||
+                        r.partnerCode?.toUpperCase() === cardPartnerCode)
+                  ).length;
+                  return (
+                    <BalanceCardDesktop
+                      key={b.partnerId}
+                      partnerId={b.partnerId}
+                      partnerName={b.partnerName}
+                      balance={b.balance}
+                      badgeText="REDEEM NOW"
+                      partnerCode={cardPartnerCode}
+                      activeRewardsCount={count}
+                    />
+                  );
+                })
               )}
             </div>
 
