@@ -57,8 +57,9 @@ export function RewardRedeemModal({
           <button
             onClick={onClose}
             className="text-neutral-400 hover:text-neutral-600 p-1"
+            aria-label="Close modal"
           >
-            <X className="w-5 h-5 cursor-pointer" />
+            <X className="w-5 h-5 cursor-pointer" aria-hidden="true" />
           </button>
         </div>
 

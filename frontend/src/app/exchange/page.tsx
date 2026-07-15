@@ -721,7 +721,7 @@ export default function ExchangePointsPage() {
                   <div className="flex items-center shadow-sm gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-semibold animate-in fade-in duration-150">
                     <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
                     <span>
-                      Insufficient points in your {fromPartner.code} account.
+                      Insufficient points in your {fromPartner?.code || ""} account.
                       Current balance is {fromBalance} pts.
                     </span>
                   </div>
@@ -739,7 +739,7 @@ export default function ExchangePointsPage() {
                     <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
                     <span>
                       No exchange rate has been configured between{" "}
-                      {fromPartner.name} and {toPartner.name}. Please contact
+                      {fromPartner?.name || ""} and {toPartner?.name || ""}. Please contact
                       your administrator.
                     </span>
                   </div>
@@ -762,8 +762,8 @@ export default function ExchangePointsPage() {
         onConfirm={handleConfirmExchange}
         amountNumber={amountNumber}
         receiveAmount={receiveAmount}
-        fromPartnerCode={fromPartner.code}
-        toPartnerCode={toPartner.code}
+        fromPartnerCode={fromPartner?.code || ""}
+        toPartnerCode={toPartner?.code || ""}
         activeRate={activeRate}
         isSubmitting={isSubmitting}
       />
@@ -773,8 +773,8 @@ export default function ExchangePointsPage() {
         onClose={closeSuccessModal}
         amountNumber={amountNumber}
         receiveAmount={receiveAmount}
-        fromPartnerName={fromPartner.name}
-        toPartnerName={toPartner.name}
+        fromPartnerName={fromPartner?.name || ""}
+        toPartnerName={toPartner?.name || ""}
         activeRate={activeRate}
       />
     </div>
