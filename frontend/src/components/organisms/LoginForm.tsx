@@ -10,6 +10,7 @@ import { FormField } from "../molecules/FormField";
 import { Button } from "../ui/button";
 import { LogIn, AlertCircle } from "lucide-react";
 import apiClient from "@/lib/apiClient";
+import { setAuthCookies } from "@/lib/authCookies";
 
 const loginSchema = z.object({
   email: z
@@ -52,6 +53,7 @@ export function LoginForm() {
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("user", JSON.stringify(user));
+      setAuthCookies(token, role);
 
       // Redirect depending on role
       if (role === "ADMIN") {

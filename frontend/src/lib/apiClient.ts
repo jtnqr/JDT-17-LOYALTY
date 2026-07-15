@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { AxiosError } from "axios";
+import { clearAuthCookies } from "./authCookies";
 
 const REQUEST_TIMEOUT = Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 15000;
 
@@ -49,6 +50,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("user");
+      clearAuthCookies();
       if (window.location.pathname !== "/login") window.location.href = "/login";
       return Promise.reject(error);
     }

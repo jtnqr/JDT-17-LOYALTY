@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MemberUser } from "@/types";
+import { clearAuthCookies } from "@/lib/authCookies";
 
 
 export function useMember() {
@@ -34,6 +35,7 @@ export function useMember() {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
+    clearAuthCookies();
     router.push("/login");
   };
 

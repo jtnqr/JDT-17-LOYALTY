@@ -11,6 +11,7 @@ import { CheckboxField } from "../molecules/CheckboxField";
 import { Button } from "../ui/button";
 import { AlertCircle } from "lucide-react";
 import apiClient from "@/lib/apiClient";
+import { setAuthCookies } from "@/lib/authCookies";
 
 const registerSchema = z
   .object({
@@ -89,6 +90,7 @@ export function RegisterForm() {
       localStorage.setItem("token", token);
       localStorage.setItem("role", role || "MEMBER");
       localStorage.setItem("user", JSON.stringify(user));
+      setAuthCookies(token, role || "MEMBER");
 
       // Auto-navigate to Member Home / Dashboard (Screen 2)
       router.push("/dashboard");
