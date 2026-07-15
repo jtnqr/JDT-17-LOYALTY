@@ -7,7 +7,7 @@ import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import Avatar from "@/components/atoms/Avatar";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   Bell,
   Search,
@@ -22,16 +22,7 @@ import {
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Transaction {
-  id: string;
-  type: string;
-  partnerName: string;
-  points: number;
-  trxAmountIDR?: number;
-  createdAt: string;
-  detailText?: string;
-}
+import { Transaction } from "@/types";
 
 export default function HistoryPage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -40,26 +31,23 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
 
-  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
 
   // Fetch paginated transactions from API
   const { data: transactionData, isLoading } = useQuery({
     queryKey: ["transactions-history", memberId, activeFilter, currentPage],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-
       // Determine type filter for API
       let typeParam = "";
       if (activeFilter === "EARN") typeParam = "&type=EARN";
       if (activeFilter === "REDEEM") typeParam = "&type=REDEEM";
       if (activeFilter === "EXCHANGE_IN") typeParam = "&type=EXCHANGE_IN";
       if (activeFilter === "EXCHANGE_OUT") typeParam = "&type=EXCHANGE_OUT";
+      if (activeFilter === "EXPIRED") typeParam = "&type=EXPIRED";
 
-      const response = await axios.get(
-        `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await apiClient.get(
+        `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`
       );
       return response.data.transactions as Transaction[];
     },
@@ -99,7 +87,8 @@ export default function HistoryPage() {
       (activeFilter === "EARN" && tx.type === "EARN") ||
       (activeFilter === "REDEEM" && tx.type === "REDEEM") ||
       (activeFilter === "EXCHANGE_IN" && tx.type === "EXCHANGE_IN") ||
-      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT");
+      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT") ||
+      (activeFilter === "EXPIRED" && tx.type === "EXPIRED");
 
     return matchesSearch && matchesFilter;
   });
@@ -174,7 +163,7 @@ export default function HistoryPage() {
   return (
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-       <MemberSidebar
+      <MemberSidebar
         className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
@@ -213,6 +202,7 @@ export default function HistoryPage() {
                 { filter: "REDEEM", label: "REDEEM" },
                 { filter: "EXCHANGE_IN", label: "EXCHANGE IN" },
                 { filter: "EXCHANGE_OUT", label: "EXCHANGE OUT" },
+                { filter: "EXPIRED", label: "EXPIRED" },
               ].map((chip) => (
                 <button
                   key={chip.filter}
@@ -338,6 +328,7 @@ export default function HistoryPage() {
                 { filter: "REDEEM", label: "Redemptions" },
                 { filter: "EXCHANGE_IN", label: "Exchange In" },
                 { filter: "EXCHANGE_OUT", label: "Exchange Out" },
+                { filter: "EXPIRED", label: "Expired" },
               ].map((chip) => (
                 <button
                   key={chip.filter}

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   LogOut,
   ChevronRight,
@@ -34,10 +34,7 @@ export default function ProfilePage() {
   const { data: memberDetail } = useQuery({
     queryKey: ["memberDetail", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/api/v1/members/${memberId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(`/api/v1/members/${memberId}`);
       return response.data;
     },
     enabled: !!memberId,
@@ -51,10 +48,7 @@ export default function ProfilePage() {
   const { data: balanceData } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/api/v1/members/${memberId}/points`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(`/api/v1/members/${memberId}/points`);
       return response.data.balances as PointBalance[];
     },
     enabled: !!memberId,

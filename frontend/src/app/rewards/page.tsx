@@ -6,22 +6,12 @@ import { useMember } from "@/lib/hooks/useMember";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
-import axios from "axios";
-import {
-  Search,
-  Bell,
-  Lock,
-  ArrowRight,
-  Gift,
-  Coins,
-  ChevronRight,
-  AlertTriangle,
-  X,
-  CheckCircle,
-} from "lucide-react";
+import apiClient from "@/lib/apiClient";
+import { Search, ArrowRight, Coins, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
 import Link from "next/link";
+import { RewardRedeemModal } from "@/components/organisms/RewardRedeemModal";
 
 export default function MemberRewardsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -43,10 +33,7 @@ export default function MemberRewardsPage() {
   const { data: rewardsData, refetch: refetchRewards } = useQuery({
     queryKey: ["rewards"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/rewards", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/rewards");
       const data = (response.data.data || response.data || []) as any[];
       return data.map((r: any) => {
         const code = r.partnerCode?.toUpperCase();
@@ -68,10 +55,7 @@ export default function MemberRewardsPage() {
   const { data: balanceData, refetch: refetchBalances } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/api/v1/members/${memberId}/points`, {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get(`/api/v1/members/${memberId}/points`);
       return response.data.balances as {
         partnerId: string;
         partnerName: string;
@@ -89,14 +73,11 @@ export default function MemberRewardsPage() {
   const { data: apiPartners } = useQuery({
     queryKey: ["rewards-partners"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return (response.data.partners || response.data.data || []) as any[];
     },
     retry: 1,
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
     refetchInterval: POLLING_INTERVAL,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
@@ -209,11 +190,9 @@ export default function MemberRewardsPage() {
     setIsRedeeming(true);
     setRedeemError(null);
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
+      await apiClient.post(
         "/api/v1/redeem",
-        { rewardId: selectedReward.id },
-        { headers: { Authorization: "Bearer " + token } }
+        { rewardId: selectedReward.id }
       );
       setRedeemSuccess(true);
       refetchBalances();
@@ -514,185 +493,19 @@ export default function MemberRewardsPage() {
         </div>
       </div>
 
-      {/* ========================================================
-          SCREEN 4: REDEMPTION CONFIRMATION BOTTOM SHEET / MODAL
-          ======================================================== */}
-      {selectedReward && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-in fade-in duration-200">
-          {/* Backdrop */}
-          <div
-            onClick={closeRedeemModal}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
-          />
-
-          {/* Bottom Sheet on Mobile, Centered Modal on Desktop */}
-          <div className="absolute w-full max-w-md bg-white rounded-t-[32px] md:rounded-3xl p-6 shadow-2xl flex flex-col relative z-10 animate-in slide-in-from-bottom duration-300 md:duration-200 select-none">
-            {/* Mobile Sheet Drag Handle */}
-            <div className="md:hidden rounded-full mx-auto mb-5 mt-[-8px]" />
-
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
-              <h2 className="text-base font-extrabold text-neutral-900">
-                {redeemSuccess ? "Redemption Successful" : "Confirm Redemption"}
-              </h2>
-              <button
-                onClick={closeRedeemModal}
-                className="text-neutral-400 hover:text-neutral-600 p-1"
-              >
-                <X className="w-5 h-5 cursor-pointer" />
-              </button>
-            </div>
-
-            {redeemSuccess ? (
-              // Success Screen Layout
-              <div className="text-center py-6 space-y-4 animate-in zoom-in duration-200">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
-                  <CheckCircle className="w-9 h-9" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-neutral-900">
-                    Reward Redeemed!
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-[280px] mx-auto leading-relaxed">
-                    You have successfully claimed the {selectedReward.name}
-                    for {selectedReward.pointCost} pts.
-                  </p>
-                </div>
-
-                <div className="border border-neutral-100 rounded-2xl bg-neutral-50/50 p-4 text-xs font-semibold text-neutral-600">
-                  Remaining {selectedReward.partnerName} balance:{" "}
-                  <span className="font-extrabold text-neutral-900">
-                    {remainingPoints} pts
-                  </span>
-                </div>
-
-                <button
-                  onClick={closeRedeemModal}
-                  className="w-full bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3.5 font-bold cursor-pointer transition-colors text-xs"
-                >
-                  Done
-                </button>
-              </div>
-            ) : (
-              // Confirmation Details Layout
-              <div className="space-y-4">
-                {/* Reward Summary */}
-                <div className="flex gap-4">
-                  <div className="w-28 h-28 rounded-xl overflow-hidden bg-neutral-50 shrink-0 border border-neutral-100">
-                    <img
-                      src={selectedReward.imageUrl}
-                      alt={selectedReward.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-grow flex flex-col justify-between py-1">
-                    <div>
-                      <span
-                        className={cn(
-                          "text-[8px] font-black uppercase px-2 py-0.5 rounded",
-                          selectedReward.badgeBg
-                        )}
-                      >
-                        {selectedReward.partnerName}
-                      </span>
-                      <h3 className="text-sm font-black text-neutral-900 mt-1 leading-snug">
-                        {selectedReward.name}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-1 text-brand-primary font-bold text-xs">
-                      <Coins className="w-3.5 h-3.5" />
-                      <span>{selectedReward.pointCost} pts</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* API Error Banner */}
-                {redeemError && (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
-                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Redemption Failed</p>
-                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                        {redeemError}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Insufficient Warning Banner */}
-                {isInsufficient && (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
-                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Insufficient Balance</p>
-                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                        You need {neededPoints} more{" "}
-                        {selectedReward.partnerName} points to redeem this
-                        reward.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Balance Breakdown breakdown */}
-                <div className="border border-neutral-100 rounded-2xl bg-neutral-50 p-4 space-y-2.5 text-xs">
-                  <div className="flex justify-between items-center text-neutral-500 font-semibold">
-                    <span>Your {selectedReward.partnerName} Points</span>
-                    <span className="font-bold text-neutral-800">
-                      {currentBalance} pts
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-red-500 font-semibold">
-                    <span>Redemption Cost</span>
-                    <span>-{selectedReward.pointCost} pts</span>
-                  </div>
-
-                  <div className="h-[1px] bg-neutral-200/50" />
-
-                  <div className="flex justify-between items-center font-bold text-neutral-700">
-                    <span>After Redemption</span>
-                    <span
-                      className={cn(
-                        isInsufficient
-                          ? "text-red-500 font-black"
-                          : "text-emerald-600 font-black"
-                      )}
-                    >
-                      {isInsufficient
-                        ? `${currentBalance - selectedReward.pointCost}`
-                        : remainingPoints}{" "}
-                      pts
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="space-y-2.5 pt-2">
-                  <button
-                    onClick={handleRedeemConfirm}
-                    disabled={isInsufficient || isRedeeming}
-                    className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {isRedeeming ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      "Confirm Redemption"
-                    )}
-                  </button>
-
-                  <button
-                    onClick={closeRedeemModal}
-                    className="w-full text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 rounded-xl py-3.5 font-bold transition-colors text-xs text-center cursor-pointer border border-neutral-200/30"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <RewardRedeemModal
+        isOpen={!!selectedReward}
+        onClose={closeRedeemModal}
+        onConfirm={handleRedeemConfirm}
+        reward={selectedReward}
+        currentBalance={currentBalance}
+        remainingPoints={remainingPoints}
+        isInsufficient={isInsufficient}
+        neededPoints={neededPoints}
+        isRedeeming={isRedeeming}
+        redeemSuccess={redeemSuccess}
+        redeemError={redeemError}
+      />
     </div>
   );
 }

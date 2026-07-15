@@ -38,6 +38,7 @@ export interface Transaction {
   timeText?: string;
   trxAmountIDR?: number;
   createdAt: string;
+  detailText?: string;
 }
 
 export interface MemberActivity {
@@ -58,4 +59,15 @@ export interface PartnerActivity {
   details: string;
   timestamp: string;
   status: "SUCCESS" | "FAILURE";
+}
+
+export interface Reward {
+  id: string;
+  name: string;
+  pointCost: number;
+  status: string;
+  imageUrl: string;
+  partnerCode: string;
+  partnerId: string;
+  partnerName: string;
 }

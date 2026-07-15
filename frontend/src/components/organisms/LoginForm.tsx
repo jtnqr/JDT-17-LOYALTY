@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { FormField } from "../molecules/FormField";
 import { Button } from "../ui/button";
 import { LogIn, AlertCircle } from "lucide-react";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 
 const loginSchema = z.object({
   email: z
@@ -44,7 +44,7 @@ export function LoginForm() {
 
     try {
       // In production, the URL is relative or uses an environment variable
-      const response = await axios.post("/api/v1/auth/login", data);
+      const response = await apiClient.post("/api/v1/auth/login", data);
 
       const { token, role, user } = response.data;
 

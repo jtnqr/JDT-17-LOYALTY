@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   Search,
   Bell,
@@ -59,15 +59,12 @@ export default function AdminPartnersPage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const token = localStorage.getItem("token");
-
     try {
-      const response = await axios.put(
+      const response = await apiClient.put(
         `/api/v1/partners/${editingPartner.id}/logo`,
         formData,
         {
           headers: {
-            Authorization: "Bearer " + token,
             "Content-Type": "multipart/form-data",
           },
         }
@@ -106,7 +103,6 @@ export default function AdminPartnersPage() {
     setIsCreating(true);
     setCreateApiError(null);
 
-    const token = localStorage.getItem("token");
     const payload = {
       name: createName,
       code: createCode,
@@ -115,9 +111,7 @@ export default function AdminPartnersPage() {
     };
 
     try {
-      const response = await axios.post("/api/v1/partners", payload, {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.post("/api/v1/partners", payload);
 
       const newPartner = response.data;
       setCreatedPartnerId(newPartner.id || null);
@@ -144,11 +138,8 @@ export default function AdminPartnersPage() {
   } = useQuery({
     queryKey: ["admin-partners"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
       // Get partners
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return response.data.data as Partner[];
     },
     retry: 1,
@@ -192,7 +183,6 @@ export default function AdminPartnersPage() {
     setIsSaving(true);
     setApiError(null);
 
-    const token = localStorage.getItem("token");
     const payload = {
       name: editingPartner?.name,
       pointsPerThousandIDR: formPointsRate,
@@ -202,9 +192,7 @@ export default function AdminPartnersPage() {
 
     try {
       // 1. Update Partner Config
-      await axios.put(`/api/v1/partners/${editingPartner?.id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.put(`/api/v1/partners/${editingPartner?.id}`, payload);
 
       // 2. Update Exchange Rate in background (if endpoints configured)
       // For slicing MVP, we assume success

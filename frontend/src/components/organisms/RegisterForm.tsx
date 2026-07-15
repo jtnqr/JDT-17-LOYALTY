@@ -10,7 +10,7 @@ import { FormField } from "../molecules/FormField";
 import { CheckboxField } from "../molecules/CheckboxField";
 import { Button } from "../ui/button";
 import { AlertCircle } from "lucide-react";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 
 const registerSchema = z
   .object({
@@ -83,7 +83,7 @@ export function RegisterForm() {
     };
 
     try {
-      const response = await axios.post("/api/v1/auth/register", payload);
+      const response = await apiClient.post("/api/v1/auth/register", payload);
       
       const { token, role, user } = response.data;
       

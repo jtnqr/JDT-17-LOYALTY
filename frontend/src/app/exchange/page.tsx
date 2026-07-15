@@ -7,23 +7,18 @@ import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import Link from "next/link";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
-  Search,
-  Bell,
   ArrowUpDown,
-  Info,
-  CheckCircle2,
-  X,
   Coins,
   ArrowRight,
   ShieldCheck,
   TrendingUp,
   AlertTriangle,
-  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import Avatar from "@/components/atoms/Avatar";
+import { ExchangeConfirmModal } from "@/components/organisms/ExchangeConfirmModal";
+import { ExchangeSuccessModal } from "@/components/organisms/ExchangeSuccessModal";
 
 export default function ExchangePointsPage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -36,14 +31,11 @@ export default function ExchangePointsPage() {
   const { data: apiPartners } = useQuery({
     queryKey: ["exchange-partners-list"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return (response.data.partners || response.data.data || []) as any[];
     },
     retry: 1,
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: !!memberId,
     refetchInterval: POLLING_INTERVAL,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
@@ -118,10 +110,9 @@ export default function ExchangePointsPage() {
   const { data: balanceData, refetch } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/api/v1/members/${memberId}/points`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(
+        `/api/v1/members/${memberId}/points`
+      );
       return response.data.balances as {
         partnerId: string;
         partnerName: string;
@@ -138,14 +129,11 @@ export default function ExchangePointsPage() {
   const { data: apiRates } = useQuery({
     queryKey: ["exchange-rates"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/exchange-rates", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/exchange-rates");
       return (response.data.rates || response.data.data || []) as any[];
     },
     retry: 1,
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: !!memberId,
     refetchInterval: POLLING_INTERVAL,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
@@ -216,7 +204,6 @@ export default function ExchangePointsPage() {
     setShowConfirmModal(false);
     setIsSubmitting(true);
 
-    const token = localStorage.getItem("token");
     const payload = {
       fromPartnerId: fromPartner.id,
       toPartnerId: toPartner.id,
@@ -225,9 +212,7 @@ export default function ExchangePointsPage() {
 
     try {
       // In MVP, we call the POST /exchange endpoint
-      await axios.post("/api/v1/exchange", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.post("/api/v1/exchange", payload);
 
       setIsSubmitting(false);
       setShowSuccessModal(true);
@@ -237,10 +222,9 @@ export default function ExchangePointsPage() {
       console.error("Exchange request failed:", error);
 
       if (!error.response) {
-        console.warn(
-          "Backend offline. Simulating local points exchange update."
+        setErrorMessage(
+          "Unable to connect to the server. Please check your connection and try again."
         );
-        setShowSuccessModal(true);
         setIsSubmitting(false);
         return;
       }
@@ -772,124 +756,27 @@ export default function ExchangePointsPage() {
         </div>
       </div>
 
-      {/* ========================================================
-          EXCHANGE SUCCESS MODAL (Slides in over dashboard)
-          ======================================================== */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            onClick={() => setShowConfirmModal(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
+      <ExchangeConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmExchange}
+        amountNumber={amountNumber}
+        receiveAmount={receiveAmount}
+        fromPartnerCode={fromPartner.code}
+        toPartnerCode={toPartner.code}
+        activeRate={activeRate}
+        isSubmitting={isSubmitting}
+      />
 
-          <div className="relative z-10 w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-5">
-              <ArrowUpDown className="w-8 h-8 text-[#8B3D06]" />
-            </div>
-
-            <h3 className="text-lg font-black text-center text-neutral-900">
-              Confirm Exchange
-            </h3>
-
-            <p className="text-sm text-neutral-500 text-center mt-2 leading-relaxed">
-              Are you sure you want to exchange your points?
-            </p>
-
-            <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-500">From</span>
-                <span className="font-bold">
-                  {amountNumber} {fromPartner.code} pts
-                </span>
-              </div>
-
-              <div className="flex justify-between text-sm">
-                <span className="text-neutral-500">To</span>
-                <span className="font-bold text-[#8B3D06]">
-                  {receiveAmount} {toPartner.code} pts
-                </span>
-              </div>
-
-              <div className="flex justify-between text-sm border-t pt-3">
-                <span className="text-neutral-500">Rate</span>
-                <span className="font-bold">1 : {activeRate}</span>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                className="cursor-pointer flex-1 border border-neutral-300 rounded-xl py-3 font-semibold hover:bg-neutral-100 transition"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleConfirmExchange}
-                disabled={isSubmitting}
-                className="cursor-pointer flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3 font-bold transition disabled:opacity-50"
-              >
-                {isSubmitting ? "Processing..." : "Confirm"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
-          EXCHANGE SUCCESS MODAL (Slides in over dashboard)
-          ======================================================== */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
-          <div
-            onClick={closeSuccessModal}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
-
-          <div className="relative z-10 w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-center select-none">
-            <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto mb-5 shadow-inner">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-
-            <h3 className="text-xl font-black text-neutral-900">
-              Exchange Successful!
-            </h3>
-
-            <p className="text-xs text-neutral-500 mt-2 leading-relaxed px-4">
-              Your points have been successfully converted and transferred instantly.
-            </p>
-
-            <div className="mt-6 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-5 space-y-3.5 text-left text-xs font-semibold">
-              <div className="flex justify-between items-center pb-2.5 border-b border-neutral-100">
-                <span className="text-neutral-400">Converted From</span>
-                <span className="font-extrabold text-neutral-800">
-                  {amountNumber.toLocaleString()} {fromPartner?.name} pts
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center pb-2.5 border-b border-neutral-100">
-                <span className="text-neutral-400">Received To</span>
-                <span className="font-extrabold text-[#8B3D06] flex items-center gap-1">
-                  <Coins className="w-3.5 h-3.5" />
-                  {receiveAmount.toLocaleString()} {toPartner?.name} pts
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-neutral-400">Conversion Rate</span>
-                <span className="font-extrabold text-neutral-800">1 : {activeRate}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={closeSuccessModal}
-              className="w-full bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3.5 font-bold cursor-pointer transition-colors text-xs mt-6"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
+      <ExchangeSuccessModal
+        isOpen={showSuccessModal}
+        onClose={closeSuccessModal}
+        amountNumber={amountNumber}
+        receiveAmount={receiveAmount}
+        fromPartnerName={fromPartner.name}
+        toPartnerName={toPartner.name}
+        activeRate={activeRate}
+      />
     </div>
   );
 }
