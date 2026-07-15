@@ -11,7 +11,7 @@ export interface Member {
   name: string;
   email: string;
   phone: string;
-  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  status?: "ACTIVE" | "INACTIVE";
   createdAt: string;
 }
 
@@ -38,6 +38,7 @@ export interface Transaction {
   timeText?: string;
   trxAmountIDR?: number;
   createdAt: string;
+  detailText?: string;
 }
 
 export interface MemberActivity {
@@ -58,4 +59,15 @@ export interface PartnerActivity {
   details: string;
   timestamp: string;
   status: "SUCCESS" | "FAILURE";
+}
+
+export interface Reward {
+  id: string;
+  name: string;
+  pointCost: number;
+  status: "ACTIVE" | "INACTIVE";
+  imageUrl: string;
+  partnerCode: string;
+  partnerId: string;
+  partnerName: string;
 }

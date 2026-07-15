@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   Search,
   Pencil,
@@ -65,10 +65,7 @@ export default function AdminRewardsPage() {
   const { data: partnersData } = useQuery({
     queryKey: ["admin-rewards-partners"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return (response.data.data || response.data || []) as any[];
     },
     enabled: isLoaded,
@@ -82,10 +79,7 @@ export default function AdminRewardsPage() {
   } = useQuery({
     queryKey: ["admin-rewards"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/rewards", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/rewards");
       return (response.data.data || response.data || []) as Reward[];
     },
     enabled: isLoaded,
@@ -101,15 +95,12 @@ export default function AdminRewardsPage() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const token = localStorage.getItem("token");
-
     try {
-      const response = await axios.put(
+      const response = await apiClient.put(
         `/api/v1/rewards/${editingReward.id}/image`,
         formData,
         {
           headers: {
-            Authorization: "Bearer " + token,
             "Content-Type": "multipart/form-data",
           },
         }
@@ -136,7 +127,6 @@ export default function AdminRewardsPage() {
     setCreateApiError(null);
     setCreateImageError(null);
 
-    const token = localStorage.getItem("token");
     const payload = {
       name: createName,
       pointCost: createPointCost,
@@ -145,18 +135,15 @@ export default function AdminRewardsPage() {
     };
 
     try {
-      const response = await axios.post("/api/v1/rewards", payload, {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.post("/api/v1/rewards", payload);
 
       const newRewardId = response.data.id;
 
       if (createImageFile && newRewardId) {
         const formData = new FormData();
         formData.append("image", createImageFile);
-        await axios.put(`/api/v1/rewards/${newRewardId}/image`, formData, {
+        await apiClient.put(`/api/v1/rewards/${newRewardId}/image`, formData, {
           headers: {
-            Authorization: "Bearer " + token,
             "Content-Type": "multipart/form-data",
           },
         });
@@ -191,7 +178,6 @@ export default function AdminRewardsPage() {
     setIsSaving(true);
     setApiError(null);
 
-    const token = localStorage.getItem("token");
     const payload = {
       name: formName,
       pointCost: formPointCost,
@@ -200,9 +186,7 @@ export default function AdminRewardsPage() {
     };
 
     try {
-      await axios.put(`/api/v1/rewards/${editingReward.id}`, payload, {
-        headers: { Authorization: "Bearer " + token },
-      });
+      await apiClient.put(`/api/v1/rewards/${editingReward.id}`, payload);
       setSaveSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["rewards"] });
       setTimeout(() => {

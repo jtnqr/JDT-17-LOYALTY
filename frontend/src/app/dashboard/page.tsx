@@ -8,44 +8,20 @@ import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BalanceCardDesktop } from "@/components/molecules/BalanceCardDesktop";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import Link from "next/link";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   Gift,
   RefreshCw,
   Clock,
-  Coins,
-  ChevronRight,
-  LogOut,
-  AlertTriangle,
-  QrCode,
-  Plus,
   ArrowRight,
-  Award,
-  Wallet,
   ArrowDownLeft,
   ArrowUpRight,
-  Bell,
   ArrowLeftRight,
   History,
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface PointBalance {
-  partnerId: string;
-  partnerName: string;
-  balance: number;
-}
-
-interface Transaction {
-  id: string;
-  type: string;
-  partnerName: string;
-  points: number;
-  timeText?: string;
-  trxAmountIDR?: number;
-  createdAt: string;
-}
+import { PointBalance, Transaction } from "@/types";
 
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -57,10 +33,7 @@ export default function DashboardPage() {
   const { data: balanceData, isLoading: isBalancesLoading } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/api/v1/members/${memberId}/points`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get(`/api/v1/members/${memberId}/points`);
       return response.data.balances as PointBalance[];
     },
     enabled: !!memberId,
@@ -74,12 +47,8 @@ export default function DashboardPage() {
   const { data: transactionData, isLoading: isTrxsLoading } = useQuery({
     queryKey: ["recent-transactions", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `/api/v1/members/${memberId}/transactions?page=0&size=8`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await apiClient.get(
+        `/api/v1/members/${memberId}/transactions?page=0&size=8`
       );
       return response.data.transactions as Transaction[];
     },
@@ -94,10 +63,7 @@ export default function DashboardPage() {
   const { data: rewardsData } = useQuery({
     queryKey: ["rewards-catalog-list"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/rewards", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/rewards");
       return (response.data.data || []) as any[];
     },
     enabled: !!memberId,
@@ -469,7 +435,7 @@ export default function DashboardPage() {
             </div>
             <div className="relative z-10 space-y-2">
               <h1 className="text-3xl font-black tracking-tight mt-2">
-                Good afternoon, {member?.name || "Budi Santoso"}!
+                {getGreeting()}, {member?.name || "Budi Santoso"}!
               </h1>
               <p className="text-sm text-neutral-100 max-w-xl font-medium leading-relaxed">
                 Track, exchange, and redeem your reward points across all
@@ -548,22 +514,31 @@ export default function DashboardPage() {
                   No active partner balances found.
                 </p>
               ) : (
-                apiBalances.map((b) => (
-                  <BalanceCardDesktop
-                    key={b.partnerId}
-                    partnerId={b.partnerId}
-                    partnerName={b.partnerName}
-                    balance={b.balance}
-                    badgeText="REDEEM NOW"
-                    partnerCode={
-                      b.partnerName.toLowerCase().includes("kfc")
-                        ? "KFC"
-                        : b.partnerName.toLowerCase().includes("mcd")
-                        ? "MCD"
-                        : "GENERIC"
-                    }
-                  />
-                ))
+                apiBalances.map((b) => {
+                  const cardPartnerCode = b.partnerName.toLowerCase().includes("kfc")
+                    ? "KFC"
+                    : b.partnerName.toLowerCase().includes("mcd")
+                    ? "MCD"
+                    : "GENERIC";
+                  const count = rewardsList.filter(
+                    (r) =>
+                      r.status === "ACTIVE" &&
+                      (r.partnerId === b.partnerId ||
+                        r.partnerName?.toLowerCase() === b.partnerName?.toLowerCase() ||
+                        r.partnerCode?.toUpperCase() === cardPartnerCode)
+                  ).length;
+                  return (
+                    <BalanceCardDesktop
+                      key={b.partnerId}
+                      partnerId={b.partnerId}
+                      partnerName={b.partnerName}
+                      balance={b.balance}
+                      badgeText="REDEEM NOW"
+                      partnerCode={cardPartnerCode}
+                      activeRewardsCount={count}
+                    />
+                  );
+                })
               )}
             </div>
 

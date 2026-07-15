@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import { ChevronRight, ShieldAlert, Search, Clock, Bell } from "lucide-react";
 
 import { Member } from "@/types";
@@ -18,13 +18,10 @@ export default function AdminTransactionsPage() {
   const { data: memberData } = useQuery({
     queryKey: ["admin-tx-members-only"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/members?page=0&size=50", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/members?page=0&size=50");
       return response.data?.data as Member[];
     },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
     retry: 1,
   });
 

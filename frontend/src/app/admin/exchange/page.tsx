@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import { useSearchParams } from "next/navigation";
 import {
   ChevronRight,
@@ -71,14 +71,11 @@ function ExchangePageContent() {
   const { data: apiRates } = useQuery({
     queryKey: ["admin-exchange-rates"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/exchange-rates", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/exchange-rates");
       return (response.data.rates || response.data.data || []) as any[];
     },
     retry: 1,
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
   });
 
   // Combine API rates
@@ -103,14 +100,11 @@ function ExchangePageContent() {
   const { data: apiPartners, isLoading } = useQuery({
     queryKey: ["admin-exchange-partners"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return response.data.data as any[];
     },
     retry: 1,
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
   });
 
   // Load partners strictly from API
@@ -243,34 +237,26 @@ function ExchangePageContent() {
     const outRate = rawOut;
     const inRate = rawIn;
 
-    const token = localStorage.getItem("token");
-
     try {
       // 1. Post Outward Rate (Selected -> Other)
-      await axios.post(
+      await apiClient.post(
         "/api/v1/exchange-rates",
         {
           fromPartnerId: selectedPartnerId,
           toPartnerId: otherPartnerId,
           rate: outRate,
           effectiveFrom: new Date().toISOString(),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       // 2. Post Inward Rate (Other -> Selected)
-      await axios.post(
+      await apiClient.post(
         "/api/v1/exchange-rates",
         {
           fromPartnerId: otherPartnerId,
           toPartnerId: selectedPartnerId,
           rate: inRate,
           effectiveFrom: new Date().toISOString(),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -318,34 +304,26 @@ function ExchangePageContent() {
       [inKey]: defaultIn.toString(),
     }));
 
-    const token = localStorage.getItem("token");
-
     try {
       // 1. Post default Outward Rate (Selected -> Other)
-      await axios.post(
+      await apiClient.post(
         "/api/v1/exchange-rates",
         {
           fromPartnerId: selectedPartnerId,
           toPartnerId: otherPartnerId,
           rate: defaultOut,
           effectiveFrom: new Date().toISOString(),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       // 2. Post default Inward Rate (Other -> Selected)
-      await axios.post(
+      await apiClient.post(
         "/api/v1/exchange-rates",
         {
           fromPartnerId: otherPartnerId,
           toPartnerId: selectedPartnerId,
           rate: defaultIn,
           effectiveFrom: new Date().toISOString(),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 

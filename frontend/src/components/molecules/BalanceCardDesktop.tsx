@@ -11,6 +11,7 @@ interface BalanceCardDesktopProps {
   badgeText: string;
   partnerCode?: string;
   partnerId?: string;
+  activeRewardsCount?: number;
 }
 
 export function BalanceCardDesktop({
@@ -19,6 +20,7 @@ export function BalanceCardDesktop({
   badgeText,
   partnerCode,
   partnerId,
+  activeRewardsCount,
 }: BalanceCardDesktopProps) {
   // Normalize partner code
   const code =
@@ -124,14 +126,20 @@ export function BalanceCardDesktop({
             {activeTheme.icon}
           </div>
 
-          {/* <span
-            className={cn(
-              "text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide shadow-sm",
-              activeTheme.badge
-            )}
-          >
-            {badgeText || "Redeem Now"}
-          </span> */}
+          {activeRewardsCount !== undefined && (
+            <span
+              className={cn(
+                "text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-sm",
+                code === "KFC"
+                  ? "bg-red-50 text-[#C8102E] border border-red-200/30"
+                  : code === "MCD"
+                  ? "bg-yellow-50 text-[#D89F0E] border border-yellow-200/30"
+                  : "bg-neutral-50 text-neutral-600 border border-neutral-200/40"
+              )}
+            >
+              {activeRewardsCount} Reward{activeRewardsCount !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
 
         {/* Middle */}

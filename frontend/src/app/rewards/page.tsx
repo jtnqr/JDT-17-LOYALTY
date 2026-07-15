@@ -1,33 +1,57 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useMember } from "@/lib/hooks/useMember";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
-import axios from "axios";
-import {
-  Search,
-  Bell,
-  Lock,
-  ArrowRight,
-  Gift,
-  Coins,
-  ChevronRight,
-  AlertTriangle,
-  X,
-  CheckCircle,
-} from "lucide-react";
+import apiClient from "@/lib/apiClient";
+import { Search, ArrowRight, Coins, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Avatar from "@/components/atoms/Avatar";
 import Link from "next/link";
+import { RewardRedeemModal } from "@/components/organisms/RewardRedeemModal";
 
 export default function MemberRewardsPage() {
-  const { member, memberId, isLoaded, logout } = useMember();
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <RewardsPageContent />
+    </Suspense>
+  );
+}
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activePartnerFilter, setActivePartnerFilter] = useState("ALL");
+function RewardsPageContent() {
+  const { member, memberId, isLoaded, logout } = useMember();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const searchQuery = searchParams.get("q") || "";
+  const activePartnerFilter = searchParams.get("partner") || "ALL";
+
+  const setSearch = (q: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (q) params.set("q", q);
+    else params.delete("q");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const setPartnerFilter = (partner: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (partner === "ALL") params.delete("partner");
+    else params.set("partner", partner);
+    params.delete("q");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
   const [showPointsBanner, setShowPointsBanner] = useState(true);
 
   // Selected reward state for Screen 4 bottom sheet confirmation modal
@@ -43,10 +67,7 @@ export default function MemberRewardsPage() {
   const { data: rewardsData, refetch: refetchRewards } = useQuery({
     queryKey: ["rewards"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/rewards", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/rewards");
       const data = (response.data.data || response.data || []) as any[];
       return data.map((r: any) => {
         const code = r.partnerCode?.toUpperCase();
@@ -68,10 +89,7 @@ export default function MemberRewardsPage() {
   const { data: balanceData, refetch: refetchBalances } = useQuery({
     queryKey: ["balances", memberId],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/api/v1/members/${memberId}/points`, {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get(`/api/v1/members/${memberId}/points`);
       return response.data.balances as {
         partnerId: string;
         partnerName: string;
@@ -89,14 +107,11 @@ export default function MemberRewardsPage() {
   const { data: apiPartners } = useQuery({
     queryKey: ["rewards-partners"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return (response.data.partners || response.data.data || []) as any[];
     },
     retry: 1,
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
     refetchInterval: POLLING_INTERVAL,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
@@ -109,11 +124,10 @@ export default function MemberRewardsPage() {
         const foundPartner = apiPartners.find(
           (p: any) => p.id === storedPartnerId
         );
-        if (foundPartner) {
-          setActivePartnerFilter(foundPartner.code);
-        } else {
-          setActivePartnerFilter(storedPartnerId);
-        }
+        const partnerCode = foundPartner ? foundPartner.code : storedPartnerId;
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("partner", partnerCode);
+        router.replace(`${pathname}?${params.toString()}`);
         sessionStorage.removeItem("selected_partner_filter");
       }
     }
@@ -144,40 +158,43 @@ export default function MemberRewardsPage() {
 
   const rewardsList = rewardsData || [];
 
-  // Filter rewards dynamically based on active filter
-  const filteredRewards = rewardsList.filter((reward) => {
-    // Only show ACTIVE rewards
-    if (reward.status !== "ACTIVE") return false;
-
-    // Only show rewards belonging to ACTIVE partners
-    if (apiPartners) {
-      const partnerObj = apiPartners.find(
-        (p: any) =>
-          p.id === reward.partnerId ||
-          p.code === reward.partnerCode ||
-          (reward.partnerName &&
-            p.name.toLowerCase() === reward.partnerName.toLowerCase())
-      );
-      if (partnerObj && partnerObj.status !== "ACTIVE") {
-        return false;
+  // Filter and sort rewards dynamically based on active filter
+  const filteredRewards = rewardsList
+    .filter((reward) => {
+      // Only show rewards belonging to ACTIVE partners
+      if (apiPartners) {
+        const partnerObj = apiPartners.find(
+          (p: any) =>
+            p.id === reward.partnerId ||
+            p.code === reward.partnerCode ||
+            (reward.partnerName &&
+              p.name.toLowerCase() === reward.partnerName.toLowerCase())
+        );
+        if (partnerObj && partnerObj.status !== "ACTIVE") {
+          return false;
+        }
       }
-    }
 
-    const matchesSearch = reward.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesPartner =
-      activePartnerFilter === "ALL" ||
-      (reward.partnerName &&
-        reward.partnerName
-          .toLowerCase()
-          .includes(activePartnerFilter.toLowerCase())) ||
-      (reward.partnerCode &&
-        reward.partnerCode
-          .toLowerCase()
-          .includes(activePartnerFilter.toLowerCase()));
-    return matchesSearch && matchesPartner;
-  });
+      const matchesSearch = reward.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesPartner =
+        activePartnerFilter === "ALL" ||
+        (reward.partnerName &&
+          reward.partnerName
+            .toLowerCase()
+            .includes(activePartnerFilter.toLowerCase())) ||
+        (reward.partnerCode &&
+          reward.partnerCode
+            .toLowerCase()
+            .includes(activePartnerFilter.toLowerCase()));
+      return matchesSearch && matchesPartner;
+    })
+    .sort((a, b) => {
+      const aActive = a.status === "ACTIVE" ? 1 : 0;
+      const bActive = b.status === "ACTIVE" ? 1 : 0;
+      return bActive - aActive;
+    });
 
   // Calculate variables for the selected redemption details dynamically
   const currentBalance = (() => {
@@ -209,11 +226,9 @@ export default function MemberRewardsPage() {
     setIsRedeeming(true);
     setRedeemError(null);
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
+      await apiClient.post(
         "/api/v1/redeem",
-        { rewardId: selectedReward.id },
-        { headers: { Authorization: "Bearer " + token } }
+        { rewardId: selectedReward.id }
       );
       setRedeemSuccess(true);
       refetchBalances();
@@ -247,7 +262,7 @@ export default function MemberRewardsPage() {
           onLogout={logout}
           showBrand={false}
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={setSearch}
           searchPlaceholder="Search rewards..."
           showSearch={true}
           breadcrumbs={[{ label: "Marketplace" }, { label: "Rewards" }]}
@@ -296,7 +311,7 @@ export default function MemberRewardsPage() {
                 type="text"
                 placeholder="Search rewards..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-[#F5F5F5] text-xs text-neutral-800 pl-10 pr-4 py-3 rounded-2xl border border-transparent outline-none focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-semibold placeholder:text-neutral-400"
               />
             </div>
@@ -304,7 +319,7 @@ export default function MemberRewardsPage() {
             {/* Filter Chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               <button
-                onClick={() => setActivePartnerFilter("ALL")}
+                onClick={() => setPartnerFilter("ALL")}
                 className={cn(
                   "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
                   activePartnerFilter === "ALL"
@@ -319,7 +334,7 @@ export default function MemberRewardsPage() {
                 .map((p: any) => (
                   <button
                     key={p.id}
-                    onClick={() => setActivePartnerFilter(p.code)}
+                    onClick={() => setPartnerFilter(p.code)}
                     className={cn(
                       "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
                       activePartnerFilter === p.code
@@ -337,8 +352,11 @@ export default function MemberRewardsPage() {
               {filteredRewards.map((reward) => (
                 <div
                   key={reward.id}
-                  onClick={() => setSelectedReward(reward)}
-                  className="bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:border-t-brand-primary active:scale-98 transition-all"
+                  onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                  className={cn(
+                    "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:border-t-brand-primary active:scale-98 transition-all",
+                    reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:border-t-neutral-100 active:scale-100"
+                  )}
                 >
                   <div className="p-3">
                     {/* Food Image */}
@@ -353,17 +371,23 @@ export default function MemberRewardsPage() {
                     <span
                       className={cn(
                         "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                        reward.badgeBg
+                        reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
                       )}
                     >
-                      {reward.partnerName}
+                      {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
                     </span>
-                    <h3 className="text-xs font-black text-neutral-900 mt-2 leading-snug line-clamp-2">
+                    <h3 className={cn(
+                      "text-xs font-black mt-2 leading-snug line-clamp-2",
+                      reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
+                    )}>
                       {reward.name}
                     </h3>
                   </div>
 
-                  <div className="px-3 pb-3 pt-1 flex items-center gap-1.5 text-brand-primary font-bold text-xs">
+                  <div className={cn(
+                    "px-3 pb-3 pt-1 flex items-center gap-1.5 font-bold text-xs",
+                    reward.status !== "ACTIVE" ? "text-neutral-400" : "text-brand-primary"
+                  )}>
                     <Coins className="w-3.5 h-3.5" />
                     <span>{reward.pointCost} pts</span>
                   </div>
@@ -388,8 +412,11 @@ export default function MemberRewardsPage() {
                 {filteredRewards.map((reward) => (
                   <div
                     key={reward.id}
-                    onClick={() => setSelectedReward(reward)}
-                    className="bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:shadow-md transition-all group"
+                    onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                    className={cn(
+                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:shadow-md transition-all group",
+                      reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
+                    )}
                   >
                     <div className="p-4">
                       {/* Image */}
@@ -404,25 +431,37 @@ export default function MemberRewardsPage() {
                       <span
                         className={cn(
                           "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                          reward.badgeBg
+                          reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
                         )}
                       >
-                        {reward.partnerName}
+                        {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
                       </span>
-                      <h3 className="text-sm font-black text-neutral-900 mt-2.5 leading-snug">
+                      <h3 className={cn(
+                        "text-sm font-black mt-2.5 leading-snug",
+                        reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
+                      )}>
                         {reward.name}
                       </h3>
                     </div>
 
                     <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t border-neutral-50 mt-2 pt-3">
-                      <div className="flex items-center gap-1.5 text-brand-primary font-bold text-sm">
+                      <div className={cn(
+                        "flex items-center gap-1.5 font-bold text-sm",
+                        reward.status !== "ACTIVE" ? "text-neutral-400" : "text-brand-primary"
+                      )}>
                         <Coins className="w-4 h-4" />
                         <span>{reward.pointCost} pts</span>
                       </div>
-                      <span className="text-xs font-bold text-[#8B3D06] hover:underline flex items-center gap-0.5">
-                        Redeem Now
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
+                      {reward.status !== "ACTIVE" ? (
+                        <span className="text-xs font-bold text-neutral-400">
+                          Inactive
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-[#8B3D06] hover:underline flex items-center gap-0.5">
+                          Redeem Now
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -469,7 +508,7 @@ export default function MemberRewardsPage() {
                   type="text"
                   placeholder="Search rewards..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-white text-xs text-neutral-800 pl-10 pr-4 py-3 rounded-2xl border border-transparent outline-none focus:bg-white focus:border-neutral-200 focus:ring-1 focus:ring-neutral-200 transition-all font-semibold placeholder:text-neutral-400"
                 />
               </div>
@@ -484,7 +523,7 @@ export default function MemberRewardsPage() {
                         type="radio"
                         name="partner"
                         checked={activePartnerFilter === "ALL"}
-                        onChange={() => setActivePartnerFilter("ALL")}
+                        onChange={() => setPartnerFilter("ALL")}
                         className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
                       />
                       <span>All Merchants</span>
@@ -500,7 +539,7 @@ export default function MemberRewardsPage() {
                             type="radio"
                             name="partner"
                             checked={activePartnerFilter === p.code}
-                            onChange={() => setActivePartnerFilter(p.code)}
+                            onChange={() => setPartnerFilter(p.code)}
                             className="w-4 h-4 text-brand-primary accent-[#8B3D06] cursor-pointer"
                           />
                           <span>{p.name}</span>
@@ -514,185 +553,19 @@ export default function MemberRewardsPage() {
         </div>
       </div>
 
-      {/* ========================================================
-          SCREEN 4: REDEMPTION CONFIRMATION BOTTOM SHEET / MODAL
-          ======================================================== */}
-      {selectedReward && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-in fade-in duration-200">
-          {/* Backdrop */}
-          <div
-            onClick={closeRedeemModal}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
-          />
-
-          {/* Bottom Sheet on Mobile, Centered Modal on Desktop */}
-          <div className="absolute w-full max-w-md bg-white rounded-t-[32px] md:rounded-3xl p-6 shadow-2xl flex flex-col relative z-10 animate-in slide-in-from-bottom duration-300 md:duration-200 select-none">
-            {/* Mobile Sheet Drag Handle */}
-            <div className="md:hidden rounded-full mx-auto mb-5 mt-[-8px]" />
-
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
-              <h2 className="text-base font-extrabold text-neutral-900">
-                {redeemSuccess ? "Redemption Successful" : "Confirm Redemption"}
-              </h2>
-              <button
-                onClick={closeRedeemModal}
-                className="text-neutral-400 hover:text-neutral-600 p-1"
-              >
-                <X className="w-5 h-5 cursor-pointer" />
-              </button>
-            </div>
-
-            {redeemSuccess ? (
-              // Success Screen Layout
-              <div className="text-center py-6 space-y-4 animate-in zoom-in duration-200">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
-                  <CheckCircle className="w-9 h-9" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-neutral-900">
-                    Reward Redeemed!
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-1 max-w-[280px] mx-auto leading-relaxed">
-                    You have successfully claimed the {selectedReward.name}
-                    for {selectedReward.pointCost} pts.
-                  </p>
-                </div>
-
-                <div className="border border-neutral-100 rounded-2xl bg-neutral-50/50 p-4 text-xs font-semibold text-neutral-600">
-                  Remaining {selectedReward.partnerName} balance:{" "}
-                  <span className="font-extrabold text-neutral-900">
-                    {remainingPoints} pts
-                  </span>
-                </div>
-
-                <button
-                  onClick={closeRedeemModal}
-                  className="w-full bg-[#8B3D06] hover:bg-[#723204] text-white rounded-xl py-3.5 font-bold cursor-pointer transition-colors text-xs"
-                >
-                  Done
-                </button>
-              </div>
-            ) : (
-              // Confirmation Details Layout
-              <div className="space-y-4">
-                {/* Reward Summary */}
-                <div className="flex gap-4">
-                  <div className="w-28 h-28 rounded-xl overflow-hidden bg-neutral-50 shrink-0 border border-neutral-100">
-                    <img
-                      src={selectedReward.imageUrl}
-                      alt={selectedReward.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-grow flex flex-col justify-between py-1">
-                    <div>
-                      <span
-                        className={cn(
-                          "text-[8px] font-black uppercase px-2 py-0.5 rounded",
-                          selectedReward.badgeBg
-                        )}
-                      >
-                        {selectedReward.partnerName}
-                      </span>
-                      <h3 className="text-sm font-black text-neutral-900 mt-1 leading-snug">
-                        {selectedReward.name}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-1 text-brand-primary font-bold text-xs">
-                      <Coins className="w-3.5 h-3.5" />
-                      <span>{selectedReward.pointCost} pts</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* API Error Banner */}
-                {redeemError && (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
-                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Redemption Failed</p>
-                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                        {redeemError}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Insufficient Warning Banner */}
-                {isInsufficient && (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-50 border border-red-200/50 text-red-700 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
-                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Insufficient Balance</p>
-                      <p className="text-[10px] mt-0.5 text-red-600/90 leading-tight">
-                        You need {neededPoints} more{" "}
-                        {selectedReward.partnerName} points to redeem this
-                        reward.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Balance Breakdown breakdown */}
-                <div className="border border-neutral-100 rounded-2xl bg-neutral-50 p-4 space-y-2.5 text-xs">
-                  <div className="flex justify-between items-center text-neutral-500 font-semibold">
-                    <span>Your {selectedReward.partnerName} Points</span>
-                    <span className="font-bold text-neutral-800">
-                      {currentBalance} pts
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-red-500 font-semibold">
-                    <span>Redemption Cost</span>
-                    <span>-{selectedReward.pointCost} pts</span>
-                  </div>
-
-                  <div className="h-[1px] bg-neutral-200/50" />
-
-                  <div className="flex justify-between items-center font-bold text-neutral-700">
-                    <span>After Redemption</span>
-                    <span
-                      className={cn(
-                        isInsufficient
-                          ? "text-red-500 font-black"
-                          : "text-emerald-600 font-black"
-                      )}
-                    >
-                      {isInsufficient
-                        ? `${currentBalance - selectedReward.pointCost}`
-                        : remainingPoints}{" "}
-                      pts
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="space-y-2.5 pt-2">
-                  <button
-                    onClick={handleRedeemConfirm}
-                    disabled={isInsufficient || isRedeeming}
-                    className="w-full bg-[#8B3D06] hover:bg-[#723204] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl py-3.5 font-bold cursor-pointer transition-all text-xs flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {isRedeeming ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      "Confirm Redemption"
-                    )}
-                  </button>
-
-                  <button
-                    onClick={closeRedeemModal}
-                    className="w-full text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 rounded-xl py-3.5 font-bold transition-colors text-xs text-center cursor-pointer border border-neutral-200/30"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <RewardRedeemModal
+        isOpen={!!selectedReward}
+        onClose={closeRedeemModal}
+        onConfirm={handleRedeemConfirm}
+        reward={selectedReward}
+        currentBalance={currentBalance}
+        remainingPoints={remainingPoints}
+        isInsufficient={isInsufficient}
+        neededPoints={neededPoints}
+        isRedeeming={isRedeeming}
+        redeemSuccess={redeemSuccess}
+        redeemError={redeemError}
+      />
     </div>
   );
 }

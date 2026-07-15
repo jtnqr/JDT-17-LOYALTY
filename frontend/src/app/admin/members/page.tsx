@@ -5,18 +5,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   Search,
   Plus,
-  Download,
-  Eye,
   Pencil,
   ChevronLeft,
   ChevronRight,
   Filter,
   AlertCircle,
-  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -24,15 +21,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FormField } from "@/components/molecules/FormField";
-
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: "ACTIVE" | "INACTIVE";
-  createdAt: string;
-}
+import { Member } from "@/types";
 
 const editMemberSchema = z.object({
   name: z.string().min(1, "Full name is required"),
@@ -111,7 +100,7 @@ export default function AdminMembersPage() {
         name: selectedMember.name,
         email: selectedMember.email,
         phone: selectedMember.phone,
-        status: selectedMember.status,
+        status: selectedMember.status || "ACTIVE",
       });
     }
   }, [selectedMember, resetEdit]);
@@ -119,17 +108,13 @@ export default function AdminMembersPage() {
   const onSubmitEdit = async (data: EditMemberSchemaType) => {
     if (!selectedMember) return;
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
+      await apiClient.put(
         `/api/v1/members/${selectedMember.id}`,
         {
           name: data.name,
           email: data.email,
           phone: data.phone,
           status: data.status,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -177,7 +162,7 @@ export default function AdminMembersPage() {
     }
 
     try {
-      await axios.post("/api/v1/auth/register", {
+      await apiClient.post("/api/v1/auth/register", {
         name: data.name,
         email: data.email,
         phone: formattedPhone,
@@ -223,20 +208,18 @@ export default function AdminMembersPage() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["admin-members", statusFilter, currentPage],
+    queryKey: ["admin-members", statusFilter, currentPage, searchQuery],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
+      const execPage = searchQuery ? 0 : currentPage;
+      const execSize = searchQuery ? 100 : 10;
       const statusParam =
         statusFilter !== "ALL" ? `&status=${statusFilter}` : "";
-      const response = await axios.get(
-        `/api/v1/members?page=${currentPage}&size=10${statusParam}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await apiClient.get(
+        `/api/v1/members?page=${execPage}&size=${execSize}${statusParam}`
       );
       return response.data;
     },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
     retry: 1,
   });
 
@@ -249,6 +232,9 @@ export default function AdminMembersPage() {
   }
 
   const rawMembers = (memberData?.data as Member[]) || [];
+  const totalElements = (memberData?.total as number) || 0;
+  const pageSize = searchQuery ? 100 : ((memberData?.size as number) || 10);
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
   // Client-side search filtering
   const filteredMembers = rawMembers.filter((m) => {
@@ -267,7 +253,7 @@ export default function AdminMembersPage() {
       case "ACTIVE":
         return "bg-emerald-50 text-emerald-700 border-emerald-200/50";
       case "INACTIVE":
-        return "bg-neutral-100 text-red-500 border-neutral-200/30";
+        return "bg-neutral-100 text-neutral-500 border-neutral-200/30";
       default:
         return "bg-neutral-100 text-neutral-500";
     }
@@ -302,7 +288,10 @@ export default function AdminMembersPage() {
                   <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
                     className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
                   >
                     <option value="ALL">All Statuses</option>
@@ -317,7 +306,10 @@ export default function AdminMembersPage() {
                     type="text"
                     placeholder="Search members..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(0);
+                    }}
                     className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
                   />
                 </div>
@@ -420,7 +412,7 @@ export default function AdminMembersPage() {
                             className="hover:bg-neutral-50/30 transition-colors"
                           >
                             <td className="px-6 py-4.5 text-xs text-neutral-400 font-bold">
-                              {index + 1}
+                              {currentPage * pageSize + index + 1}
                             </td>
                             <td className="px-6 py-4.5">
                               <span className="text-sm font-extrabold text-[#8B3D06] hover:underline cursor-pointer">
@@ -440,10 +432,10 @@ export default function AdminMembersPage() {
                               <span
                                 className={cn(
                                   "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
-                                  getStatusBadgeClass(member.status)
+                                  getStatusBadgeClass(member.status || "ACTIVE")
                                 )}
                               >
-                                {member.status}
+                                {member.status || "ACTIVE"}
                               </span>
                             </td>
                             <td className="px-6 py-4.5">
@@ -471,10 +463,14 @@ export default function AdminMembersPage() {
               {/* Pagination Controls Footer */}
               <div className="border-t border-neutral-100 px-6 py-4 flex items-center justify-between bg-neutral-50/20 text-xs font-bold text-neutral-500">
                 <span>
-                  Showing 1–{filteredMembers.length} of {filteredMembers.length}{" "}
-                  members
+                  {totalElements === 0
+                    ? "No members found"
+                    : searchQuery
+                    ? `Showing ${filteredMembers.length} of ${totalElements} members (filtered)`
+                    : `Showing ${currentPage * pageSize + 1}–${Math.min((currentPage + 1) * pageSize, totalElements)} of ${totalElements} members`}
                 </span>
 
+                {!searchQuery && (
                 <div className="flex items-center gap-1">
                   <button
                     disabled={currentPage === 0}
@@ -483,16 +479,41 @@ export default function AdminMembersPage() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <button className="px-3.5 py-2 border border-neutral-200 rounded-lg bg-white font-black text-[#8B3D06]">
-                    1
-                  </button>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 5) {
+                      pageNum = i;
+                    } else if (currentPage < 3) {
+                      pageNum = i;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 5 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={cn(
+                          "px-3.5 py-2 border border-neutral-200 rounded-lg transition-colors cursor-pointer",
+                          currentPage === pageNum
+                            ? "bg-[#8B3D06] text-white border-[#8B3D06]"
+                            : "bg-white hover:bg-neutral-50 text-neutral-600"
+                        )}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
                   <button
-                    disabled
-                    className="p-2 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    className="p-2 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
+                )}
               </div>
             </section>
           </div>

@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useMember } from "@/lib/hooks/useMember";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import Avatar from "@/components/atoms/Avatar";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import {
   Bell,
   Search,
@@ -22,44 +23,71 @@ import {
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Transaction {
-  id: string;
-  type: string;
-  partnerName: string;
-  points: number;
-  trxAmountIDR?: number;
-  createdAt: string;
-  detailText?: string;
-}
+import { Transaction } from "@/types";
 
 export default function HistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <HistoryPageContent />
+    </Suspense>
+  );
+}
+
+function HistoryPageContent() {
   const { member, memberId, isLoaded, logout } = useMember();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, EARN, REDEEM, EXCHANGE_IN, EXCHANGE_OUT
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
+  const activeFilter = searchParams.get("filter") || "ALL";
+  const currentPage = Number(searchParams.get("page")) || 0;
+  const searchQuery = searchParams.get("q") || "";
 
-  const POLLING_INTERVAL = Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
+  const setFilter = (filter: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("filter", filter);
+    params.delete("page");
+    params.delete("q");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const setPage = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(page));
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const setSearch = (q: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (q) params.set("q", q);
+    else params.delete("q");
+    params.delete("page");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
 
   // Fetch paginated transactions from API
   const { data: transactionData, isLoading } = useQuery({
     queryKey: ["transactions-history", memberId, activeFilter, currentPage],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-
       // Determine type filter for API
       let typeParam = "";
       if (activeFilter === "EARN") typeParam = "&type=EARN";
       if (activeFilter === "REDEEM") typeParam = "&type=REDEEM";
       if (activeFilter === "EXCHANGE_IN") typeParam = "&type=EXCHANGE_IN";
       if (activeFilter === "EXCHANGE_OUT") typeParam = "&type=EXCHANGE_OUT";
+      if (activeFilter === "EXPIRED") typeParam = "&type=EXPIRED";
 
-      const response = await axios.get(
-        `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await apiClient.get(
+        `/api/v1/members/${memberId}/transactions?page=${currentPage}&size=20${typeParam}`
       );
       return response.data.transactions as Transaction[];
     },
@@ -99,7 +127,8 @@ export default function HistoryPage() {
       (activeFilter === "EARN" && tx.type === "EARN") ||
       (activeFilter === "REDEEM" && tx.type === "REDEEM") ||
       (activeFilter === "EXCHANGE_IN" && tx.type === "EXCHANGE_IN") ||
-      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT");
+      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT") ||
+      (activeFilter === "EXPIRED" && tx.type === "EXPIRED");
 
     return matchesSearch && matchesFilter;
   });
@@ -174,7 +203,7 @@ export default function HistoryPage() {
   return (
     <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
       {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-       <MemberSidebar
+      <MemberSidebar
         className="hidden md:flex"
         activeTab="history"
         userName={member?.name || "Budi Santoso"}
@@ -188,7 +217,7 @@ export default function HistoryPage() {
           onLogout={logout}
           showBrand={false}
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={setSearch}
           searchPlaceholder="Search transactions..."
           showSearch={true}
           breadcrumbs={[{ label: "Account" }, { label: "History" }]}
@@ -213,10 +242,11 @@ export default function HistoryPage() {
                 { filter: "REDEEM", label: "REDEEM" },
                 { filter: "EXCHANGE_IN", label: "EXCHANGE IN" },
                 { filter: "EXCHANGE_OUT", label: "EXCHANGE OUT" },
+                { filter: "EXPIRED", label: "EXPIRED" },
               ].map((chip) => (
                 <button
                   key={chip.filter}
-                  onClick={() => setActiveFilter(chip.filter)}
+                  onClick={() => setFilter(chip.filter)}
                   className={cn(
                     "px-5 py-2.5 rounded-full text-xs font-bold transition-colors border border-transparent whitespace-nowrap cursor-pointer",
                     activeFilter === chip.filter
@@ -338,13 +368,11 @@ export default function HistoryPage() {
                 { filter: "REDEEM", label: "Redemptions" },
                 { filter: "EXCHANGE_IN", label: "Exchange In" },
                 { filter: "EXCHANGE_OUT", label: "Exchange Out" },
+                { filter: "EXPIRED", label: "Expired" },
               ].map((chip) => (
                 <button
                   key={chip.filter}
-                  onClick={() => {
-                    setActiveFilter(chip.filter);
-                    setCurrentPage(0);
-                  }}
+                  onClick={() => setFilter(chip.filter)}
                   className={cn(
                     "px-5 py-2.5 rounded-xl text-xs font-bold transition-all border border-neutral-200/50 cursor-pointer",
                     activeFilter === chip.filter
@@ -363,7 +391,7 @@ export default function HistoryPage() {
                 type="text"
                 placeholder="Search transactions..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-white text-neutral-700 border border-neutral-200 pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:border-[#8B3D06] transition-colors font-semibold placeholder:text-neutral-400"
               />
             </div>
@@ -508,7 +536,7 @@ export default function HistoryPage() {
               <div className="flex items-center gap-1 select-none">
                 <button
                   disabled={currentPage === 0}
-                  onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                  onClick={() => setPage(Math.max(0, currentPage - 1))}
                   className="p-2 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -518,7 +546,7 @@ export default function HistoryPage() {
                 </button>
                 <button
                   disabled={filteredTransactions.length < 20}
-                  onClick={() => setCurrentPage((p) => p + 1)}
+                  onClick={() => setPage(currentPage + 1)}
                   className="p-2 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />

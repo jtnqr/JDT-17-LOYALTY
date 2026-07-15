@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
-import axios from "axios";
+import apiClient from "@/lib/apiClient";
 import Link from "next/link";
 import {
   Users,
@@ -67,26 +67,20 @@ export default function AdminDashboardPage() {
   const { data: memberData } = useQuery({
     queryKey: ["admin-total-members"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/members?page=0&size=1", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/members?page=0&size=1");
       return response.data.total as number;
     },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
   });
 
   // Fetch Partner count from API
   const { data: partnerData } = useQuery({
     queryKey: ["admin-total-partners"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/partners", {
-        headers: { Authorization: "Bearer " + token },
-      });
+      const response = await apiClient.get("/api/v1/partners");
       return (response.data.data as any[]).length;
     },
-    enabled: typeof window !== "undefined" && !!localStorage.getItem("token"),
+    enabled: isLoaded,
   });
 
   const getEventBadge = (type: string) => {

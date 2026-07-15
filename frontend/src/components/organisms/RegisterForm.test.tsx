@@ -4,12 +4,24 @@ import React from 'react'
 import { RegisterForm } from './RegisterForm'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
+import apiClient from '@/lib/apiClient'
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }))
 
-vi.mock('axios')
+vi.mock('@/lib/apiClient', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    interceptors: {
+      request: { use: vi.fn() },
+      response: { use: vi.fn() },
+    },
+  },
+}))
 
 describe('RegisterForm', () => {
   const mockPush = vi.fn()
@@ -52,7 +64,7 @@ describe('RegisterForm', () => {
   })
 
   it('normalizes phone and registers member successfully', async () => {
-    vi.mocked(axios.post).mockResolvedValueOnce({
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
       data: {
         token: 'registered-jwt-token',
         role: 'MEMBER',
@@ -70,7 +82,7 @@ describe('RegisterForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /Create Account/i }))
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith('/api/v1/auth/register', {
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/auth/register', {
         name: 'Budi Santoso',
         email: 'budi@test.com',
         phone: '081234567890',
@@ -82,7 +94,7 @@ describe('RegisterForm', () => {
   })
 
   it('normalizes +62 phone numbers properly', async () => {
-    vi.mocked(axios.post).mockResolvedValueOnce({
+    vi.mocked(apiClient.post).mockResolvedValueOnce({
       data: { token: 'token', role: 'MEMBER', user: {} },
     })
 
@@ -96,17 +108,17 @@ describe('RegisterForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /Create Account/i }))
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith('/api/v1/auth/register', expect.objectContaining({
+      expect(apiClient.post).toHaveBeenCalledWith('/api/v1/auth/register', expect.objectContaining({
         phone: '081234567890',
       }))
     })
   })
 
   it('displays API errors on registration fail', async () => {
-    vi.mocked(axios.post).mockRejectedValueOnce({
+    vi.mocked(apiClient.post).mockRejectedValueOnce({
       response: {
         data: {
-          message: 'Phone number already registered',
+          message: 'Email already registered',
         },
       },
     })
@@ -120,11 +132,11 @@ describe('RegisterForm', () => {
     fireEvent.click(screen.getByLabelText(/I agree/i))
     fireEvent.click(screen.getByRole('button', { name: /Create Account/i }))
 
-    expect(await screen.findByText(/Phone number already registered/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Email already registered/i)).toBeInTheDocument()
   })
 
   it('displays connection error on network failure', async () => {
-    vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'))
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new Error('Network Error'))
 
     render(<RegisterForm />)
     fireEvent.change(screen.getByLabelText(/Full Name/i), { target: { value: 'Budi Santoso' } })
