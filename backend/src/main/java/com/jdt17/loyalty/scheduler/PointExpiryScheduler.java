@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class PointExpiryScheduler {
     private final TransactionService transactionService;
 
-    @Scheduled(cron = "0 0 17 * * *")
+    @Scheduled(cron = "0 0 17 * * *", zone = "UTC") // 00:00 WIB (UTC+7)
     public void runPointExpiry() {
         log.info("Starting daily point expiry job");
         try {
