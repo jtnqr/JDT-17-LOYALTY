@@ -16,6 +16,7 @@ import {
   Coins,
   Building2,
   Gift,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,18 +27,21 @@ interface Reward {
   status: string;
   imageUrl: string;
   partnerCode: string;
+  partnerId: string;
 }
 
 export default function AdminRewardsPage() {
   const { isLoaded } = useAdmin();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [partnerFilter, setPartnerFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
 
   // Edit Form State
   const [formName, setFormName] = useState("");
   const [formPointCost, setFormPointCost] = useState<number>(0);
-  const [formStatus, setFormStatus] = useState("ACTIVE");
+  const [formStatus, setFormStatus] = useState<string>("ACTIVE");
   const [formImageUrl, setFormImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -71,7 +75,11 @@ export default function AdminRewardsPage() {
   });
 
   // Fetch rewards list
-  const { data: rewardsData, isLoading, refetch } = useQuery({
+  const {
+    data: rewardsData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-rewards"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
@@ -111,7 +119,6 @@ export default function AdminRewardsPage() {
           ...editingReward,
           imageUrl: response.data.imageUrl,
         });
-        setFormImageUrl(response.data.imageUrl);
       }
       refetch();
       queryClient.invalidateQueries({ queryKey: ["rewards"] });
@@ -147,16 +154,12 @@ export default function AdminRewardsPage() {
       if (createImageFile && newRewardId) {
         const formData = new FormData();
         formData.append("image", createImageFile);
-        await axios.put(
-          `/api/v1/rewards/${newRewardId}/image`,
-          formData,
-          {
-            headers: {
-              Authorization: "Bearer " + token,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
+        await axios.put(`/api/v1/rewards/${newRewardId}/image`, formData, {
+          headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "multipart/form-data",
+          },
+        });
       }
 
       setCreateSuccess(true);
@@ -174,7 +177,9 @@ export default function AdminRewardsPage() {
       }, 1000);
     } catch (error: any) {
       console.error("Failed to create reward:", error);
-      setCreateApiError(error.response?.data?.message || "Failed to create reward.");
+      setCreateApiError(
+        error.response?.data?.message || "Failed to create reward."
+      );
     } finally {
       setIsCreating(false);
     }
@@ -231,11 +236,15 @@ export default function AdminRewardsPage() {
   }
 
   const rewards = rewardsData || [];
-  const filteredRewards = rewards.filter(
-    (r) =>
+  const filteredRewards = rewards.filter((r) => {
+    const matchesSearch =
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.partnerCode?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      r.partnerCode?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPartner =
+      partnerFilter === "ALL" || r.partnerId === partnerFilter;
+    const matchesStatus = statusFilter === "ALL" || r.status === statusFilter;
+    return matchesSearch && matchesPartner && matchesStatus;
+  });
 
   return (
     <div className="min-h-screen bg-neutral-50 flex font-sans">
@@ -253,15 +262,49 @@ export default function AdminRewardsPage() {
 
         <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative w-64">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search rewards..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400 w-full"
-              />
+            <div className="flex flex-wrap gap-3 items-center">
+              {/* Partner Filter */}
+              <div className="relative">
+                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <select
+                  value={partnerFilter}
+                  onChange={(e) => setPartnerFilter(e.target.value)}
+                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
+                >
+                  <option value="ALL">All Partners</option>
+                  {partnersData?.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+              </div>
+
+              {/* Status Filter */}
+              <div className="relative">
+                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+              </div>
+              <div className="relative w-64">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search rewards..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400 animate-in fade-in duration-200"
+                />
+              </div>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
@@ -277,54 +320,98 @@ export default function AdminRewardsPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Image</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Reward Name</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Partner</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Points Cost</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 text-center">Edit</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                      Image
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                      Reward Name
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                      Partner
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                      Points Cost
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 text-center">
+                      Edit
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {isLoading && filteredRewards.length === 0 ? (
                     Array.from({ length: 3 }).map((_, idx) => (
                       <tr key={idx} className="animate-pulse">
-                        <td className="px-6 py-5"><div className="h-10 w-16 bg-neutral-200 rounded" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-36" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-16" /></td>
-                        <td className="px-6 py-5"><div className="h-4 bg-neutral-200 rounded w-12" /></td>
-                        <td className="px-6 py-5"><div className="h-6 bg-neutral-200 rounded w-20" /></td>
-                        <td className="px-6 py-5"><div className="h-6 bg-neutral-200 rounded w-8 mx-auto" /></td>
+                        <td className="px-6 py-5">
+                          <div className="h-10 w-16 bg-neutral-200 rounded" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-36" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-16" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-4 bg-neutral-200 rounded w-12" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-6 bg-neutral-200 rounded w-20" />
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="h-6 bg-neutral-200 rounded w-8 mx-auto" />
+                        </td>
                       </tr>
                     ))
                   ) : filteredRewards.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-sm font-semibold text-neutral-400">
+                      <td
+                        colSpan={6}
+                        className="text-center py-10 text-sm font-semibold text-neutral-400"
+                      >
                         No rewards found.
                       </td>
                     </tr>
                   ) : (
                     filteredRewards.map((reward) => (
-                      <tr key={reward.id} className="hover:bg-neutral-50/20 transition-colors">
+                      <tr
+                        key={reward.id}
+                        className="hover:bg-neutral-50/20 transition-colors"
+                      >
                         <td className="px-6 py-4">
                           <div className="w-16 h-10 rounded overflow-hidden bg-neutral-100 border shadow-inner shrink-0">
                             {reward.imageUrl ? (
-                              <img src={reward.imageUrl} alt={reward.name} className="w-full h-full object-cover" />
+                              <img
+                                src={reward.imageUrl}
+                                alt={reward.name}
+                                className="w-full h-full object-cover"
+                              />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-neutral-150"><Gift className="w-4 h-4 text-neutral-400" /></div>
+                              <div className="w-full h-full flex items-center justify-center bg-neutral-150">
+                                <Gift className="w-4 h-4 text-neutral-400" />
+                              </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm font-extrabold text-neutral-800">{reward.name}</td>
-                        <td className="px-6 py-4 text-sm font-extrabold text-[#8B3D06]">{reward.partnerCode}</td>
-                        <td className="px-6 py-4 text-sm font-bold text-neutral-700">{reward.pointCost} pts</td>
+                        <td className="px-6 py-4 text-sm font-extrabold text-neutral-800">
+                          {reward.name}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-extrabold text-[#8B3D06]">
+                          {reward.partnerCode}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-neutral-700">
+                          {reward.pointCost} pts
+                        </td>
                         <td className="px-6 py-4">
-                          <span className={cn(
-                            "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
-                            reward.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
-                              : "bg-neutral-100 text-neutral-500 border-neutral-200/30"
-                          )}>
+                          <span
+                            className={cn(
+                              "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
+                              reward.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
+                                : "bg-neutral-100 text-neutral-500 border-neutral-200/30"
+                            )}
+                          >
                             {reward.status}
                           </span>
                         </td>
@@ -351,14 +438,26 @@ export default function AdminRewardsPage() {
           ======================================================== */}
       {editingReward && (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
-          <div onClick={() => setEditingReward(null)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-          <form onSubmit={handleUpdateReward} className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col gap-4 animate-in zoom-in-95 duration-200 select-none">
+          <div
+            onClick={() => setEditingReward(null)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+          <form
+            onSubmit={handleUpdateReward}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col gap-4 animate-in zoom-in-95 duration-200 select-none"
+          >
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3.5">
               <div className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-[#8B3D06]" />
-                <h2 className="text-base font-extrabold text-neutral-900 font-sans">Edit Reward</h2>
+                <h2 className="text-base font-extrabold text-neutral-900 font-sans">
+                  Edit Reward
+                </h2>
               </div>
-              <button type="button" onClick={() => setEditingReward(null)} className="text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setEditingReward(null)}
+                className="text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -369,8 +468,12 @@ export default function AdminRewardsPage() {
                   <CheckCircle className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">Reward Saved!</h3>
-                  <p className="text-[11px] text-neutral-500 mt-1">Changes to the reward details have been saved successfully.</p>
+                  <h3 className="text-sm font-bold text-neutral-900">
+                    Reward Saved!
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 mt-1">
+                    Changes to the reward details have been saved successfully.
+                  </p>
                 </div>
               </div>
             ) : (
@@ -383,7 +486,9 @@ export default function AdminRewardsPage() {
                 )}
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Reward Name</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Reward Name
+                  </label>
                   <input
                     type="text"
                     required
@@ -394,7 +499,9 @@ export default function AdminRewardsPage() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Points Cost</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Points Cost
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -406,7 +513,9 @@ export default function AdminRewardsPage() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Status</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Status
+                  </label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value)}
@@ -418,7 +527,9 @@ export default function AdminRewardsPage() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Reward Image URL</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Reward Image URL
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. https://example.com/voucher.jpg or upload below"
@@ -430,30 +541,58 @@ export default function AdminRewardsPage() {
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-10 rounded overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
                       {formImageUrl ? (
-                        <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <img
+                          src={formImageUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <Gift className="w-5 h-5 text-neutral-400" />
                       )}
                     </div>
                     <div className="flex-1 flex flex-col gap-1">
-                      <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Or upload local file</label>
+                      <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                        Or upload local file
+                      </label>
                       <input
                         type="file"
                         accept="image/png, image/jpeg, image/webp"
                         onChange={handleImageUpload}
                         className="text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#8B3D06]/10 file:text-[#8B3D06] hover:file:bg-[#8B3D06]/20 file:cursor-pointer"
                       />
-                      {uploadingImage && <span className="text-[10px] text-neutral-400 animate-pulse">Uploading image...</span>}
-                      {imageError && <span className="text-[10px] text-red-500 font-bold">{imageError}</span>}
+                      {uploadingImage && (
+                        <span className="text-[10px] text-neutral-400 animate-pulse">
+                          Uploading image...
+                        </span>
+                      )}
+                      {imageError && (
+                        <span className="text-[10px] text-red-500 font-bold">
+                          {imageError}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-3 pt-3">
-                  <button type="submit" disabled={isSaving} className="flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white font-bold rounded-xl py-3 text-xs cursor-pointer shadow-md active:translate-y-px transition-all flex items-center justify-center gap-1.5">
-                    {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Save Changes"}
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white font-bold rounded-xl py-3 text-xs cursor-pointer shadow-md active:translate-y-px transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {isSaving ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      "Save Changes"
+                    )}
                   </button>
-                  <button type="button" onClick={() => setEditingReward(null)} className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors">Cancel</button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingReward(null)}
+                    className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
@@ -466,14 +605,26 @@ export default function AdminRewardsPage() {
           ======================================================== */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200">
-          <div onClick={() => setIsCreateModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
-          <form onSubmit={handleCreateReward} className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col gap-4 animate-in zoom-in-95 duration-200 select-none">
+          <div
+            onClick={() => setIsCreateModalOpen(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+          <form
+            onSubmit={handleCreateReward}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col gap-4 animate-in zoom-in-95 duration-200 select-none"
+          >
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3.5">
               <div className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-[#8B3D06]" />
-                <h2 className="text-base font-extrabold text-neutral-900 font-sans">Create New Reward</h2>
+                <h2 className="text-base font-extrabold text-neutral-900 font-sans">
+                  Create New Reward
+                </h2>
               </div>
-              <button type="button" onClick={() => setIsCreateModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="text-neutral-400 hover:text-neutral-600 p-1 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -484,8 +635,12 @@ export default function AdminRewardsPage() {
                   <CheckCircle className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">Reward Created!</h3>
-                  <p className="text-[11px] text-neutral-500 mt-1">The new reward catalog has been added successfully.</p>
+                  <h3 className="text-sm font-bold text-neutral-900">
+                    Reward Created!
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 mt-1">
+                    The new reward catalog has been added successfully.
+                  </p>
                 </div>
               </div>
             ) : (
@@ -498,7 +653,9 @@ export default function AdminRewardsPage() {
                 )}
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Reward Name</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Reward Name
+                  </label>
                   <input
                     type="text"
                     required
@@ -510,7 +667,9 @@ export default function AdminRewardsPage() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Partner Merchant</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Partner Merchant
+                  </label>
                   <select
                     required
                     value={createPartnerId}
@@ -519,13 +678,17 @@ export default function AdminRewardsPage() {
                   >
                     <option value="">Select a Merchant</option>
                     {partnersData?.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.code})
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Points Cost</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Points Cost
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -538,7 +701,9 @@ export default function AdminRewardsPage() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Reward Image URL</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Reward Image URL
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. https://example.com/voucher.jpg or upload below"
@@ -549,7 +714,9 @@ export default function AdminRewardsPage() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Or upload local file</label>
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
+                    Or upload local file
+                  </label>
                   <input
                     type="file"
                     accept="image/png, image/jpeg, image/webp"
@@ -568,15 +735,31 @@ export default function AdminRewardsPage() {
                     className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] file:mr-4 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#FCF5F1] file:text-[#8B3D06] hover:file:bg-[#f6e6dc] cursor-pointer"
                   />
                   {createImageError && (
-                    <span className="text-[10px] text-red-600 mt-1 font-semibold">{createImageError}</span>
+                    <span className="text-[10px] text-red-600 mt-1 font-semibold">
+                      {createImageError}
+                    </span>
                   )}
                 </div>
 
                 <div className="flex gap-3 pt-3">
-                  <button type="submit" disabled={isCreating} className="flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white font-bold rounded-xl py-3 text-xs cursor-pointer shadow-md active:translate-y-px transition-all flex items-center justify-center gap-1.5">
-                    {isCreating ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Create Reward"}
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="flex-1 bg-[#8B3D06] hover:bg-[#723204] text-white font-bold rounded-xl py-3 text-xs cursor-pointer shadow-md active:translate-y-px transition-all flex items-center justify-center gap-1.5"
+                  >
+                    {isCreating ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      "Create Reward"
+                    )}
                   </button>
-                  <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors">Cancel</button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-bold rounded-xl py-3 text-xs cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}

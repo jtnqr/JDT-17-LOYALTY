@@ -21,6 +21,7 @@ import {
   X,
   AlertCircle,
   Plus,
+  Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ export default function AdminPartnersPage() {
   const { isLoaded } = useAdmin();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
 
   // Local form state for Edit Partner modal
@@ -162,12 +164,14 @@ export default function AdminPartnersPage() {
 
   const partners = partnerData || [];
 
-  // Search filtering
-  const filteredPartners = partners.filter(
-    (p) =>
+  // Search and status filtering
+  const filteredPartners = partners.filter((p) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      p.code.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const openEditModal = (partner: Partner) => {
     setEditingPartner(partner);
@@ -255,15 +259,31 @@ export default function AdminPartnersPage() {
         {/* Content Body */}
         <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative w-64">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search partners..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
-              />
+            <div className="flex flex-wrap gap-3 items-center">
+              {/* Status Filter */}
+              <div className="relative">
+                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+              </div>
+              <div className="relative w-64">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search partners..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
+                />
+              </div>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
@@ -615,7 +635,8 @@ export default function AdminPartnersPage() {
                     configured successfully.
                   </p>
                   <p className="text-[11px] font-bold text-[#8B3D06] mt-2.5 bg-[#FCF5F1] p-2.5 rounded-lg border border-[#8B3D06]/10">
-                    Do you want to configure directional exchange rates for this partner now?
+                    Do you want to configure directional exchange rates for this
+                    partner now?
                   </p>
                 </div>
                 <div className="flex gap-3 pt-2">
