@@ -57,6 +57,9 @@ type AddMemberSchemaType = z.infer<typeof addMemberSchema>;
 
 export default function AdminMembersPage() {
   const { isLoaded } = useAdmin();
+
+  const POLLING_INTERVAL =
+    Number(process.env.NEXT_PUBLIC_REFETCH_INTERVAL) || 5000;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(0);
@@ -221,6 +224,9 @@ export default function AdminMembersPage() {
     },
     enabled: isLoaded,
     retry: 1,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
 
   if (!isLoaded) {
