@@ -100,7 +100,7 @@ export default function AdminMembersPage() {
         name: selectedMember.name,
         email: selectedMember.email,
         phone: selectedMember.phone,
-        status: selectedMember.status,
+        status: selectedMember.status || "ACTIVE",
       });
     }
   }, [selectedMember, resetEdit]);
@@ -251,7 +251,7 @@ export default function AdminMembersPage() {
       case "ACTIVE":
         return "bg-emerald-50 text-emerald-700 border-emerald-200/50";
       case "INACTIVE":
-        return "bg-neutral-100 text-red-500 border-neutral-200/30";
+        return "bg-neutral-100 text-neutral-500 border-neutral-200/30";
       default:
         return "bg-neutral-100 text-neutral-500";
     }
@@ -430,10 +430,10 @@ export default function AdminMembersPage() {
                               <span
                                 className={cn(
                                   "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
-                                  getStatusBadgeClass(member.status)
+                                  getStatusBadgeClass(member.status || "ACTIVE")
                                 )}
                               >
-                                {member.status}
+                                {member.status || "ACTIVE"}
                               </span>
                             </td>
                             <td className="px-6 py-4.5">
