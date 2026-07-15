@@ -158,37 +158,43 @@ function RewardsPageContent() {
 
   const rewardsList = rewardsData || [];
 
-  // Filter rewards dynamically based on active filter
-  const filteredRewards = rewardsList.filter((reward) => {
-    // Only show rewards belonging to ACTIVE partners
-    if (apiPartners) {
-      const partnerObj = apiPartners.find(
-        (p: any) =>
-          p.id === reward.partnerId ||
-          p.code === reward.partnerCode ||
-          (reward.partnerName &&
-            p.name.toLowerCase() === reward.partnerName.toLowerCase())
-      );
-      if (partnerObj && partnerObj.status !== "ACTIVE") {
-        return false;
+  // Filter and sort rewards dynamically based on active filter
+  const filteredRewards = rewardsList
+    .filter((reward) => {
+      // Only show rewards belonging to ACTIVE partners
+      if (apiPartners) {
+        const partnerObj = apiPartners.find(
+          (p: any) =>
+            p.id === reward.partnerId ||
+            p.code === reward.partnerCode ||
+            (reward.partnerName &&
+              p.name.toLowerCase() === reward.partnerName.toLowerCase())
+        );
+        if (partnerObj && partnerObj.status !== "ACTIVE") {
+          return false;
+        }
       }
-    }
 
-    const matchesSearch = reward.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesPartner =
-      activePartnerFilter === "ALL" ||
-      (reward.partnerName &&
-        reward.partnerName
-          .toLowerCase()
-          .includes(activePartnerFilter.toLowerCase())) ||
-      (reward.partnerCode &&
-        reward.partnerCode
-          .toLowerCase()
-          .includes(activePartnerFilter.toLowerCase()));
-    return matchesSearch && matchesPartner;
-  });
+      const matchesSearch = reward.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesPartner =
+        activePartnerFilter === "ALL" ||
+        (reward.partnerName &&
+          reward.partnerName
+            .toLowerCase()
+            .includes(activePartnerFilter.toLowerCase())) ||
+        (reward.partnerCode &&
+          reward.partnerCode
+            .toLowerCase()
+            .includes(activePartnerFilter.toLowerCase()));
+      return matchesSearch && matchesPartner;
+    })
+    .sort((a, b) => {
+      const aActive = a.status === "ACTIVE" ? 1 : 0;
+      const bActive = b.status === "ACTIVE" ? 1 : 0;
+      return bActive - aActive;
+    });
 
   // Calculate variables for the selected redemption details dynamically
   const currentBalance = (() => {
