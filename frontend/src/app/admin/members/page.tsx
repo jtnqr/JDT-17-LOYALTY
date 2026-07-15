@@ -208,12 +208,14 @@ export default function AdminMembersPage() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["admin-members", statusFilter, currentPage],
+    queryKey: ["admin-members", statusFilter, currentPage, searchQuery],
     queryFn: async () => {
+      const execPage = searchQuery ? 0 : currentPage;
+      const execSize = searchQuery ? 100 : 10;
       const statusParam =
         statusFilter !== "ALL" ? `&status=${statusFilter}` : "";
       const response = await apiClient.get(
-        `/api/v1/members?page=${currentPage}&size=10${statusParam}`
+        `/api/v1/members?page=${execPage}&size=${execSize}${statusParam}`
       );
       return response.data;
     },
@@ -231,7 +233,7 @@ export default function AdminMembersPage() {
 
   const rawMembers = (memberData?.data as Member[]) || [];
   const totalElements = (memberData?.total as number) || 0;
-  const pageSize = (memberData?.size as number) || 10;
+  const pageSize = searchQuery ? 100 : ((memberData?.size as number) || 10);
   const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
 
   // Client-side search filtering
@@ -463,9 +465,12 @@ export default function AdminMembersPage() {
                 <span>
                   {totalElements === 0
                     ? "No members found"
+                    : searchQuery
+                    ? `Showing ${filteredMembers.length} of ${totalElements} members (filtered)`
                     : `Showing ${currentPage * pageSize + 1}–${Math.min((currentPage + 1) * pageSize, totalElements)} of ${totalElements} members`}
                 </span>
 
+                {!searchQuery && (
                 <div className="flex items-center gap-1">
                   <button
                     disabled={currentPage === 0}
@@ -508,6 +513,7 @@ export default function AdminMembersPage() {
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
+                )}
               </div>
             </section>
           </div>
