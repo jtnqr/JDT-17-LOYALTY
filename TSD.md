@@ -947,7 +947,7 @@ Content-Type: multipart/form-data
 
 ---
 
-#### PUT /api/v1/partners/{id}/logo
+#### PUT /api/v1/partners/{id}/image
 Access: ADMIN only
 Content-Type: multipart/form-data
 
@@ -986,7 +986,7 @@ Content-Type: multipart/form-data
 | GET /partners | — | ✓ | ✓ | — |
 | POST /partners | — | — | ✓ | — |
 | PUT /partners/{id} | — | — | ✓ | — |
-| PUT /partners/{id}/logo | — | — | ✓ | — |
+| PUT /partners/{id}/image | — | — | ✓ | — |
 | POST /rewards | — | — | ✓ | — |
 | PUT /rewards/{id} | — | — | ✓ | — |
 | PUT /rewards/{id}/image | — | — | ✓ | — |
