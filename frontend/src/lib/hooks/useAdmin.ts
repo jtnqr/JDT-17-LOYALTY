@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearAuthCookies } from "@/lib/authCookies";
 
 export interface AdminUser {
   id: string;
@@ -39,6 +40,7 @@ export function useAdmin() {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
+    clearAuthCookies();
     router.push("/login");
   };
 
