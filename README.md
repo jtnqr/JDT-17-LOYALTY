@@ -25,12 +25,13 @@ A full-stack loyalty platform enabling members to earn, redeem, and exchange poi
 ## Tech Stack
 
 ### Backend
-- **Framework:** Spring Boot 4.1.x (Java 21 LTS)
+- **Framework:** Spring Boot 4.1.0 (Java 21 LTS)
 - **Database:** PostgreSQL 18
+- **Cache:** Redis
 - **ORM:** JPA / Hibernate
 - **Migrations:** Flyway
 - **Authentication:** JWT (Spring Security)
-- **Testing:** JUnit 5 + Mockito (TDD approach)
+- **Testing:** JUnit 5 + Mockito (100% statements/branches target)
 - **Build:** Maven
 
 ### Frontend
@@ -38,7 +39,8 @@ A full-stack loyalty platform enabling members to earn, redeem, and exchange poi
 - **UI Library:** shadcn/ui + Tailwind CSS
 - **State Management:** React Query (TanStack)
 - **Language:** TypeScript
-- **Build:** Vite
+- **Testing:** Vitest
+- **Build:** Next.js Build Pipeline (Webpack/Turbopack)
 
 ### Infrastructure
 - **Deployment:** Docker Compose
@@ -370,10 +372,11 @@ Before deploying to production:
 - [x] Entity Relationship Diagram (ERD)
 - [x] Use Cases & Activity Diagrams
 - [x] Flow Chart / BPMN
-- [x] API Specification
-- [ ] Source Code (in progress)
-- [ ] Unit Testing (TDD approach)
-- [ ] Audit Trail Implementation
+- [x] API Specification & Postman Collection
+- [x] Source Code
+- [x] Unit Testing (100% test coverage target achieved)
+- [x] Audit Trail & Redis Caching Implementation
+- [x] Point Expiry Scheduler (pinned to UTC)
 - [ ] Presentation Materials
 
 ---
@@ -393,11 +396,11 @@ These features are documented as future enhancements in `FSD.md` §2.2.
 ## Team
 
 **Development Team:**
-- [Your Name] — Backend & Infrastructure
-- [Teammate Name] — Frontend & Integration
+- Julius W. — Backend & Infrastructure
+- Verry Kurniawan — Frontend & Integration
 
 **Program:** Indivara Technology Java Developer Apprenticeship (Batch 17)  
-**Mentor:** [Mentor Name]
+**Mentor:** Indivara Batch 17 Mentors Team
 
 ---
 
@@ -410,6 +413,5 @@ Proprietary — Indivara Technology Apprenticeship Project
 ## Contact
 
 For questions or issues, contact:
-- **Email:** [your-email]
+- **Email:** juliuspanjul25@gmail.com
 - **Repository:** https://github.com/jtnqr/JDT-17-LOYALTY
-- **Issue Tracker:** https://github.com/jtnqr/JDT-17-LOYALTY/issues

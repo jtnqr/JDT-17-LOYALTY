@@ -113,6 +113,43 @@
             },
             "url": { "raw": "{{baseUrl}}/api/v1/redeem", "host": ["{{baseUrl}}"], "path": ["api", "v1", "redeem"] }
           }
+        },
+        {
+          "name": "Get Active Rewards",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rewards?partnerId={{kfcPartnerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "rewards"],
+              "query": [
+                { "key": "partnerId", "value": "{{kfcPartnerId}}", "disabled": false }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Partners",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/partners", "host": ["{{baseUrl}}"], "path": ["api", "v1", "partners"] }
+          }
+        },
+        {
+          "name": "Get Exchange Rates",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{memberToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/exchange-rates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exchange-rates"] }
+          }
         }
       ]
     },
@@ -179,6 +216,41 @@
           }
         },
         {
+          "name": "Update Partner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Starbucks Indonesia Updated\",\n  \"pointsPerThousandIDR\": 2,\n  \"expiryDays\": 180,\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/partners/{{kfcPartnerId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "partners", "{{kfcPartnerId}}"] }
+          }
+        },
+        {
+          "name": "Upload Partner Image",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/partners/{{kfcPartnerId}}/image", "host": ["{{baseUrl}}"], "path": ["api", "v1", "partners", "{{kfcPartnerId}}", "image"] }
+          }
+        },
+        {
           "name": "Create Exchange Rate",
           "request": {
             "method": "POST",
@@ -191,6 +263,56 @@
               "raw": "{\n  \"fromPartnerId\": \"{{kfcPartnerId}}\",\n  \"toPartnerId\": \"{{mcdPartnerId}}\",\n  \"rate\": 0.8500,\n  \"effectiveFrom\": \"2026-07-10T12:00:00Z\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/api/v1/exchange-rates", "host": ["{{baseUrl}}"], "path": ["api", "v1", "exchange-rates"] }
+          }
+        },
+        {
+          "name": "Create Reward",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"KFC Bucket 9 Pcs\",\n  \"pointCost\": 900,\n  \"partnerId\": \"{{kfcPartnerId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/rewards", "host": ["{{baseUrl}}"], "path": ["api", "v1", "rewards"] }
+          }
+        },
+        {
+          "name": "Update Reward",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"KFC Bucket 9 Pcs Special\",\n  \"pointCost\": 950,\n  \"status\": \"INACTIVE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/rewards/880e8400-e29b-41d4-a716-446655440007", "host": ["{{baseUrl}}"], "path": ["api", "v1", "rewards", "880e8400-e29b-41d4-a716-446655440007"] }
+          }
+        },
+        {
+          "name": "Upload Reward Image",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/rewards/880e8400-e29b-41d4-a716-446655440007/image", "host": ["{{baseUrl}}"], "path": ["api", "v1", "rewards", "880e8400-e29b-41d4-a716-446655440007", "image"] }
           }
         }
       ]
@@ -217,7 +339,7 @@
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8082", "type": "string" },
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
     { "key": "memberToken", "value": "", "type": "string" },
     { "key": "adminToken", "value": "", "type": "string" },
     { "key": "partnerToken", "value": "", "type": "string" },
