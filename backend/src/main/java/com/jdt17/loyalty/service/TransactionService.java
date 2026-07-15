@@ -17,6 +17,7 @@ import com.jdt17.loyalty.entity.Reward;
 import com.jdt17.loyalty.entity.ExchangeRate;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -115,6 +116,7 @@ public class TransactionService {
     private final RewardRepository rewardRepository;
     private final ExchangeRateRepository exchangeRateRepository;
 
+    @Cacheable(value = "rewards", key = "#partnerId != null ? #partnerId.toString() : 'all'")
     public ListRewardResponse getRewards(UUID partnerId) {
         List<Reward> rewards;
         if (partnerId != null) {
