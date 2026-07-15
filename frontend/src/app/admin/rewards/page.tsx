@@ -231,20 +231,17 @@ export default function AdminRewardsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      <AdminSidebar activeTab="rewards" />
+    <>
+      <AdminHeader
+        breadcrumbs={[{ label: "Rewards" }]}
+        title="Reward Catalog"
+        showSearch={true}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchPlaceholder="Search rewards..."
+      />
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <AdminHeader
-          breadcrumbs={[{ label: "Rewards" }]}
-          title="Reward Catalog"
-          showSearch={true}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search rewards..."
-        />
-
-        <div className="p-8 flex-grow flex flex-col space-y-6">
+      <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
               {/* Partner Filter */}
@@ -415,7 +412,6 @@ export default function AdminRewardsPage() {
             </div>
           </section>
         </div>
-      </main>
 
       {/* ========================================================
           EDIT REWARD MODAL
@@ -750,6 +746,6 @@ export default function AdminRewardsPage() {
           </form>
         </div>
       )}
-    </div>
+    </>
   );
 }

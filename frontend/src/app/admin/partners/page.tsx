@@ -228,24 +228,19 @@ export default function AdminPartnersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      {/* Sidebar Navigation */}
-      <AdminSidebar activeTab="partners" />
+    <>
+      {/* Top Header */}
+      <AdminHeader
+        breadcrumbs={[{ label: "Partners" }]}
+        title="Partner Merchants"
+        showSearch={true}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchPlaceholder="Search partners..."
+      />
 
-      {/* Main CMS Layout */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <AdminHeader
-          breadcrumbs={[{ label: "Partners" }]}
-          title="Partner Merchants"
-          showSearch={true}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search partners..."
-        />
-
-        {/* Content Body */}
-        <div className="p-8 flex-grow flex flex-col space-y-6">
+      {/* Content Body */}
+      <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
               {/* Status Filter */}
@@ -402,7 +397,6 @@ export default function AdminPartnersPage() {
             </div>
           </section>
         </div>
-      </main>
 
       {/* ========================================================
           EDIT PARTNER DETAILS & EXCHANGE RATE CONFIG MODAL
@@ -756,6 +750,6 @@ export default function AdminPartnersPage() {
           </form>
         </div>
       )}
-    </div>
+    </>
   );
 }

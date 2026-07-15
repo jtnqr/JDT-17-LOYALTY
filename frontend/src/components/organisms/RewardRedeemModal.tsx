@@ -15,7 +15,7 @@ interface RewardRedeemModalProps {
     partnerName: string;
     imageUrl: string;
     badgeBg: string;
-  };
+  } | null;
   currentBalance: number;
   remainingPoints: number;
   isInsufficient: boolean;
@@ -38,7 +38,7 @@ export function RewardRedeemModal({
   redeemSuccess,
   redeemError,
 }: RewardRedeemModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen || !reward) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-in fade-in duration-200">

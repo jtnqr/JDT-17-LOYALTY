@@ -41,8 +41,14 @@ export default function AdminExchangePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+        <div className="h-screen bg-neutral-100 font-sans flex overflow-hidden">
+          <div className="hidden md:flex w-64 bg-white border-r border-neutral-200/50 flex-col shrink-0" />
+          <div className="flex-grow flex flex-col min-w-0">
+            <div className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm shrink-0" />
+            <div className="flex-grow flex items-center justify-center">
+              <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+            </div>
+          </div>
         </div>
       }
     >
@@ -95,6 +101,8 @@ function ExchangePageContent() {
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
   // Save notification states [targetPartnerId]: boolean
   const [saveStatus, setSaveStatus] = useState<Record<string, boolean>>({});
+  // Error states per target partner [targetPartnerId]: string | null
+  const [errorStatus, setErrorStatus] = useState<Record<string, string | null>>({});
 
   // 1. Fetch Partner List via React Query
   const { data: apiPartners, isLoading } = useQuery({
@@ -209,6 +217,11 @@ function ExchangePageContent() {
       ...prev,
       [`${fromId}_${toId}`]: val,
     }));
+    const otherId = fromId === selectedPartnerId ? toId : fromId;
+    setErrorStatus((prev) => ({
+      ...prev,
+      [otherId]: null,
+    }));
   };
 
   // Save the bidirectional rates for a pair of partners
@@ -222,7 +235,10 @@ function ExchangePageContent() {
     const rawInStr = rateInputs[inKey];
 
     if (!rawOutStr || !rawInStr) {
-      alert("Please enter a valid rate for both conversion directions.");
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: "Please enter a valid rate for both directions.",
+      }));
       return;
     }
 
@@ -230,7 +246,10 @@ function ExchangePageContent() {
     const rawIn = parseFloat(rawInStr);
 
     if (isNaN(rawOut) || rawOut <= 0 || isNaN(rawIn) || rawIn <= 0) {
-      alert("Please enter a valid positive decimal number for both rates.");
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: "Please enter a valid positive decimal number.",
+      }));
       return;
     }
 
@@ -238,6 +257,11 @@ function ExchangePageContent() {
     const inRate = rawIn;
 
     try {
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: null,
+      }));
+
       // 1. Post Outward Rate (Selected -> Other)
       await apiClient.post(
         "/api/v1/exchange-rates",
@@ -272,7 +296,10 @@ function ExchangePageContent() {
       console.error("Failed to save pair rates to API:", error);
       const errMsg =
         error.response?.data?.message || error.message || "Unknown error";
-      alert(`Failed to save exchange rates: ${errMsg}`);
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: `Failed to save exchange rates: ${errMsg}`,
+      }));
     }
   };
 
@@ -305,6 +332,11 @@ function ExchangePageContent() {
     }));
 
     try {
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: null,
+      }));
+
       // 1. Post default Outward Rate (Selected -> Other)
       await apiClient.post(
         "/api/v1/exchange-rates",
@@ -338,7 +370,10 @@ function ExchangePageContent() {
       console.error("Failed to reset rates via API:", error);
       const errMsg =
         error.response?.data?.message || error.message || "Unknown error";
-      alert(`Failed to reset exchange rates: ${errMsg}`);
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: `Failed to reset exchange rates: ${errMsg}`,
+      }));
     }
   };
 
@@ -355,32 +390,27 @@ function ExchangePageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      {/* Sidebar Navigation */}
-      <AdminSidebar activeTab="exchange" />
+    <>
+      {/* Top Header */}
+      <AdminHeader
+        breadcrumbs={
+          selectedPartner
+            ? [{ label: "Exchange Matrix" }, { label: selectedPartner.name }]
+            : [{ label: "Exchange Matrix" }]
+        }
+        title={
+          selectedPartner
+            ? `${selectedPartner.name} Relations`
+            : "Points Exchange Configuration"
+        }
+        showSearch={!selectedPartner}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchPlaceholder="Search partners..."
+      />
 
-      {/* Main Content */}
-      <main className="flex-grow flex flex-col min-w-0">
-        {/* Top Header */}
-        <AdminHeader
-          breadcrumbs={
-            selectedPartner
-              ? [{ label: "Exchange Matrix" }, { label: selectedPartner.name }]
-              : [{ label: "Exchange Matrix" }]
-          }
-          title={
-            selectedPartner
-              ? `${selectedPartner.name} Relations`
-              : "Points Exchange Configuration"
-          }
-          showSearch={!selectedPartner}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search partners..."
-        />
-
-        {/* Content Body */}
-        <div className="p-8 flex-grow flex flex-col space-y-6">
+      {/* Content Body */}
+      <div className="p-8 flex-grow flex flex-col space-y-6">
           {/* ========================================================
               VIEW 1: PARTNERS LIST TABLE
               ======================================================== */}
@@ -638,6 +668,11 @@ function ExchangePageContent() {
                                     </div>
                                   </div>
                                 </div>
+                                {errorStatus[other.id] && (
+                                  <div className="mt-2 text-[10px] font-bold text-red-600 leading-tight bg-red-50 border border-red-200/50 rounded-lg px-2.5 py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                                    {errorStatus[other.id]}
+                                  </div>
+                                )}
                               </td>
 
                               {/* Outbound input */}
@@ -751,7 +786,6 @@ function ExchangePageContent() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </>
   );
 }

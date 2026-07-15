@@ -29,8 +29,14 @@ export default function HistoryPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
+          <div className="hidden md:flex w-64 bg-white border-r border-neutral-200/50 flex-col shrink-0" />
+          <div className="flex-grow flex flex-col min-w-0">
+            <div className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm shrink-0" />
+            <div className="flex-grow flex items-center justify-center">
+              <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+            </div>
+          </div>
         </div>
       }
     >
@@ -122,15 +128,7 @@ function HistoryPageContent() {
         tx.detailText.toLowerCase().includes(searchQuery.toLowerCase())) ||
       tx.type.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesFilter =
-      activeFilter === "ALL" ||
-      (activeFilter === "EARN" && tx.type === "EARN") ||
-      (activeFilter === "REDEEM" && tx.type === "REDEEM") ||
-      (activeFilter === "EXCHANGE_IN" && tx.type === "EXCHANGE_IN") ||
-      (activeFilter === "EXCHANGE_OUT" && tx.type === "EXCHANGE_OUT") ||
-      (activeFilter === "EXPIRED" && tx.type === "EXPIRED");
-
-    return matchesSearch && matchesFilter;
+    return matchesSearch;
   });
 
   // Helper to format date groups
@@ -201,28 +199,7 @@ function HistoryPageContent() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="history"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          searchQuery={searchQuery}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search transactions..."
-          showSearch={true}
-          breadcrumbs={[{ label: "Account" }, { label: "History" }]}
-          title="Transaction History"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
@@ -322,7 +299,7 @@ function HistoryPageContent() {
                                         : "bg-[#F5F5F5] text-[#9E9E9E]"
                                     )}
                                   >
-                                    {tx.type.replace("_", " ")}
+                                    {tx.type.replaceAll("_", " ")}
                                   </span>
                                   {/* {tx.type === "EARN" && tx.trxAmountIDR && (
                                     <span className="text-[9px] font-semibold text-neutral-400">
@@ -488,7 +465,7 @@ function HistoryPageContent() {
                                   : "bg-red-50 border-red-200/50 text-red-700"
                               )}
                             >
-                              {tx.type.replace("_", " ")}
+                              {tx.type.replaceAll("_", " ")}
                             </span>
                           </td>
                           <td className="px-6 py-4.5">
@@ -556,6 +533,5 @@ function HistoryPageContent() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

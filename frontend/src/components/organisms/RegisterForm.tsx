@@ -7,8 +7,6 @@ import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormField } from "../molecules/FormField";
-import { CheckboxField } from "../molecules/CheckboxField";
-import { Button } from "../ui/button";
 import { AlertCircle } from "lucide-react";
 import apiClient from "@/lib/apiClient";
 import { setAuthCookies } from "@/lib/authCookies";
@@ -175,32 +173,46 @@ export function RegisterForm() {
         {...register("confirmPassword")}
       />
 
-      <CheckboxField
-        label={
-          <span>
-            I agree to the{" "}
-            <Link
-              href="/terms"
-              className="text-brand-primary font-semibold hover:underline"
-            >
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="/privacy"
-              className="text-brand-primary font-semibold hover:underline"
-            >
-              Privacy Policy
-            </Link>
-            .
+      <div className="flex flex-col w-full">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="agree"
+            disabled={isLoading}
+            className="w-5 h-5 rounded border border-neutral-300 bg-white text-brand-primary focus:ring-brand-primary accent-brand-primary cursor-pointer select-none transition-all mt-0.5"
+            {...register("agree")}
+          />
+          <label
+            htmlFor="agree"
+            className="text-xs text-neutral-600 font-medium leading-tight select-none cursor-pointer"
+          >
+            <span>
+              I agree to the{" "}
+              <Link
+                href="/terms"
+                className="text-brand-primary font-semibold hover:underline"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="text-brand-primary font-semibold hover:underline"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+        </div>
+        {errors.agree?.message && (
+          <span className="text-xs text-red-500 mt-1.5 font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+            {errors.agree.message}
           </span>
-        }
-        disabled={isLoading}
-        error={errors.agree?.message}
-        {...register("agree")}
-      />
+        )}
+      </div>
 
-      <Button
+      <button
         type="submit"
         disabled={isLoading}
         className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white rounded-xl py-6 font-semibold transition-all shadow-md active:translate-y-px mt-3 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
@@ -210,7 +222,7 @@ export function RegisterForm() {
         ) : (
           <>Create Account</>
         )}
-      </Button>
+      </button>
     </form>
   );
 }

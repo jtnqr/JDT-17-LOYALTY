@@ -90,7 +90,7 @@ export default function DashboardPage() {
       ?.balance ?? 0;
 
   const combinedBalance = kfcPoints + mcdPoints;
-  const estimatedValue = combinedBalance * 0.01; // $60.50 style
+  const estimatedValue = combinedBalance * 1000; // Rp 1,000 per point style
 
   const transactions = transactionData || [];
   const rewardsList = rewardsData || [];
@@ -120,18 +120,7 @@ export default function DashboardPage() {
       color = "text-emerald-600";
       sign = "+";
     } else if (isRedeem) {
-      // Find matching reward by pointCost and partnerName similarity
-      const matchedReward = rewardsList.find(
-        (r) =>
-          r.pointCost === Math.abs(tx.points) &&
-          (r.partnerName
-            ?.toLowerCase()
-            .includes(tx.partnerName?.toLowerCase()) ||
-            tx.partnerName
-              ?.toLowerCase()
-              .includes(r.partnerName?.toLowerCase()))
-      );
-      label = matchedReward ? `${matchedReward.name}` : "Redeemed reward";
+      label = tx.detailText || "Redeemed reward";
       color = "text-red-500";
       sign = "-";
     } else if (isExchangeIn) {
@@ -179,23 +168,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* 1. DESKTOP SIDEBAR NAVIGATION (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="home"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* 2. MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0 h-full overflow-hidden">
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          breadcrumbs={[{ label: "Home" }]}
-          title="Dashboard"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
@@ -412,7 +385,6 @@ export default function DashboardPage() {
           </section>
 
           {/* Tab Navigation */}
-          <BottomNavigation />
         </div>
 
         {/* ========================================================
@@ -620,6 +592,5 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

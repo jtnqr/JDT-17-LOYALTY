@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Avatar } from "../atoms/Avatar";
-import { Bell, Search, Menu, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 export interface BreadcrumbItem {
   label: string;
@@ -11,7 +11,6 @@ export interface BreadcrumbItem {
 interface DesktopNavbarProps {
   userName?: string;
   onLogout?: () => void;
-  showBrand?: boolean;
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
   searchPlaceholder?: string;
@@ -23,7 +22,6 @@ interface DesktopNavbarProps {
 export function DesktopNavbar({
   userName = "Alex Thompson",
   onLogout,
-  showBrand = true,
   searchQuery = "",
   onSearchChange,
   searchPlaceholder = "Search...",
@@ -78,12 +76,6 @@ export function DesktopNavbar({
                 {title}
               </h2>
             )}
-          </div>
-        ) : showBrand ? (
-          <div className="flex items-center gap-2 text-brand-primary animate-in fade-in duration-300">
-            <span className="font-extrabold text-xl tracking-tight">
-              Pistos APP
-            </span>
           </div>
         ) : null}
       </div>

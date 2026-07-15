@@ -18,8 +18,14 @@ export default function MemberRewardsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+        <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
+          <div className="hidden md:flex w-64 bg-white border-r border-neutral-200/50 flex-col shrink-0" />
+          <div className="flex-grow flex flex-col min-w-0">
+            <div className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm shrink-0" />
+            <div className="flex-grow flex items-center justify-center">
+              <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+            </div>
+          </div>
         </div>
       }
     >
@@ -246,28 +252,7 @@ function RewardsPageContent() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="rewards"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          searchQuery={searchQuery}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search rewards..."
-          showSearch={true}
-          breadcrumbs={[{ label: "Marketplace" }, { label: "Rewards" }]}
-          title="Rewards Catalog"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
@@ -550,22 +535,21 @@ function RewardsPageContent() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+          </div>
 
-      <RewardRedeemModal
-        isOpen={!!selectedReward}
-        onClose={closeRedeemModal}
-        onConfirm={handleRedeemConfirm}
-        reward={selectedReward}
-        currentBalance={currentBalance}
-        remainingPoints={remainingPoints}
-        isInsufficient={isInsufficient}
-        neededPoints={neededPoints}
-        isRedeeming={isRedeeming}
-        redeemSuccess={redeemSuccess}
-        redeemError={redeemError}
-      />
-    </div>
-  );
-}
+          <RewardRedeemModal
+          isOpen={!!selectedReward}
+          onClose={closeRedeemModal}
+          onConfirm={handleRedeemConfirm}
+          reward={selectedReward}
+          currentBalance={currentBalance}
+          remainingPoints={remainingPoints}
+          isInsufficient={isInsufficient}
+          neededPoints={neededPoints}
+          isRedeeming={isRedeeming}
+          redeemSuccess={redeemSuccess}
+          redeemError={redeemError}
+          />
+          </div>
+          );
+          }

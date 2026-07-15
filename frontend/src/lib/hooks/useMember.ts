@@ -8,14 +8,38 @@ import { clearAuthCookies } from "@/lib/authCookies";
 
 export function useMember() {
   const router = useRouter();
-  const [member, setMember] = useState<MemberUser | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  
+  const [member, setMember] = useState<MemberUser | null>(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
+      const userString = localStorage.getItem("user");
+      if (token && role === "MEMBER" && userString) {
+        try {
+          return JSON.parse(userString) as MemberUser;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+
+  const [isLoaded, setIsLoaded] = useState(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
+      const userString = localStorage.getItem("user");
+      return !!(token && role === "MEMBER" && userString);
+    }
+    return false;
+  });
 
   useEffect(() => {
     try {
-      let token = localStorage.getItem("token");
-      let role = localStorage.getItem("role");
-      let userString = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
+      const userString = localStorage.getItem("user");
 
       if (!token || role !== "MEMBER" || !userString) {
         router.push("/login");

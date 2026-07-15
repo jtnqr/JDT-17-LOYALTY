@@ -83,24 +83,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* 1. DESKTOP SIDEBAR NAVIGATION */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="profile"
-        userName={displayMember?.name || "Budi Santoso"}
-      />
-
-      {/* 2. MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        <DesktopNavbar
-          userName={displayMember?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          breadcrumbs={[{ label: "Profile" }]}
-          title="My Profile"
-        />
-
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
         {/* Outer Scroll Container */}
         <div className="flex-grow overflow-y-auto">
           {/* ========================================================
@@ -371,10 +354,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-
-        {/* 3. MOBILE BOTTOM NAVIGATION */}
-        <BottomNavigation />
       </div>
-    </div>
   );
 }

@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Gift, RefreshCw, Clock, CircleUser } from "lucide-react";
+import { Home, Gift, RefreshCw, Clock } from "lucide-react";
 import { useMember } from "@/lib/hooks/useMember";
 import Avatar from "../atoms/Avatar";
 
@@ -40,7 +40,7 @@ function NavItem({ href, label, icon, active }: NavItemProps) {
 }
 
 export function BottomNavigation() {
-  const { member, memberId, isLoaded, logout } = useMember();
+  const { member } = useMember();
   const pathname = usePathname();
 
   const navItems = [

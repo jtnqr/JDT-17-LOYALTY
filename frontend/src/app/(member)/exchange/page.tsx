@@ -260,33 +260,14 @@ export default function ExchangePointsPage() {
     setExchangeAmount("10"); // Minimum exchange limit
   };
 
-  if (!isLoaded || !fromPartner || !toPartner) {
-    return (
-      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="exchange"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          breadcrumbs={[{ label: "Marketplace" }, { label: "Exchange" }]}
-          title="Exchange Center"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
+        {!isLoaded || !fromPartner || !toPartner ? (
+          <div className="flex-grow flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
@@ -754,7 +735,8 @@ export default function ExchangePointsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </>
+      )}
 
       <ExchangeConfirmModal
         isOpen={showConfirmModal}

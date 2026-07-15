@@ -267,24 +267,18 @@ export default function AdminMembersPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-neutral-50 flex font-sans">
-        {/* Reusable Sidebar matching public/sidebar-desktop.png */}
-        <AdminSidebar activeTab="members" />
+      {/* Top Header Bar */}
+      <AdminHeader
+        breadcrumbs={[{ label: "Members" }]}
+        title="Members Directory"
+        showSearch={true}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchPlaceholder="Search members by name, email..."
+      />
 
-        {/* Main CMS Content Container */}
-        <main className="flex-1 flex flex-col min-w-0">
-          {/* Top Header Bar */}
-          <AdminHeader
-            breadcrumbs={[{ label: "Members" }]}
-            title="Members Directory"
-            showSearch={true}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            searchPlaceholder="Search members by name, email..."
-          />
-
-          {/* Inner Content Area */}
-          <div className="p-8 flex-grow flex flex-col space-y-6">
+      {/* Inner Content Area */}
+      <div className="p-8 flex-grow flex flex-col space-y-6">
             {/* Toolbar Control Row */}
             <section className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
               {/* Left: Filter Inputs */}
@@ -523,8 +517,6 @@ export default function AdminMembersPage() {
               </div>
             </section>
           </div>
-        </main>
-      </div>
 
       {/* Edit Member Modal */}
       {isEditOpen && selectedMember && (
