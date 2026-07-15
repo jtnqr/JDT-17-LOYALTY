@@ -65,7 +65,7 @@ export interface Reward {
   id: string;
   name: string;
   pointCost: number;
-  status: string;
+  status: "ACTIVE" | "INACTIVE";
   imageUrl: string;
   partnerCode: string;
   partnerId: string;
