@@ -258,8 +258,8 @@ function RewardsPageContent() {
         <div className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
           {/* Top Navbar */}
           <div className="px-5 pt-6 space-y-5">
-            <div className="flex justify-between">
-              <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
+            <div className="flex justify-between items-center">
+              <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
                 Rewards
               </h1>
 
