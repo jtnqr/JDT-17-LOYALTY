@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Plus,
   Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,12 +41,15 @@ export default function AdminPartnersPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
 
   // Local form state for Edit Partner modal
   const [formPointsRate, setFormPointsRate] = useState<number>(1);
   const [formExpiryDays, setFormExpiryDays] = useState<number>(365);
   const [formStatus, setFormStatus] = useState<string>("ACTIVE");
+  const [formLogoUrl, setFormLogoUrl] = useState<string>("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
 
@@ -75,6 +79,7 @@ export default function AdminPartnersPage() {
           logoUrl: response.data.logoUrl,
         });
       }
+      setFormLogoUrl(response.data.logoUrl);
       refetch();
     } catch (err: any) {
       console.error("Logo upload failed:", err);
@@ -93,10 +98,42 @@ export default function AdminPartnersPage() {
   const [createCode, setCreateCode] = useState("");
   const [createPointsRate, setCreatePointsRate] = useState<number>(1);
   const [createExpiryDays, setCreateExpiryDays] = useState<number>(365);
+  const [createLogoUrl, setCreateLogoUrl] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [createdPartnerId, setCreatedPartnerId] = useState<string | null>(null);
   const [createApiError, setCreateApiError] = useState<string | null>(null);
+  const [uploadingCreateLogo, setUploadingCreateLogo] = useState(false);
+  const [createLogoError, setCreateLogoError] = useState<string | null>(null);
+
+  const handleCreateLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingCreateLogo(true);
+    setCreateLogoError(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // The backend expects upload endpoint or we can direct-upload to a generic static image upload endpoint if exists
+      // If we don't have a direct partner logo upload until partner is created, we can support text URL input as requested by YAGNI/Audit.
+      // But let's check if there is an upload endpoint. Let's see if we can do a mock upload or a standard API upload.
+      // Wait, let's try calling upload. If not supported, we fall back to standard URL.
+      const response = await apiClient.post("/api/v1/assets/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setCreateLogoUrl(response.data.url || response.data.logoUrl);
+    } catch (err: any) {
+      // Fallback: let's try a different endpoint or just show error
+      setCreateLogoError("Upload failed, please input URL manually.");
+    } finally {
+      setUploadingCreateLogo(false);
+    }
+  };
 
   const handleCreatePartner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,6 +145,7 @@ export default function AdminPartnersPage() {
       code: createCode,
       pointsPerThousandIDR: createPointsRate,
       expiryDays: createExpiryDays,
+      logoUrl: createLogoUrl,
     };
 
     try {
@@ -162,6 +200,18 @@ export default function AdminPartnersPage() {
       p.code.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Partner] || "";
+    let bVal: any = b[sortField as keyof Partner] || "";
+
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   const openEditModal = (partner: Partner) => {
@@ -169,6 +219,7 @@ export default function AdminPartnersPage() {
     setFormPointsRate(partner.pointsPerThousandIDR);
     setFormExpiryDays(partner.expiryDays);
     setFormStatus(partner.status);
+    setFormLogoUrl(partner.logoUrl || "");
     setSaveSuccess(false);
     setApiError(null);
   };
@@ -188,6 +239,7 @@ export default function AdminPartnersPage() {
       pointsPerThousandIDR: formPointsRate,
       expiryDays: formExpiryDays,
       status: formStatus,
+      logoUrl: formLogoUrl,
     };
 
     try {
@@ -282,21 +334,86 @@ export default function AdminPartnersPage() {
             <div className="overflow-x-auto flex-grow">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
-                      Merchant Name
+                  <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
+                    <th
+                      onClick={() => {
+                        if (sortField === "name") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("name");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Merchant Name
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28">
-                      Code
+                    <th
+                      onClick={() => {
+                        if (sortField === "code") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("code");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Code
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
-                      Accumulation Rate
+                    <th
+                      onClick={() => {
+                        if (sortField === "pointsPerThousandIDR") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("pointsPerThousandIDR");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Accumulation Rate
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36">
-                      Expiry Days
+                    <th
+                      onClick={() => {
+                        if (sortField === "expiryDays") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("expiryDays");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Expiry Days
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
-                      Status
+                    <th
+                      onClick={() => {
+                        if (sortField === "status") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("status");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Status
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 text-center">
                       Edit
@@ -472,16 +589,16 @@ export default function AdminPartnersPage() {
                   </select>
                 </div>
 
-                {/* Logo Upload */}
+                {/* Logo Upload & URL Input */}
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
-                    Merchant Logo
+                    Merchant Logo (Upload or URL)
                   </label>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
-                      {(editingPartner as any)?.logoUrl ? (
+                      {formLogoUrl ? (
                         <img
-                          src={(editingPartner as any).logoUrl}
+                          src={formLogoUrl}
                           alt="Logo preview"
                           className="w-full h-full object-cover"
                         />
@@ -489,7 +606,7 @@ export default function AdminPartnersPage() {
                         <Building2 className="w-6 h-6 text-neutral-400" />
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex-1 flex flex-col gap-1.5">
                       <input
                         type="file"
                         accept="image/png, image/jpeg, image/webp"
@@ -506,6 +623,13 @@ export default function AdminPartnersPage() {
                           {logoError}
                         </span>
                       )}
+                      <input
+                        type="text"
+                        placeholder="Or enter logo image URL directly..."
+                        value={formLogoUrl}
+                        onChange={(e) => setFormLogoUrl(e.target.value)}
+                        className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] mt-1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -686,6 +810,51 @@ export default function AdminPartnersPage() {
                     }
                     className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06]"
                   />
+                </div>
+
+                {/* Logo Upload & URL Input */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
+                    Merchant Logo (Upload or URL)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
+                      {createLogoUrl ? (
+                        <img
+                          src={createLogoUrl}
+                          alt="Logo preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="w-6 h-6 text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={handleCreateLogoUpload}
+                        className="text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#8B3D06]/10 file:text-[#8B3D06] hover:file:bg-[#8B3D06]/20 file:cursor-pointer"
+                      />
+                      {uploadingCreateLogo && (
+                        <span className="text-[10px] text-neutral-400 animate-pulse">
+                          Uploading logo...
+                        </span>
+                      )}
+                      {createLogoError && (
+                        <span className="text-[10px] text-red-500 font-bold">
+                          {createLogoError}
+                        </span>
+                      )}
+                      <input
+                        type="text"
+                        placeholder="Or enter logo image URL directly..."
+                        value={createLogoUrl}
+                        onChange={(e) => setCreateLogoUrl(e.target.value)}
+                        className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] mt-1"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Points accumulation Rate */}

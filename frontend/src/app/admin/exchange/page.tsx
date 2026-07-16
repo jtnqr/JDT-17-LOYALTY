@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Bell,
   AlertTriangle,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,10 @@ function ExchangePageContent() {
   const { isLoaded } = useAdmin();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [detailSortField, setDetailSortField] = useState<string>("name");
+  const [detailSortOrder, setDetailSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
     null
   );
@@ -209,7 +214,19 @@ function ExchangePageContent() {
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Partner] || "";
+    let bVal: any = b[sortField as keyof Partner] || "";
+
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   // Update a single rate input value
   const handleInputChange = (fromId: string, toId: string, val: string) => {
@@ -419,18 +436,57 @@ function ExchangePageContent() {
               <div className="overflow-x-auto flex-grow">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                    <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-16">
                         #
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">
-                        Merchant Name
+                      <th
+                        onClick={() => {
+                          if (sortField === "name") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("name");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Merchant Name
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24">
-                        Code
+                      <th
+                        onClick={() => {
+                          if (sortField === "code") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("code");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Code
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
-                        Status
+                      <th
+                        onClick={() => {
+                          if (sortField === "status") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("status");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Status
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
                         Outbound Rates Mappings
@@ -584,9 +640,22 @@ function ExchangePageContent() {
                 <div className="overflow-x-auto flex-grow">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">
-                          Target Partner
+                      <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
+                        <th
+                          onClick={() => {
+                            if (detailSortField === "name") {
+                              setDetailSortOrder(detailSortOrder === "asc" ? "desc" : "asc");
+                            } else {
+                              setDetailSortField("name");
+                              setDetailSortOrder("asc");
+                            }
+                          }}
+                          className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            Target Partner
+                            <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                          </div>
                         </th>
                         <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
                           Outbound Conversion Rate ({selectedPartner.code}{" "}
@@ -604,6 +673,19 @@ function ExchangePageContent() {
                     <tbody className="divide-y divide-neutral-100">
                       {partners
                         .filter((other) => other.id !== selectedPartner.id)
+                        .sort((a, b) => {
+                          let aVal: any = a[detailSortField as keyof Partner] || "";
+                          let bVal: any = b[detailSortField as keyof Partner] || "";
+
+                          if (typeof aVal === "string") {
+                            aVal = aVal.toLowerCase();
+                            bVal = bVal.toLowerCase();
+                          }
+
+                          if (aVal < bVal) return detailSortOrder === "asc" ? -1 : 1;
+                          if (aVal > bVal) return detailSortOrder === "asc" ? 1 : -1;
+                          return 0;
+                        })
                         .map((other) => {
                           const outKey = `${selectedPartner.id}_${other.id}`;
                           const inKey = `${other.id}_${selectedPartner.id}`;

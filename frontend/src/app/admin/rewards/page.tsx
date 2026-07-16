@@ -17,6 +17,7 @@ import {
   Building2,
   Gift,
   Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,8 @@ export default function AdminRewardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [partnerFilter, setPartnerFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
 
   // Edit Form State
@@ -228,6 +231,18 @@ export default function AdminRewardsPage() {
       partnerFilter === "ALL" || r.partnerId === partnerFilter;
     const matchesStatus = statusFilter === "ALL" || r.status === statusFilter;
     return matchesSearch && matchesPartner && matchesStatus;
+  }).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Reward] || "";
+    let bVal: any = b[sortField as keyof Reward] || "";
+
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   return (
@@ -300,21 +315,73 @@ export default function AdminRewardsPage() {
             <div className="overflow-x-auto flex-grow">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                  <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
                       Image
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Reward Name
+                    <th
+                      onClick={() => {
+                        if (sortField === "name") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("name");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Reward Name
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Partner
+                    <th
+                      onClick={() => {
+                        if (sortField === "partnerCode") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("partnerCode");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Partner
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Points Cost
+                    <th
+                      onClick={() => {
+                        if (sortField === "pointCost") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("pointCost");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Points Cost
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Status
+                    <th
+                      onClick={() => {
+                        if (sortField === "status") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("status");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Status
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 text-center">
                       Edit

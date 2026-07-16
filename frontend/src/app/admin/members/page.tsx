@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Filter,
   AlertCircle,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -63,6 +64,10 @@ export default function AdminMembersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(0);
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const queryClient = useQueryClient();
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -251,7 +256,39 @@ export default function AdminMembersPage() {
 
     const matchesStatus = statusFilter === "ALL" || m.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    let matchesDate = true;
+    if (startDateFilter || endDateFilter) {
+      const regDate = new Date(m.createdAt);
+      regDate.setHours(0, 0, 0, 0);
+
+      if (startDateFilter) {
+        const start = new Date(startDateFilter);
+        start.setHours(0, 0, 0, 0);
+        if (regDate < start) matchesDate = false;
+      }
+      if (endDateFilter) {
+        const end = new Date(endDateFilter);
+        end.setHours(0, 0, 0, 0);
+        if (regDate > end) matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
+  }).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Member] || "";
+    let bVal: any = b[sortField as keyof Member] || "";
+
+    if (sortField === "createdAt") {
+      aVal = new Date(a.createdAt).getTime();
+      bVal = new Date(b.createdAt).getTime();
+    } else {
+      aVal = String(aVal).toLowerCase();
+      bVal = String(bVal).toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   const getStatusBadgeClass = (status: string) => {
@@ -282,7 +319,7 @@ export default function AdminMembersPage() {
             {/* Toolbar Control Row */}
             <section className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
               {/* Left: Filter Inputs */}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Status Filter */}
                 <div className="relative">
                   <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
@@ -313,6 +350,30 @@ export default function AdminMembersPage() {
                     className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
                   />
                 </div>
+
+                {/* Date Registration Range Filter */}
+                <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-xl px-3 py-2">
+                  <span className="text-xs font-bold text-neutral-500">Registered:</span>
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => {
+                      setStartDateFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    className="text-xs font-bold text-neutral-700 bg-transparent outline-none cursor-pointer"
+                  />
+                  <span className="text-neutral-300 text-xs">-</span>
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => {
+                      setEndDateFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    className="text-xs font-bold text-neutral-700 bg-transparent outline-none cursor-pointer"
+                  />
+                </div>
               </div>
 
               {/* Right: Action Buttons */}
@@ -332,24 +393,89 @@ export default function AdminMembersPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                    <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400 w-16">
                         #
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Member Name
+                      <th
+                        onClick={() => {
+                          if (sortField === "name") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("name");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Member Name
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Email Address
+                      <th
+                        onClick={() => {
+                          if (sortField === "email") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("email");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Email Address
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Phone Number
+                      <th
+                        onClick={() => {
+                          if (sortField === "phone") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("phone");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Phone Number
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Registered Date
+                      <th
+                        onClick={() => {
+                          if (sortField === "createdAt") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("createdAt");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Registered Date
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
-                        Status
+                      <th
+                        onClick={() => {
+                          if (sortField === "status") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("status");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Status
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28 text-center">
                         Actions

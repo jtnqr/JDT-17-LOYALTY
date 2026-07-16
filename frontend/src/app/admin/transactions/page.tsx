@@ -6,7 +6,7 @@ import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import apiClient from "@/lib/apiClient";
-import { ChevronRight, ChevronLeft, ShieldAlert, Clock } from "lucide-react";
+import { ChevronRight, ChevronLeft, ShieldAlert, Clock, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { Member } from "@/types";
@@ -15,6 +15,8 @@ export default function AdminTransactionsPage() {
   const { isLoaded } = useAdmin();
   const [currentPage, setCurrentPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Fetch Member List
   const { data: memberData } = useQuery({
@@ -49,7 +51,22 @@ export default function AdminTransactionsPage() {
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.phone.includes(searchQuery)
-  );
+  ).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Member] || "";
+    let bVal: any = b[sortField as keyof Member] || "";
+
+    if (sortField === "createdAt") {
+      aVal = new Date(a.createdAt).getTime();
+      bVal = new Date(b.createdAt).getTime();
+    } else {
+      aVal = String(aVal).toLowerCase();
+      bVal = String(bVal).toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   return (
     <>
@@ -95,21 +112,73 @@ export default function AdminTransactionsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                  <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-wider text-neutral-400 w-16">
                       #
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Member Name
+                    <th
+                      onClick={() => {
+                        if (sortField === "name") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("name");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Member Name
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Email Address
+                    <th
+                      onClick={() => {
+                        if (sortField === "email") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("email");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Email Address
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Phone Number
+                    <th
+                      onClick={() => {
+                        if (sortField === "phone") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("phone");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Phone Number
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Registered Date
+                    <th
+                      onClick={() => {
+                        if (sortField === "createdAt") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("createdAt");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Registered Date
+                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                      </div>
                     </th>
                   </tr>
                 </thead>

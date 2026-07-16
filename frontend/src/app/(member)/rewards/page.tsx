@@ -181,6 +181,10 @@ function RewardsPageContent() {
         }
       }
 
+      if (reward.status !== "ACTIVE") {
+        return false;
+      }
+
       const matchesSearch = reward.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
@@ -321,13 +325,13 @@ function RewardsPageContent() {
                     key={p.id}
                     onClick={() => setPartnerFilter(p.code)}
                     className={cn(
-                      "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
+                      "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0 whitespace-nowrap",
                       activePartnerFilter === p.code
                         ? "bg-[#8B3D06] text-white"
                         : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
                     )}
                   >
-                    {p.name.split(" ")[0]}
+                    {p.name}
                   </button>
                 ))}
             </div>

@@ -126,17 +126,30 @@ export default function ProfilePage() {
               </div>
 
               {/* Available Points Card */}
-              <div className="bg-white rounded-2xl flex items-center flex-col p-5 shadow-xs border border-neutral-200/50 border-t-4 border-t-amber-400">
-                <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                  Available Points
-                </p>
-                <p className="text-3xl font-black text-[#8B3D06] mt-1.5 tracking-tight">
-                  {totalPoints.toLocaleString()}
-                </p>
+              <div className="bg-white rounded-2xl flex items-center justify-between p-5 shadow-xs border border-neutral-200/50 border-t-4 border-t-amber-400">
+                <div>
+                  <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Aggregate Available Points
+                  </p>
+                  <p className="text-3xl font-black text-[#8B3D06] mt-1.5 tracking-tight">
+                    {totalPoints.toLocaleString()}{" "}
+                    <span className="text-xs font-bold text-neutral-400">
+                      pts
+                    </span>
+                  </p>
+                </div>
+                <div className="bg-[#FCF5F1] p-3 rounded-2xl border border-[#8B3D06]/5 text-right">
+                  <p className="text-[10px] font-bold text-[#8B3D06] uppercase tracking-wider">
+                    Estimated Value
+                  </p>
+                  <p className="text-sm font-black text-[#8B3D06] mt-0.5">
+                    Rp {(totalPoints * 1000).toLocaleString()}
+                  </p>
+                </div>
               </div>
 
               {/* From Partner Section */}
-              <div className="space-y-3">
+              <div className="max-h-60 overflow-y-auto overflow-x-hidden space-y-3 pr-1">
                 {balances.map((bal) => {
                   const firstChar = bal.partnerName
                     ? bal.partnerName.trim().charAt(0).toUpperCase()

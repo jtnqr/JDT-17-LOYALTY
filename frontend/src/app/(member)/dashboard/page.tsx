@@ -198,9 +198,9 @@ export default function DashboardPage() {
           <section className="mt-6 px-5 z-10">
             <div className="flex justify-between items-center pb-2">
               <p className="font-semibold text-base">Your wallets</p>
-              <p className="flex items-center text-brand-primary text-xs">
-                View All <ArrowRight height={16} width={16} />
-              </p>
+              <Link href="/profile" className="flex items-center text-brand-primary text-xs">
+                View all <ArrowRight height={16} width={16} className="ml-1" />
+              </Link>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x snap-mandatory">
               {isBalancesLoading ? (
@@ -246,7 +246,7 @@ export default function DashboardPage() {
                         );
                       }}
                       className={cn(
-                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start active:scale-98 transition-all hover:shadow-md cursor-pointer",
+                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start active:scale-98 transition-all hover:shadow-md cursor-pointer relative",
                         borderTop
                       )}
                     >
@@ -258,15 +258,16 @@ export default function DashboardPage() {
                       >
                         {firstChar}
                       </div>
-                      <p className="text-[11px] font-semibold text-neutral-500 truncate">
+                      <p className="text-[11px] font-semibold text-neutral-500 truncate pr-4">
                         {b.partnerName}
                       </p>
-                      <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight truncate">
+                      <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight truncate pr-4">
                         {b.balance.toLocaleString()}{" "}
                         <span className="text-xs font-bold text-neutral-500">
                           pts
                         </span>
                       </p>
+                      <ArrowRight className="absolute bottom-4 right-4 w-4 h-4 text-neutral-300" />
                     </Link>
                   );
                 })
@@ -321,9 +322,9 @@ export default function DashboardPage() {
           </section>
 
           {/* Activity List */}
-          <section className="px-5 mt-6 flex-grow">
-            <div className="rounded-2xl p-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-4">
+          <section className="px-5 mt-6 pb-4">
+            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50">
+              <div className="flex items-center justify-between mb-3.5">
                 <h3 className="text-xs font-bold text-black uppercase tracking-wider">
                   Recent Activity
                 </h3>
@@ -335,7 +336,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              <div className="space-y-4 bg-gray-100/70 rounded-xl p-3">
+              <div className="space-y-4 bg-gray-100/60 rounded-xl p-3">
                 {isTrxsLoading
                   ? Array.from({ length: 3 }).map((_, idx) => (
                       <div
