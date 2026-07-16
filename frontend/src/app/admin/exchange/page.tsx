@@ -414,10 +414,6 @@ function ExchangePageContent() {
             ? `${selectedPartner.name} Relations`
             : "Points Exchange Configuration"
         }
-        showSearch={!selectedPartner}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchPlaceholder="Search partners..."
       />
 
       {/* Content Body */}

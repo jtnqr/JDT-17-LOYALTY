@@ -250,10 +250,6 @@ export default function AdminRewardsPage() {
       <AdminHeader
         breadcrumbs={[{ label: "Rewards" }]}
         title="Reward Catalog"
-        showSearch={true}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchPlaceholder="Search rewards..."
       />
 
       <div className="p-8 flex-grow flex flex-col space-y-6">

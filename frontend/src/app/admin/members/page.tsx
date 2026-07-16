@@ -308,10 +308,6 @@ export default function AdminMembersPage() {
       <AdminHeader
         breadcrumbs={[{ label: "Members" }]}
         title="Members Directory"
-        showSearch={true}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchPlaceholder="Search members by name, email..."
       />
 
       {/* Inner Content Area */}
@@ -337,6 +333,34 @@ export default function AdminMembersPage() {
                   </select>
                   <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
                 </div>
+
+                {/* Date Registration Range Filter */}
+                <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-xl px-3 py-2.5">
+                  <span className="text-sm font-bold text-neutral-800">Registered:</span>
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => {
+                      setStartDateFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className="text-xs font-bold text-neutral-700 bg-transparent outline-none cursor-pointer"
+                  />
+                  <span className="text-neutral-300 text-xs">-</span>
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => {
+                      setEndDateFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className="text-xs font-bold text-neutral-700 bg-transparent outline-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Search Input */}
                 <div className="relative w-64">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                   <input
@@ -348,30 +372,6 @@ export default function AdminMembersPage() {
                       setCurrentPage(0);
                     }}
                     className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
-                  />
-                </div>
-
-                {/* Date Registration Range Filter */}
-                <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-xl px-3 py-2">
-                  <span className="text-xs font-bold text-neutral-500">Registered:</span>
-                  <input
-                    type="date"
-                    value={startDateFilter}
-                    onChange={(e) => {
-                      setStartDateFilter(e.target.value);
-                      setCurrentPage(0);
-                    }}
-                    className="text-xs font-bold text-neutral-700 bg-transparent outline-none cursor-pointer"
-                  />
-                  <span className="text-neutral-300 text-xs">-</span>
-                  <input
-                    type="date"
-                    value={endDateFilter}
-                    onChange={(e) => {
-                      setEndDateFilter(e.target.value);
-                      setCurrentPage(0);
-                    }}
-                    className="text-xs font-bold text-neutral-700 bg-transparent outline-none cursor-pointer"
                   />
                 </div>
               </div>

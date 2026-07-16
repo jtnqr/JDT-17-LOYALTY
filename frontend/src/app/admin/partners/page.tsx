@@ -285,10 +285,6 @@ export default function AdminPartnersPage() {
       <AdminHeader
         breadcrumbs={[{ label: "Partners" }]}
         title="Partner Merchants"
-        showSearch={true}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchPlaceholder="Search partners..."
       />
 
       {/* Content Body */}
