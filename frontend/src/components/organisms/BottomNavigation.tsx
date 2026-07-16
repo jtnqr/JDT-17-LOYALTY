@@ -22,7 +22,7 @@ function NavItem({ href, label, icon, active }: NavItemProps) {
       className={cn(
         "flex flex-col items-center justify-center py-1.5 flex-1 transition-all select-none",
         active
-          ? "text-brand-primary font-semibold"
+          ? "text-[#8B3D06] font-semibold"
           : "text-neutral-400 hover:text-neutral-500"
       )}
     >

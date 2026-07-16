@@ -184,7 +184,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="space-y-1 bg-linear-to-br from-brand-primary to-[#F4A261] p-6 rounded-lg">
+            <div className="space-y-1 bg-gradient-to-br from-[#8B3D06] via-[#A65B28] to-[#C17A4A] p-6 rounded-lg">
               <h2 className="text-xl font-bold tracking-tight">
                 {getGreeting()}, {member?.name?.split(" ")[0]} 👋
               </h2>
@@ -222,18 +222,8 @@ export default function DashboardPage() {
                   const firstChar = b.partnerName
                     ? b.partnerName.trim().charAt(0).toUpperCase()
                     : "P";
-                  const isKfc = b.partnerName.toLowerCase().includes("kfc");
-                  const isMcd = b.partnerName.toLowerCase().includes("mcd");
-
-                  let borderTop = "border-t-[#8B3D06]";
-                  let iconBg = "bg-[#FCF5F1] text-[#8B3D06]";
-                  if (isKfc) {
-                    borderTop = "border-t-[#C8102E]";
-                    iconBg = "bg-red-50 text-[#C8102E]";
-                  } else if (isMcd) {
-                    borderTop = "border-t-[#FFC72C]";
-                    iconBg = "bg-yellow-50 text-[#D89F0E]";
-                  }
+                  const borderTop = "border-t-[#8B3D06]";
+                  const iconBg = "bg-[#FCF5F1] text-[#8B3D06]";
 
                   return (
                     <Link
@@ -277,44 +267,56 @@ export default function DashboardPage() {
 
           {/* Actions grid */}
           <section className="px-5 mt-6">
-            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50">
+            <div className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-black uppercase tracking-wider mb-3">
                 Quick Actions
               </h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3.5">
                 <Link
                   href="/rewards"
-                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                 >
-                  <div className="w-11 h-11 rounded-full bg-brand-primary text-brand-primary-light flex items-center justify-center shadow-sm border border-orange-100/50 mb-2">
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                     <Gift className="w-5 h-5" />
                   </div>
-                  <span className="text-[13px] font-bold text-neutral-700">
-                    Redeem
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    Rewards Catalog
                   </span>
                 </Link>
 
                 <Link
                   href="/exchange"
-                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                 >
-                  <div className="w-11 h-11 rounded-full bg-brand-primary text-brand-primary-light flex items-center justify-center shadow-sm border border-blue-100/50 mb-2">
-                    <ArrowLeftRight className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <RefreshCw className="w-5 h-5" />
                   </div>
-                  <span className="text-[13px] font-bold text-neutral-700">
-                    Exchange
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    Exchange Points
                   </span>
                 </Link>
 
                 <Link
                   href="/history"
-                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                 >
-                  <div className="w-11 h-11 rounded-full bg-gray-600 text-white flex items-center justify-center shadow-sm border border-purple-100/50 mb-2">
-                    <History className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <Clock className="w-5 h-5" />
                   </div>
-                  <span className="text-[13px] font-bold text-neutral-700">
-                    History
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    Point History
+                  </span>
+                </Link>
+
+                <Link
+                  href="/profile"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
+                >
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    My Profile
                   </span>
                 </Link>
               </div>
@@ -323,64 +325,87 @@ export default function DashboardPage() {
 
           {/* Activity List */}
           <section className="px-5 mt-6 pb-4">
-            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50">
-              <div className="flex items-center justify-between mb-3.5">
+            <div className="rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
                 <h3 className="text-xs font-bold text-black uppercase tracking-wider">
                   Recent Activity
                 </h3>
                 <Link
                   href="/history"
-                  className="text-xs font-semibold text-brand-primary flex items-center gap-0.5 hover:underline"
+                  className="text-xs font-bold text-brand-primary hover:underline"
                 >
-                  See All <ArrowRight height={16} width={16} />
+                  See all
                 </Link>
               </div>
 
-              <div className="space-y-4 bg-gray-100/60 rounded-xl p-3">
-                {isTrxsLoading
-                  ? Array.from({ length: 3 }).map((_, idx) => (
+              <div className="space-y-4">
+                {isTrxsLoading ? (
+                  Array.from({ length: 3 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 animate-pulse py-1"
+                    />
+                  ))
+                ) : transactions.length === 0 ? (
+                  <p className="text-xs text-neutral-400 italic py-4 text-center">
+                    No recent activity.
+                  </p>
+                ) : (
+                  transactions.slice(0, 5).map((tx) => {
+                    const details = getTransactionDetails(tx, transactions);
+                    const isEarn =
+                      tx.type === "EARN" || tx.type === "EXCHANGE_IN";
+                    return (
                       <div
-                        key={idx}
-                        className="flex items-center gap-3 animate-pulse py-1"
-                      />
-                    ))
-                  : transactions.slice(0, 8).map((tx) => {
-                      const details = getTransactionDetails(tx, transactions);
-                      return (
-                        <div
-                          key={tx.id}
-                          className="flex items-center justify-between gap-3 border-b border-neutral-200/50 pb-3 last:border-0 last:pb-0"
-                        >
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-[13px] font-black text-neutral-900 leading-none truncate">
+                        key={tx.id}
+                        className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 last:border-0 last:pb-0"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner",
+                              isEarn ? "bg-emerald-50" : "bg-red-50"
+                            )}
+                          >
+                            {isEarn ? (
+                              <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <ArrowUpRight className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
                               {tx.type
                                 .toLowerCase()
                                 .split("_")
                                 .map(
                                   (word) =>
-                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                    word.charAt(0).toUpperCase() +
+                                    word.slice(1)
                                 )
                                 .join(" ")}
-                            </span>
-                            <span className="text-[10px] text-neutral-500 font-semibold mt-1 truncate">
+                            </p>
+                            <span className="text-[10px] text-neutral-500 font-semibold mt-0.5 block truncate">
                               {details.label}
                             </span>
-                            <span className="text-[9px] text-neutral-400 font-bold mt-0.5">
+                            <span className="text-[9px] text-neutral-400 font-bold block mt-0.5">
                               {details.dateText}
                             </span>
                           </div>
-                          <span
-                            className={cn(
-                              "text-xs font-black shrink-0",
-                              details.color
-                            )}
-                          >
-                            {details.sign}
-                            {Math.abs(tx.points).toLocaleString()} pts
-                          </span>
                         </div>
-                      );
-                    })}
+                        <span
+                          className={cn(
+                            "text-xs font-black shrink-0",
+                            details.color
+                          )}
+                        >
+                          {details.sign}
+                          {Math.abs(tx.points).toLocaleString()} pts
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </section>

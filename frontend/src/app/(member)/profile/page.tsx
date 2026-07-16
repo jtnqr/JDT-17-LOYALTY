@@ -126,7 +126,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Available Points Card */}
-              <div className="bg-white rounded-2xl flex items-center justify-between p-5 shadow-xs border border-neutral-200/50 border-t-4 border-t-amber-400">
+              <div className="bg-white rounded-2xl flex items-center justify-between p-5 shadow-xs border border-neutral-200/50 border-t-4 border-t-[#8B3D06]">
                 <div>
                   <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
                     Aggregate Available Points
@@ -289,7 +289,7 @@ export default function ProfilePage() {
               {/* Column 2 & 3: Point Wallets & Partner Breakdown */}
               <div className="md:col-span-2 space-y-6">
                 {/* Total Points Header Card */}
-                <div className="bg-white rounded-3xl p-6 border border-neutral-200/50 shadow-xs border-t-4 border-t-amber-400 flex items-center justify-between">
+                <div className="bg-white rounded-3xl p-6 border border-neutral-200/50 shadow-xs border-t-4 border-t-[#8B3D06] flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
                       Aggregate Available Points

@@ -71,9 +71,7 @@ function RewardsPageContent() {
       const data = (response.data.data || response.data || []) as any[];
       return data.map((r: any) => {
         const code = r.partnerCode?.toUpperCase();
-        let badgeBg = "bg-brand-primary text-white";
-        if (code === "KFC") badgeBg = "bg-red-500 text-white";
-        else if (code === "MCD") badgeBg = "bg-yellow-500 text-black";
+        const badgeBg = "bg-[#FCF5F1] text-[#8B3D06] border border-[#8B3D06]/10";
         return {
           ...r,
           badgeBg,
@@ -337,8 +335,8 @@ function RewardsPageContent() {
                   key={reward.id}
                   onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
                   className={cn(
-                    "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:border-t-brand-primary active:scale-98 transition-all",
-                    reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:border-t-neutral-100 active:scale-100"
+                    "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer active:scale-98 transition-all hover:shadow-md",
+                    reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed active:scale-100"
                   )}
                 >
                   <div className="p-3">
@@ -397,7 +395,7 @@ function RewardsPageContent() {
                     key={reward.id}
                     onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
                     className={cn(
-                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:shadow-md transition-all group",
+                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group",
                       reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
                     )}
                   >
