@@ -42,14 +42,8 @@ export default function AdminExchangePage() {
   return (
     <Suspense
       fallback={
-        <div className="h-screen bg-neutral-100 font-sans flex overflow-hidden">
-          <div className="hidden md:flex w-64 bg-white border-r border-neutral-200/50 flex-col shrink-0" />
-          <div className="flex-grow flex flex-col min-w-0">
-            <div className="h-16 border-b border-neutral-200/50 bg-white px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm shrink-0" />
-            <div className="flex-grow flex items-center justify-center">
-              <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
-            </div>
-          </div>
+        <div className="w-full h-full flex items-center justify-center bg-neutral-100 min-h-[300px]">
+          <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >
