@@ -166,9 +166,24 @@ function HistoryPageContent() {
       tx.type.toLowerCase().includes(searchQuery.toLowerCase());
 
     // 2. Partner Filter
-    const matchesPartner =
-      selectedPartner === "ALL" ||
-      tx.partnerName.toLowerCase().includes(selectedPartner.toLowerCase());
+    let matchesPartner = true;
+    if (selectedPartner !== "ALL") {
+      const partnerObj = apiPartners?.find((p) => p.code === selectedPartner);
+      if (partnerObj) {
+        const pName = partnerObj.name.toLowerCase();
+        const pCode = partnerObj.code.toLowerCase();
+        const txName = tx.partnerName.toLowerCase();
+        matchesPartner =
+          txName === pName ||
+          txName.includes(pName) ||
+          txName.includes(pCode) ||
+          pName.includes(txName) ||
+          txName.replace(/[^a-z0-9]/g, "").includes(pCode.replace(/[^a-z0-9]/g, "")) ||
+          pCode.replace(/[^a-z0-9]/g, "").includes(txName.replace(/[^a-z0-9]/g, ""));
+      } else {
+        matchesPartner = tx.partnerName.toLowerCase().includes(selectedPartner.toLowerCase());
+      }
+    }
 
     // 3. Date Range Filter
     let matchesDate = true;
