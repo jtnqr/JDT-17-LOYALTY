@@ -49,7 +49,7 @@ export function DesktopNavbar({
   }, []);
 
   return (
-    <header className="hidden md:flex h-16 border-b border-neutral-200/50 bg-white px-8 items-center justify-between sticky top-0 z-50 shadow-sm">
+    <header className="hidden md:flex h-16 shrink-0 border-b border-neutral-200/50 bg-white px-8 items-center justify-between sticky top-0 z-50 shadow-sm">
       {/* Left: Brand Logo / Breadcrumbs */}
       <div className="flex items-center gap-4 animate-in fade-in duration-200">
         {breadcrumbs && breadcrumbs.length > 0 ? (
