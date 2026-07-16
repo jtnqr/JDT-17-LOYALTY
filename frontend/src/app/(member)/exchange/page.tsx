@@ -101,6 +101,8 @@ export default function ExchangePointsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasInitializedAmount, setHasInitializedAmount] = useState(false);
+  const [lastPartnerId, setLastPartnerId] = useState<string | null>(null);
 
   useEffect(() => {
     setErrorMessage(null);
@@ -197,6 +199,37 @@ export default function ExchangePointsPage() {
   const isSamePartner = fromPartner?.id === toPartner?.id;
   const isValidAmount =
     amountNumber > 0 && !isInsufficient && !isSamePartner && isRateConfigured;
+
+  // Auto-fill input amount with full balance on partner change or initial load
+  useEffect(() => {
+    if (balanceData && fromPartner) {
+      if (fromPartner.id !== lastPartnerId || !hasInitializedAmount) {
+        setLastPartnerId(fromPartner.id);
+        setHasInitializedAmount(true);
+        setExchangeAmount(fromBalance.toString());
+      }
+    }
+  }, [fromPartner, fromBalance, balanceData, lastPartnerId, hasInitializedAmount]);
+
+  // Clamp input amount if it exceeds selected partner's balance (only when balanceData is loaded)
+  useEffect(() => {
+    if (!balanceData) return;
+    const amount = Number(exchangeAmount) || 0;
+    if (amount > fromBalance) {
+      setExchangeAmount(fromBalance.toString());
+    }
+  }, [fromPartner, fromBalance, exchangeAmount, balanceData]);
+
+  const handleAmountChange = (val: string) => {
+    const num = Number(val) || 0;
+    if (num > fromBalance) {
+      setExchangeAmount(fromBalance.toString());
+    } else if (num < 0) {
+      setExchangeAmount("0");
+    } else {
+      setExchangeAmount(val);
+    }
+  };
 
   const handleConfirmExchange = async () => {
     if (!isValidAmount || isSubmitting) return;
@@ -334,9 +367,12 @@ export default function ExchangePointsPage() {
                   <input
                     type="number"
                     value={exchangeAmount}
-                    onChange={(e) => setExchangeAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="w-40 text-center font-black text-4xl text-neutral-900 outline-none border-b border-transparent focus:border-neutral-200 py-1"
                   />
+                </div>
+                <div className="text-[10px] font-bold text-neutral-400">
+                  Available: <button type="button" onClick={handleSetMax} className="text-[#8B3D06] hover:underline font-extrabold">{fromBalance.toLocaleString()} pts</button>
                 </div>
 
                 {/* Overlapping Swap button */}
@@ -605,7 +641,7 @@ export default function ExchangePointsPage() {
                       <input
                         type="number"
                         value={exchangeAmount}
-                        onChange={(e) => setExchangeAmount(e.target.value)}
+                        onChange={(e) => handleAmountChange(e.target.value)}
                         className="w-full text-left font-black text-xl text-neutral-800 outline-none"
                         placeholder="Enter amount"
                       />
