@@ -365,6 +365,9 @@ function HistoryPageContent() {
                     )}
                   >
                     <option value="ALL">All Merchants</option>
+                    {selectedPartner !== "ALL" && !apiPartners?.some((p: any) => p.code === selectedPartner) && (
+                      <option value={selectedPartner}>{selectedPartner}</option>
+                    )}
                     {apiPartners?.map((p: any) => (
                       <option key={p.id} value={p.code}>{p.name}</option>
                     ))}
@@ -558,6 +561,9 @@ function HistoryPageContent() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 font-bold"
                   >
                     <option value="ALL">All Transactions</option>
+                    {activeFilter !== "ALL" && !["EARN", "REDEEM", "EXCHANGE_IN", "EXCHANGE_OUT", "EXPIRED"].includes(activeFilter) && (
+                      <option value={activeFilter}>{activeFilter}</option>
+                    )}
                     <option value="EARN">Earnings</option>
                     <option value="REDEEM">Redemptions</option>
                     <option value="EXCHANGE_IN">Exchange In</option>
@@ -596,6 +602,9 @@ function HistoryPageContent() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 font-bold"
                   >
                     <option value="ALL">All Merchants</option>
+                    {selectedPartner !== "ALL" && !apiPartners?.some((p: any) => p.code === selectedPartner) && (
+                      <option value={selectedPartner}>{selectedPartner}</option>
+                    )}
                     {apiPartners?.map((p: any) => (
                       <option key={p.id} value={p.code}>{p.name}</option>
                     ))}
