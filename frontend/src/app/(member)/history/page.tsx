@@ -478,12 +478,17 @@ function HistoryPageContent() {
           {/* Desktop filter row */}
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-neutral-500">Type:</span>
+              <span className={cn("text-xs font-bold transition-colors", activeFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-500")}>Type:</span>
               <div className="relative">
                 <select
                   value={activeFilter}
                   onChange={(e) => setFilter(e.target.value)}
-                  className="bg-white text-neutral-700 border border-neutral-200 pl-3 pr-8 py-2 rounded-xl text-xs font-semibold outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none"
+                  className={cn(
+                    "pl-3 pr-8 py-2 rounded-xl text-xs font-semibold outline-none focus:border-[#8B3D06] border transition-colors cursor-pointer appearance-none",
+                    activeFilter !== "ALL"
+                      ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                      : "bg-white text-neutral-700 border-neutral-200"
+                  )}
                 >
                   <option value="ALL">All Transactions</option>
                   <option value="EARN">Earnings</option>
@@ -492,46 +497,53 @@ function HistoryPageContent() {
                   <option value="EXCHANGE_OUT">Exchange Out</option>
                   <option value="EXPIRED">Expired</option>
                 </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                <div className={cn("absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors", activeFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-400")}>
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
 
-              <span className="text-xs font-bold text-neutral-500 ml-2">Partner:</span>
+              <span className={cn("text-xs font-bold transition-colors ml-2", selectedPartner !== "ALL" ? "text-[#8B3D06]" : "text-neutral-500")}>Partner:</span>
               <div className="relative">
                 <select
                   value={selectedPartner}
                   onChange={(e) => setPartnerSelect(e.target.value)}
-                  className="bg-white text-neutral-700 border border-neutral-200 pl-3 pr-8 py-2 rounded-xl text-xs font-semibold outline-none focus:border-[#8B3D06] transition-colors cursor-pointer appearance-none min-w-[120px]"
+                  className={cn(
+                    "pl-3 pr-8 py-2 rounded-xl text-xs font-semibold outline-none focus:border-[#8B3D06] border transition-colors cursor-pointer appearance-none min-w-[120px]",
+                    selectedPartner !== "ALL"
+                      ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                      : "bg-white text-neutral-700 border-neutral-200"
+                  )}
                 >
                   <option value="ALL">All Merchants</option>
                   {apiPartners?.map((p: any) => (
                     <option key={p.id} value={p.code}>{p.name}</option>
                   ))}
                 </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                <div className={cn("absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors", selectedPartner !== "ALL" ? "text-[#8B3D06]" : "text-neutral-400")}>
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
 
-              <span className="text-xs font-bold text-neutral-500 ml-2">Date:</span>
-              <div className="flex items-center gap-1 bg-white border border-neutral-200 rounded-xl px-2 py-1">
+              <div className={cn("flex items-center gap-1.5 border rounded-xl px-3 py-2 transition-colors ml-2", startDateStr || endDateStr ? "bg-[#FCF5F1] border-[#8B3D06]" : "bg-white border-neutral-200")}>
+                <span className={cn("text-xs font-bold transition-colors", startDateStr || endDateStr ? "text-[#8B3D06]" : "text-neutral-500")}>Date:</span>
                 <input
                   type="date"
                   value={startDateStr}
                   onChange={(e) => setDateRange(e.target.value, endDateStr)}
-                  className="text-xs font-semibold text-neutral-700 bg-transparent outline-none cursor-pointer w-[110px]"
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className={cn("text-xs font-semibold bg-transparent outline-none cursor-pointer transition-colors w-[110px]", startDateStr || endDateStr ? "text-[#8B3D06]" : "text-neutral-700")}
                 />
-                <span className="text-neutral-300 text-xs">-</span>
+                <span className={cn("text-xs transition-colors", startDateStr || endDateStr ? "text-[#8B3D06]" : "text-neutral-300")}>-</span>
                 <input
                   type="date"
                   value={endDateStr}
                   onChange={(e) => setDateRange(startDateStr, e.target.value)}
-                  className="text-xs font-semibold text-neutral-700 bg-transparent outline-none cursor-pointer w-[110px]"
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  className={cn("text-xs font-semibold bg-transparent outline-none cursor-pointer transition-colors w-[110px]", startDateStr || endDateStr ? "text-[#8B3D06]" : "text-neutral-700")}
                 />
               </div>
             </div>
@@ -548,6 +560,53 @@ function HistoryPageContent() {
               />
             </div>
           </div>
+
+          {/* Active Filter Chips */}
+          {(activeFilter !== "ALL" || selectedPartner !== "ALL" || startDateStr || endDateStr || searchQuery) && (
+            <div className="flex flex-wrap items-center gap-2 select-none animate-in fade-in duration-200">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Active Filters:</span>
+              
+              {activeFilter !== "ALL" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold">
+                  Type: {activeFilter}
+                  <button onClick={() => setFilter("ALL")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+
+              {selectedPartner !== "ALL" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold">
+                  Merchant: {apiPartners?.find((p) => p.code === selectedPartner)?.name || selectedPartner}
+                  <button onClick={() => setPartnerSelect("ALL")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+
+              {(startDateStr || endDateStr) && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold">
+                  Date: {startDateStr || "*"} to {endDateStr || "*"}
+                  <button onClick={() => setDateRange("", "")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold">
+                  Search: "{searchQuery}"
+                  <button onClick={() => setSearch("")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+
+              <button
+                onClick={() => {
+                  setFilter("ALL");
+                  setPartnerSelect("ALL");
+                  setDateRange("", "");
+                  setSearch("");
+                }}
+                className="text-xs font-bold text-[#8B3D06] hover:underline cursor-pointer ml-2"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
 
           {/* Desktop Table View */}
           <div className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden flex-grow flex flex-col justify-between">
