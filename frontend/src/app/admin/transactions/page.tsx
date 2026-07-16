@@ -107,6 +107,35 @@ export default function AdminTransactionsPage() {
             </div>
           </section>
 
+          {/* Active Filter Chips */}
+          {(searchQuery || sortField) && (
+            <div className="flex flex-wrap items-center gap-2 select-none">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Active Filters:</span>
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Search: "{searchQuery}"
+                  <button onClick={() => setSearchQuery("")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              {sortField && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Sort: {sortField === "name" ? "Member Name" : sortField === "email" ? "Email Address" : sortField === "phone" ? "Phone Number" : "Registered Date"} ({sortOrder === "asc" ? "Asc" : "Desc"})
+                  <button onClick={() => { setSortField("name"); setSortOrder("asc"); }} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSortField("name");
+                  setSortOrder("asc");
+                }}
+                className="text-xs font-bold text-[#8B3D06] hover:underline cursor-pointer ml-2"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
           {/* Table Container */}
           <section className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden flex-grow flex flex-col">
             <div className="overflow-x-auto">
@@ -125,11 +154,14 @@ export default function AdminTransactionsPage() {
                           setSortOrder("asc");
                         }
                       }}
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "name" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
                     >
                       <div className="flex items-center gap-1.5">
                         Member Name
-                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "name" ? "text-[#8B3D06]" : "text-neutral-400")} />
                       </div>
                     </th>
                     <th
@@ -141,11 +173,14 @@ export default function AdminTransactionsPage() {
                           setSortOrder("asc");
                         }
                       }}
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "email" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
                     >
                       <div className="flex items-center gap-1.5">
                         Email Address
-                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "email" ? "text-[#8B3D06]" : "text-neutral-400")} />
                       </div>
                     </th>
                     <th
@@ -157,11 +192,14 @@ export default function AdminTransactionsPage() {
                           setSortOrder("asc");
                         }
                       }}
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "phone" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
                     >
                       <div className="flex items-center gap-1.5">
                         Phone Number
-                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "phone" ? "text-[#8B3D06]" : "text-neutral-400")} />
                       </div>
                     </th>
                     <th
@@ -173,11 +211,14 @@ export default function AdminTransactionsPage() {
                           setSortOrder("asc");
                         }
                       }}
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "createdAt" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
                     >
                       <div className="flex items-center gap-1.5">
                         Registered Date
-                        <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "createdAt" ? "text-[#8B3D06]" : "text-neutral-400")} />
                       </div>
                     </th>
                   </tr>

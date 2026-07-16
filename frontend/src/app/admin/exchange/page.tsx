@@ -297,6 +297,7 @@ function ExchangePageContent() {
 
       // Invalidate queries to reload from backend
       queryClient.invalidateQueries({ queryKey: ["admin-exchange-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exchange-partners"] });
 
       // Show temporary success feedback
       setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
@@ -372,6 +373,7 @@ function ExchangePageContent() {
 
       // Invalidate queries to reload from backend
       queryClient.invalidateQueries({ queryKey: ["admin-exchange-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exchange-partners"] });
 
       setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
       setTimeout(() => {
@@ -388,15 +390,44 @@ function ExchangePageContent() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === "ACTIVE" ? (
-      <span className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/50">
-        ACTIVE
-      </span>
-    ) : (
-      <span className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-200/30">
-        INACTIVE
-      </span>
+  const getStatusBadge = (partner: Partner) => {
+    if (partner.status !== "ACTIVE") {
+      return (
+        <div className="w-28 mx-auto">
+          <span className="w-full text-center inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-200/30">
+            INACTIVE
+          </span>
+        </div>
+      );
+    }
+
+    const relations = partners.filter((o) => o.id !== partner.id);
+    const isAnyRateMissing = relations.some((other) => {
+      const outRate = getRateValue(partner.id, other.id);
+      const inRate = getRateValue(other.id, partner.id);
+      return outRate === null || inRate === null;
+    });
+
+    if (isAnyRateMissing) {
+      return (
+        <div className="flex flex-col gap-1 items-center w-28 mx-auto">
+          <span className="w-full text-center inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/50">
+            ACTIVE
+          </span>
+          <span className="w-full text-center inline-flex flex-col items-center justify-center text-[9px] leading-tight font-black uppercase px-1.5 py-1 rounded-md border bg-amber-50 text-amber-700 border-amber-200/50 whitespace-normal">
+            <span>PARTIALLY</span>
+            <span>CONFIGURED</span>
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-28 mx-auto">
+        <span className="w-full text-center inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/50">
+          ACTIVE
+        </span>
+      </div>
     );
   };
 
@@ -530,7 +561,7 @@ function ExchangePageContent() {
                               {partner.code}
                             </td>
                             <td className="px-6 py-5">
-                              {getStatusBadge(partner.status)}
+                              {getStatusBadge(partner)}
                             </td>
                             <td className="px-6 py-5">
                               <div className="flex flex-wrap gap-2">
@@ -551,7 +582,7 @@ function ExchangePageContent() {
                                         </span>
                                       ) : (
                                         <span className="text-red-600 font-bold bg-amber-100 px-1.5 py-0.2 rounded border border-amber-100/50 text-[10px] uppercase">
-                                          Not Configured
+                                          MISSING
                                         </span>
                                       )}
                                     </span>
