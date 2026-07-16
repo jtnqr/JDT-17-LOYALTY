@@ -120,7 +120,15 @@ export default function DashboardPage() {
       color = "text-emerald-600";
       sign = "+";
     } else if (isRedeem) {
-      label = tx.detailText || "Redeemed reward";
+      const rewardPointsCost = Math.abs(tx.points);
+      const matchedReward = rewardsList.find(
+        (r) =>
+          r.pointCost === rewardPointsCost &&
+          r.partnerName?.toLowerCase() === tx.partnerName?.toLowerCase()
+      );
+      const rewardName = matchedReward ? matchedReward.name : "reward";
+      const displayReward = rewardName.length > 25 ? rewardName.slice(0, 25) + "..." : rewardName;
+      label = matchedReward ? `Redeemed ${displayReward}` : "Redeemed reward";
       color = "text-red-500";
       sign = "-";
     } else if (isExchangeIn) {

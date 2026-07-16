@@ -60,6 +60,16 @@ function HistoryPageContent() {
     enabled: isLoaded,
   });
 
+  // Fetch rewards catalog for transaction detail mapping
+  const { data: rewardsData } = useQuery({
+    queryKey: ["rewards-catalog-list"],
+    queryFn: async () => {
+      const response = await apiClient.get("/api/v1/rewards");
+      return (response.data.data || []) as any[];
+    },
+    enabled: isLoaded,
+  });
+
   const setFilter = (filter: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("filter", filter);
@@ -241,11 +251,43 @@ function HistoryPageContent() {
     }
   };
 
-  // Helper for transaction point coloring
-  const getPointsClass = (points: number, type: string) => {
-    if (points > 0) return "text-[#8B3D06]"; // Earnings show brown
-    if (type === "REDEEM") return "text-neutral-700"; // Redemptions show dark brown/grey
-    return "text-[#C8102E]"; // Exchanges show red
+  // Helper for transaction point color and sign
+  const getTransactionPointsInfo = (tx: Transaction) => {
+    const isAddition = tx.type === "EARN" || tx.type === "EXCHANGE_IN";
+    return {
+      sign: isAddition ? "+" : "-",
+      color: isAddition ? "text-emerald-600" : "text-red-500",
+    };
+  };
+
+  const getTransactionDetailText = (tx: Transaction) => {
+    if (tx.detailText) return tx.detailText;
+    if (tx.type === "EARN") {
+      return tx.trxAmountIDR
+        ? `Spend: Rp ${tx.trxAmountIDR.toLocaleString()}`
+        : "Earned points";
+    }
+    if (tx.type === "REDEEM") {
+      const rewardPointsCost = Math.abs(tx.points);
+      const matchedReward = (rewardsData || []).find(
+        (r) =>
+          r.pointCost === rewardPointsCost &&
+          r.partnerName?.toLowerCase() === tx.partnerName?.toLowerCase()
+      );
+      const rewardName = matchedReward ? matchedReward.name : "reward";
+      const displayReward = rewardName.length > 25 ? rewardName.slice(0, 25) + "..." : rewardName;
+      return matchedReward ? `Redeemed ${displayReward}` : "Redeemed reward";
+    }
+    if (tx.type === "EXCHANGE_OUT") {
+      return "Exchanged points out";
+    }
+    if (tx.type === "EXCHANGE_IN") {
+      return "Exchanged points in";
+    }
+    if (tx.type === "EXPIRED") {
+      return "Points expired";
+    }
+    return "Processed transaction";
   };
 
   return (
@@ -363,25 +405,16 @@ function HistoryPageContent() {
                                 {tx.partnerName}
                               </span>
                               <span className="text-[10px] text-neutral-500 font-semibold block mt-0.5 line-clamp-2 leading-tight">
-                                {tx.detailText ||
-                                  (tx.type === "EARN" && tx.trxAmountIDR
-                                    ? `Store purchase of Rp ${tx.trxAmountIDR.toLocaleString()}`
-                                    : tx.type === "REDEEM"
-                                    ? `Redeemed points`
-                                    : tx.type === "EXCHANGE_OUT"
-                                    ? `Exchanged points out`
-                                    : tx.type === "EXCHANGE_IN"
-                                    ? `Exchanged points in`
-                                    : `Processed transaction`)}
+                                {getTransactionDetailText(tx)}
                               </span>
                             </td>
                             <td
                               className={cn(
                                 "px-4 py-3.5 text-xs font-black text-right whitespace-nowrap",
-                                getPointsClass(tx.points, tx.type)
+                                getTransactionPointsInfo(tx).color
                               )}
                             >
-                              {tx.points > 0 ? "+" : ""}
+                              {getTransactionPointsInfo(tx).sign}
                               {tx.points.toLocaleString()} pts
                             </td>
                           </tr>
@@ -476,14 +509,14 @@ function HistoryPageContent() {
                   type="date"
                   value={startDateStr}
                   onChange={(e) => setDateRange(e.target.value, endDateStr)}
-                  className="text-xs font-semibold text-neutral-700 bg-transparent outline-none cursor-pointer"
+                  className="text-xs font-semibold text-neutral-700 bg-transparent outline-none cursor-pointer w-[110px]"
                 />
                 <span className="text-neutral-300 text-xs">-</span>
                 <input
                   type="date"
                   value={endDateStr}
                   onChange={(e) => setDateRange(startDateStr, e.target.value)}
-                  className="text-xs font-semibold text-neutral-700 bg-transparent outline-none cursor-pointer"
+                  className="text-xs font-semibold text-neutral-700 bg-transparent outline-none cursor-pointer w-[110px]"
                 />
               </div>
             </div>
@@ -603,24 +636,15 @@ function HistoryPageContent() {
                             </div>
                           </td>
                           <td className="px-6 py-4.5 text-xs text-neutral-500 font-semibold max-w-xs break-words">
-                            {tx.detailText ||
-                              (tx.type === "EARN" && tx.trxAmountIDR
-                                ? `Completed store purchase of Rp ${tx.trxAmountIDR.toLocaleString()} to accumulate loyalty points and qualify for partner benefits.`
-                                : tx.type === "REDEEM"
-                                ? `Redeemed points at ${tx.partnerName} for reward items and merchant discount vouchers.`
-                                : tx.type === "EXCHANGE_OUT"
-                                ? `Exchanged points out from ${tx.partnerName} to convert balances to another partner loyalty account.`
-                                : tx.type === "EXCHANGE_IN"
-                                ? `Exchanged points in to ${tx.partnerName} from other connected merchant programs.`
-                                : `Processed transaction at ${tx.partnerName} for member balance adjustment.`)}
+                            {getTransactionDetailText(tx)}
                           </td>
                           <td
                             className={cn(
                               "px-6 py-4.5 text-xs font-black text-right",
-                              getPointsClass(tx.points, tx.type)
+                              getTransactionPointsInfo(tx).color
                             )}
                           >
-                            {tx.points > 0 ? "+" : ""}
+                            {getTransactionPointsInfo(tx).sign}
                             {tx.points.toLocaleString()} pts
                           </td>
                         </tr>
