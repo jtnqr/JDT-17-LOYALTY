@@ -74,6 +74,10 @@ export default function AdminRewardsPage() {
     enabled: isLoaded,
   });
 
+  const selectedPartnerText = partnerFilter === 'ALL'
+  ? 'All Partners'
+  : (partnersData?.find((p: any) => String(p.id) === String(partnerFilter))?.name || 'All Partners');
+
   // Fetch rewards list
   const {
     data: rewardsData,
@@ -255,24 +259,6 @@ export default function AdminRewardsPage() {
       <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
-              {/* Partner Filter */}
-              <div className="relative">
-                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                <select
-                  value={partnerFilter}
-                  onChange={(e) => setPartnerFilter(e.target.value)}
-                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
-                >
-                  <option value="ALL">All Partners</option>
-                  {partnersData?.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
-              </div>
-
               {/* Status Filter */}
               <div className="relative">
                 <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
@@ -285,6 +271,32 @@ export default function AdminRewardsPage() {
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
                 </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+              </div>
+
+              {/* Partner Filter */}
+              <div className="relative bg-white border border-neutral-200 rounded-xl focus-within:border-[#8B3D06] transition-colors">
+                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                
+                {/* Invisible native select handling clicks and value */}
+                <select
+                  value={partnerFilter}
+                  onChange={(e) => setPartnerFilter(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                >
+                  <option value="ALL">All Partners</option>
+                  {partnersData?.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Visible text layer driving the dynamic container width */}
+                <div className="text-sm text-neutral-800 pl-10 pr-8 py-2.5 font-bold whitespace-nowrap select-none">
+                  {selectedPartnerText}
+                </div>
+
                 <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
               </div>
 
