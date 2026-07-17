@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import Link from "next/link";
 
 import { PointBalance } from "@/types";
@@ -53,6 +54,19 @@ export default function ProfilePage() {
     },
     enabled: !!memberId,
     retry: 1,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch partners list for logo matching
+  const { data: partnersData } = useQuery({
+    queryKey: ["partners-list"],
+    queryFn: async () => {
+      const response = await apiClient.get("/api/v1/partners");
+      return (response.data.data || []) as any[];
+    },
+    enabled: !!memberId,
     refetchInterval: POLLING_INTERVAL,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
@@ -151,9 +165,12 @@ export default function ProfilePage() {
               {/* From Partner Section */}
               <div className="max-h-60 overflow-y-auto overflow-x-hidden space-y-3 pr-1">
                 {balances.map((bal) => {
-                  const firstChar = bal.partnerName
-                    ? bal.partnerName.trim().charAt(0).toUpperCase()
-                    : "P";
+                  const partner = (partnersData || []).find(
+                    (p: any) =>
+                      p.id === bal.partnerId ||
+                      p.name?.toLowerCase() === bal.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partner?.logoUrl;
                   return (
                     <div
                       key={bal.partnerId}
@@ -163,9 +180,11 @@ export default function ProfilePage() {
                         onClick={() => handleViewRewards(bal.partnerId)}
                         className="flex flex-1 min-w-0 items-center gap-4 cursor-pointer"
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-[#8B3D06] text-white flex items-center justify-center shrink-0">
-                          {firstChar}
-                        </div>
+                        <PartnerLogo
+                          logoUrl={logoUrl}
+                          name={bal.partnerName}
+                          className="w-12 h-12 rounded-2xl border border-neutral-100 shadow-inner"
+                        />
 
                         <div className="flex-1 min-w-0">
                           <p className="truncate text-sm font-black text-neutral-800">
@@ -320,9 +339,12 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {balances.map((bal) => {
-                      const firstChar = bal.partnerName
-                        ? bal.partnerName.trim().charAt(0).toUpperCase()
-                        : "P";
+                      const partner = (partnersData || []).find(
+                        (p: any) =>
+                          p.id === bal.partnerId ||
+                          p.name?.toLowerCase() === bal.partnerName?.toLowerCase()
+                      );
+                      const logoUrl = partner?.logoUrl;
                       return (
                         <div
                           key={bal.partnerId}
@@ -330,9 +352,11 @@ export default function ProfilePage() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#FCF5F1] text-[#8B3D06] flex items-center justify-center shadow-inner font-black text-base select-none">
-                                {firstChar}
-                              </div>
+                              <PartnerLogo
+                                logoUrl={logoUrl}
+                                name={bal.partnerName}
+                                className="w-10 h-10 rounded-xl border border-neutral-200/50 shadow-inner"
+                              />
                               <div>
                                 <p className="text-xs font-bold text-neutral-800 leading-none">
                                   {bal.partnerName}

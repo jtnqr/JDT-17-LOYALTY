@@ -10,6 +10,7 @@ import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import apiClient from "@/lib/apiClient";
 import { Search, ArrowRight, Coins, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import Avatar from "@/components/atoms/Avatar";
 import Link from "next/link";
 import { RewardRedeemModal } from "@/components/organisms/RewardRedeemModal";
@@ -330,33 +331,47 @@ function RewardsPageContent() {
 
             {/* Mobile Grid */}
             <div className="grid grid-cols-2 gap-4">
-              {filteredRewards.map((reward) => (
-                <div
-                  key={reward.id}
-                  onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
-                  className={cn(
-                    "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer active:scale-98 transition-all hover:shadow-md",
-                    reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed active:scale-100"
-                  )}
-                >
-                  <div className="p-3">
-                    {/* Food Image */}
-                    <div className="h-28 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-3">
-                      <img
-                        src={reward.imageUrl}
-                        alt={reward.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+              {filteredRewards.map((reward) => {
+                const partner = (apiPartners || []).find(
+                  (p: any) =>
+                    p.code === reward.partnerCode ||
+                    p.name?.toLowerCase() === reward.partnerName?.toLowerCase()
+                );
+                const logoUrl = partner?.logoUrl;
+                return (
+                  <div
+                    key={reward.id}
+                    onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                    className={cn(
+                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer active:scale-98 transition-all hover:shadow-md",
+                      reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed active:scale-100"
+                    )}
+                  >
+                    <div className="p-3">
+                      {/* Food Image */}
+                      <div className="h-28 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-3">
+                        <img
+                          src={reward.imageUrl}
+                          alt={reward.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
 
-                    <span
-                      className={cn(
-                        "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                        reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
-                      )}
-                    >
-                      {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
-                    </span>
+                      <div className="flex items-center gap-1 mb-1">
+                        <PartnerLogo
+                          logoUrl={logoUrl}
+                          name={reward.partnerName}
+                          className="w-4 h-4 rounded-full border border-neutral-100 shadow-sm"
+                        />
+                        <span
+                          className={cn(
+                            "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                            reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
+                          )}
+                        >
+                          {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
+                        </span>
+                      </div>
                     <h3 className={cn(
                       "text-xs font-black mt-2 leading-snug line-clamp-2",
                       reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
@@ -373,7 +388,8 @@ function RewardsPageContent() {
                     <span>{reward.pointCost} pts</span>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
 
@@ -390,33 +406,47 @@ function RewardsPageContent() {
             <div className="col-span-3 space-y-6">
               {/* Desktop Catalog Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRewards.map((reward) => (
-                  <div
-                    key={reward.id}
-                    onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
-                    className={cn(
-                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group",
-                      reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
-                    )}
-                  >
-                    <div className="p-4">
-                      {/* Image */}
-                      <div className="h-36 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-4">
-                        <img
-                          src={reward.imageUrl}
-                          alt={reward.name}
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-                        />
-                      </div>
+                {filteredRewards.map((reward) => {
+                  const partner = (apiPartners || []).find(
+                    (p: any) =>
+                      p.code === reward.partnerCode ||
+                      p.name?.toLowerCase() === reward.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partner?.logoUrl;
+                  return (
+                    <div
+                      key={reward.id}
+                      onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                      className={cn(
+                        "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group",
+                        reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
+                      )}
+                    >
+                      <div className="p-4">
+                        {/* Image */}
+                        <div className="h-36 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-4">
+                          <img
+                            src={reward.imageUrl}
+                            alt={reward.name}
+                            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                          />
+                        </div>
 
-                      <span
-                        className={cn(
-                          "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                          reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
-                        )}
-                      >
-                        {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
-                      </span>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <PartnerLogo
+                            logoUrl={logoUrl}
+                            name={reward.partnerName}
+                            className="w-4 h-4 rounded-full border border-neutral-100 shadow-sm"
+                          />
+                          <span
+                            className={cn(
+                              "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                              reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
+                            )}
+                          >
+                            {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
+                          </span>
+                        </div>
                       <h3 className={cn(
                         "text-sm font-black mt-2.5 leading-snug",
                         reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
@@ -445,7 +475,8 @@ function RewardsPageContent() {
                       )}
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             </div>
             {/* Right Sidebar Category filters */}

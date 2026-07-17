@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PointBalance, Transaction } from "@/types";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -65,6 +66,19 @@ export default function DashboardPage() {
     queryFn: async () => {
       const response = await apiClient.get("/api/v1/rewards");
       return (response.data.data || []) as any[];
+    },
+    enabled: !!memberId,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch partners list for logo matching
+  const { data: partnersData } = useQuery({
+    queryKey: ["partners-list"],
+    queryFn: async () => {
+      const response = await apiClient.get("/api/v1/partners");
+      return (b => b.data || [])(response.data) as any[];
     },
     enabled: !!memberId,
     refetchInterval: POLLING_INTERVAL,
@@ -227,11 +241,13 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 apiBalances.map((b) => {
-                  const firstChar = b.partnerName
-                    ? b.partnerName.trim().charAt(0).toUpperCase()
-                    : "P";
+                  const partnerInfo = (partnersData || []).find(
+                    (p: any) =>
+                      p.id === b.partnerId ||
+                      p.name?.toLowerCase() === b.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partnerInfo?.logoUrl;
                   const borderTop = "border-t-[#8B3D06]";
-                  const iconBg = "bg-[#FCF5F1] text-[#8B3D06]";
 
                   return (
                     <Link
@@ -248,14 +264,11 @@ export default function DashboardPage() {
                         borderTop
                       )}
                     >
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center font-black text-xs mb-2 shadow-inner",
-                          iconBg
-                        )}
-                      >
-                        {firstChar}
-                      </div>
+                      <PartnerLogo
+                        logoUrl={logoUrl}
+                        name={b.partnerName}
+                        className="w-8 h-8 rounded-full border border-neutral-100 shadow-inner mb-2"
+                      />
                       <p className="text-[11px] font-semibold text-neutral-500 truncate pr-4">
                         {b.partnerName}
                       </p>
@@ -363,24 +376,22 @@ export default function DashboardPage() {
                     const details = getTransactionDetails(tx, transactions);
                     const isEarn =
                       tx.type === "EARN" || tx.type === "EXCHANGE_IN";
+                    const partnerInfo = (partnersData || []).find(
+                      (p: any) =>
+                        p.name?.toLowerCase() === tx.partnerName?.toLowerCase()
+                    );
+                    const logoUrl = partnerInfo?.logoUrl;
                     return (
                       <div
                         key={tx.id}
                         className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 last:border-0 last:pb-0"
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div
-                            className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner",
-                              isEarn ? "bg-emerald-50" : "bg-red-50"
-                            )}
-                          >
-                            {isEarn ? (
-                              <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-                            ) : (
-                              <ArrowUpRight className="w-4 h-4 text-red-500" />
-                            )}
-                          </div>
+                          <PartnerLogo
+                            logoUrl={logoUrl}
+                            name={tx.partnerName || "Pistos"}
+                            className="w-8 h-8 rounded-full border border-neutral-100 shadow-inner"
+                          />
                           <div className="min-w-0 flex-1">
                             <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
                               {tx.type
@@ -533,6 +544,12 @@ export default function DashboardPage() {
                         r.partnerName?.toLowerCase() === b.partnerName?.toLowerCase() ||
                         r.partnerCode?.toUpperCase() === cardPartnerCode)
                   ).length;
+                  const partnerInfo = (partnersData || []).find(
+                    (p: any) =>
+                      p.id === b.partnerId ||
+                      p.name?.toLowerCase() === b.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partnerInfo?.logoUrl;
                   return (
                     <BalanceCardDesktop
                       key={b.partnerId}
@@ -542,6 +559,7 @@ export default function DashboardPage() {
                       badgeText="REDEEM NOW"
                       partnerCode={cardPartnerCode}
                       activeRewardsCount={count}
+                      logoUrl={logoUrl}
                     />
                   );
                 })
@@ -569,24 +587,22 @@ export default function DashboardPage() {
                       const details = getTransactionDetails(tx, transactions);
                       const isEarn =
                         tx.type === "EARN" || tx.type === "EXCHANGE_IN";
+                      const partnerInfo = (partnersData || []).find(
+                        (p: any) =>
+                          p.name?.toLowerCase() === tx.partnerName?.toLowerCase()
+                      );
+                      const logoUrl = partnerInfo?.logoUrl;
                       return (
                         <div
                           key={tx.id}
                           className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 last:border-0 last:pb-0"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div
-                              className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner",
-                                isEarn ? "bg-emerald-50" : "bg-red-50"
-                              )}
-                            >
-                              {isEarn ? (
-                                <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-                              ) : (
-                                <ArrowUpRight className="w-4 h-4 text-red-500" />
-                              )}
-                            </div>
+                            <PartnerLogo
+                              logoUrl={logoUrl}
+                              name={tx.partnerName || "Pistos"}
+                              className="w-8 h-8 rounded-full border border-neutral-100 shadow-inner"
+                            />
                             <div className="min-w-0 flex-1">
                               <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
                                 {tx.type

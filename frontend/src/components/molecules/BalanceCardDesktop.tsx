@@ -4,6 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { Info, ArrowRight, Coins } from "lucide-react";
 import Link from "next/link";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 
 interface BalanceCardDesktopProps {
   partnerName: string;
@@ -12,6 +13,7 @@ interface BalanceCardDesktopProps {
   partnerCode?: string;
   partnerId?: string;
   activeRewardsCount?: number;
+  logoUrl?: string;
 }
 
 export function BalanceCardDesktop({
@@ -21,6 +23,7 @@ export function BalanceCardDesktop({
   partnerCode,
   partnerId,
   activeRewardsCount,
+  logoUrl,
 }: BalanceCardDesktopProps) {
   // Normalize partner code
   const code =
@@ -109,14 +112,11 @@ export function BalanceCardDesktop({
       >
         {/* Top row */}
         <div className="flex items-center justify-between">
-          <div
-            className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center shadow-inner",
-              activeTheme.iconBg
-            )}
-          >
-            {activeTheme.icon}
-          </div>
+          <PartnerLogo
+            logoUrl={logoUrl}
+            name={partnerName}
+            className="w-10 h-10 rounded-xl border border-neutral-200/50 shadow-inner"
+          />
 
           {activeRewardsCount !== undefined && (
             <span

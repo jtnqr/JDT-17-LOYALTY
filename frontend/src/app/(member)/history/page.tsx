@@ -23,6 +23,7 @@ import {
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import { Transaction } from "@/types";
 
 export default function HistoryPage() {
@@ -464,13 +465,22 @@ function HistoryPageContent() {
                     <div className="space-y-3">
                       {groupedTransactions[dateGroup].map((tx) => {
                         const pointsInfo = getTransactionPointsInfo(tx);
+                        const partner = (apiPartners || []).find(
+                          (p: any) =>
+                            p.name?.toLowerCase() === tx.partnerName?.toLowerCase()
+                        );
+                        const logoUrl = partner?.logoUrl;
                         return (
                           <div
                             key={tx.id}
                             className="bg-white border border-neutral-200/50 rounded-2xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-between"
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              {getTxIcon(tx.type)}
+                              <PartnerLogo
+                                logoUrl={logoUrl}
+                                name={tx.partnerName || "Pistos"}
+                                className="w-10 h-10 border border-neutral-100 rounded-full shrink-0"
+                              />
                               <div className="min-w-0">
                                 <p className="text-xs font-black text-neutral-800 leading-none truncate">
                                   {tx.partnerName}
@@ -767,6 +777,11 @@ function HistoryPageContent() {
                     filteredTransactions.map((tx) => {
                       const isEarn = tx.type === "EARN";
                       const date = new Date(tx.createdAt);
+                      const partner = (apiPartners || []).find(
+                        (p: any) =>
+                          p.name?.toLowerCase() === tx.partnerName?.toLowerCase()
+                      );
+                      const logoUrl = partner?.logoUrl;
 
                       return (
                         <tr
@@ -804,6 +819,11 @@ function HistoryPageContent() {
                           </td>
                           <td className="px-6 py-4.5">
                             <div className="flex items-center gap-2">
+                              <PartnerLogo
+                                logoUrl={logoUrl}
+                                name={tx.partnerName || "Pistos"}
+                                className="w-5 h-5 rounded-full border border-neutral-100 shadow-inner"
+                              />
                               <span className="text-xs font-bold text-neutral-800">
                                 {tx.partnerName}
                               </span>

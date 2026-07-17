@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import { ExchangeConfirmModal } from "@/components/organisms/ExchangeConfirmModal";
 import { ExchangeSuccessModal } from "@/components/organisms/ExchangeSuccessModal";
 
@@ -63,6 +64,7 @@ export default function ExchangePointsPage() {
         name: p.name,
         logoBg,
         logoChar,
+        logoUrl: p.logoUrl,
       };
     });
   }, [apiPartners]);
@@ -336,8 +338,12 @@ export default function ExchangePointsPage() {
                         </option>
                       ))}
                     </select>
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Coins className="w-4 h-4 text-neutral-400" />
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <PartnerLogo
+                        logoUrl={fromPartner.logoUrl}
+                        name={fromPartner.name || "Pistos"}
+                        className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                      />
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                       <svg
@@ -416,8 +422,12 @@ export default function ExchangePointsPage() {
                           </option>
                         ))}
                     </select>
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Coins className="w-4 h-4 text-neutral-400" />
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <PartnerLogo
+                        logoUrl={toPartner.logoUrl}
+                        name={toPartner.name || "Pistos"}
+                        className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                      />
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                       <svg
@@ -555,8 +565,12 @@ export default function ExchangePointsPage() {
                           </option>
                         ))}
                       </select>
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Coins className="w-4 h-4 text-neutral-400" />
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <PartnerLogo
+                          logoUrl={fromPartner.logoUrl}
+                          name={fromPartner.name || "Pistos"}
+                          className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                        />
                       </div>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                         <svg
@@ -611,8 +625,12 @@ export default function ExchangePointsPage() {
                             </option>
                           ))}
                       </select>
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Coins className="w-4 h-4 text-neutral-400" />
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <PartnerLogo
+                          logoUrl={toPartner.logoUrl}
+                          name={toPartner.name || "Pistos"}
+                          className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                        />
                       </div>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                         <svg
