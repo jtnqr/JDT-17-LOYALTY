@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify member is barred from admin page</description>
+   <name>TC_Guard_Member_Access_Admin_Forbidden</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>4f6d09c0-453d-40be-88b6-b229aa718222</testCaseGuid>
+</TestCaseEntity>

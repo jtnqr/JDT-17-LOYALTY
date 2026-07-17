@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Create a new merchant partner program</description>
+   <name>TC_Admin_Create_Partner</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>06041152-154c-47af-bd18-fed1c29bbe27</testCaseGuid>
+</TestCaseEntity>

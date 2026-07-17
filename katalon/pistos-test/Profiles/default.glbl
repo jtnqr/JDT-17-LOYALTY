@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalVariableEntities>
+   <description>Pistos test global variables</description>
+   <name>default</name>
+   <tag></tag>
+   <defaultProfile>true</defaultProfile>
+   <GlobalVariableEntity>
+      <description>Frontend base URL</description>
+      <initValue>'http://localhost:3000'</initValue>
+      <name>BASE_URL</name>
+   </GlobalVariableEntity>
+   <GlobalVariableEntity>
+      <description>Seed member email for login tests</description>
+      <initValue>'budi.santoso@example.com'</initValue>
+      <name>MEMBER_EMAIL</name>
+   </GlobalVariableEntity>
+   <GlobalVariableEntity>
+      <description>Seed member password for login tests</description>
+      <initValue>'Member123!'</initValue>
+      <name>MEMBER_PASSWORD</name>
+   </GlobalVariableEntity>
+   <GlobalVariableEntity>
+      <description>Seed admin email</description>
+      <initValue>'admin@jdt17loyalty.com'</initValue>
+      <name>ADMIN_EMAIL</name>
+   </GlobalVariableEntity>
+   <GlobalVariableEntity>
+      <description>Seed admin password</description>
+      <initValue>'Admin123!'</initValue>
+      <name>ADMIN_PASSWORD</name>
+   </GlobalVariableEntity>
+</GlobalVariableEntities>

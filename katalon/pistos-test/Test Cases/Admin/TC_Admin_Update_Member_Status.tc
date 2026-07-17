@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Modify member status ACTIVE/INACTIVE</description>
+   <name>TC_Admin_Update_Member_Status</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>042cae65-5d6e-4dc8-b58c-db1c101209a7</testCaseGuid>
+</TestCaseEntity>

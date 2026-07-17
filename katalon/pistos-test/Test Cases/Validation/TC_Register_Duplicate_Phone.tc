@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify register phone number uniqueness constraint</description>
+   <name>TC_Register_Duplicate_Phone</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>e0a1f4d3-7f06-4ab4-ba4a-9f7a8116b290</testCaseGuid>
+</TestCaseEntity>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify member history page displays past operations</description>
+   <name>TC_Member_Transaction_History</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>8d14e2ac-48e1-484d-831a-ed041d416569</testCaseGuid>
+</TestCaseEntity>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify system handles insufficient point balance exchange</description>
+   <name>TC_Exchange_Insufficient_Points</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>fc760b07-3ce4-4a8a-a8cb-2fc0fbf83607</testCaseGuid>
+</TestCaseEntity>
