@@ -1,6 +1,7 @@
 import static com.kms.katalon.core.testobject.ObjectRepository.findTestObject
 import com.kms.katalon.core.webui.keyword.WebUiBuiltInKeywords as WebUI
 import internal.GlobalVariable
+import com.kms.katalon.core.configuration.RunConfiguration
 
 String timestamp = System.currentTimeMillis().toString().substring(5)
 String pName = "Starbucks " + timestamp
@@ -37,5 +38,7 @@ WebUI.click(findTestObject('Page_AdminPartners/btn_submitCreate'))
 WebUI.waitForElementVisible(findTestObject('Page_AdminPartners/btn_maybeLater'), 5)
 WebUI.click(findTestObject('Page_AdminPartners/btn_maybeLater'))
 WebUI.delay(2)
+
+WebUI.takeScreenshot(RunConfiguration.getProjectDir() + '/Screenshots/' + 'TC_Admin_Create_Partner' + '.png')
 
 WebUI.closeBrowser()

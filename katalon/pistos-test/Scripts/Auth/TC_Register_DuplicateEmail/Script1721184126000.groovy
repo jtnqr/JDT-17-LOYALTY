@@ -1,6 +1,7 @@
 import static com.kms.katalon.core.testobject.ObjectRepository.findTestObject
 import com.kms.katalon.core.webui.keyword.WebUiBuiltInKeywords as WebUI
 import internal.GlobalVariable
+import com.kms.katalon.core.configuration.RunConfiguration
 
 WebUI.openBrowser('')
 WebUI.maximizeWindow()
@@ -17,5 +18,7 @@ WebUI.click(findTestObject('Page_Register/btn_createAccount'))
 
 WebUI.delay(2)
 WebUI.verifyMatch(WebUI.getUrl(), '.*/register', true)
+
+WebUI.takeScreenshot(RunConfiguration.getProjectDir() + '/Screenshots/' + 'TC_Register_DuplicateEmail' + '.png')
 
 WebUI.closeBrowser()

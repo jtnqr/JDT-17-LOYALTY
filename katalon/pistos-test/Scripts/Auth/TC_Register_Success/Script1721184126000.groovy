@@ -1,6 +1,7 @@
 import static com.kms.katalon.core.testobject.ObjectRepository.findTestObject
 import com.kms.katalon.core.webui.keyword.WebUiBuiltInKeywords as WebUI
 import internal.GlobalVariable
+import com.kms.katalon.core.configuration.RunConfiguration
 
 String timestamp = System.currentTimeMillis().toString()
 String testEmail = "testuser${timestamp}@example.com"
@@ -21,5 +22,7 @@ WebUI.click(findTestObject('Page_Register/btn_createAccount'))
 
 WebUI.verifyElementPresent(findTestObject('Page_Dashboard/lbl_heading'), 10)
 WebUI.verifyMatch(WebUI.getUrl(), '.*/dashboard', true)
+
+WebUI.takeScreenshot(RunConfiguration.getProjectDir() + '/Screenshots/' + 'TC_Register_Success' + '.png')
 
 WebUI.closeBrowser()

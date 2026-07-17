@@ -1,6 +1,7 @@
 import static com.kms.katalon.core.testobject.ObjectRepository.findTestObject
 import com.kms.katalon.core.webui.keyword.WebUiBuiltInKeywords as WebUI
 import internal.GlobalVariable
+import com.kms.katalon.core.configuration.RunConfiguration
 
 WebUI.openBrowser('')
 WebUI.maximizeWindow()
@@ -22,5 +23,7 @@ WebUI.setText(findTestObject('Page_Exchange/input_exchangeAmount'), '999999')
 
 // Verify that the warning alert is visible
 WebUI.verifyElementPresent(findTestObject('Page_Exchange/lbl_insufficientPointsAlert'), 10)
+
+WebUI.takeScreenshot(RunConfiguration.getProjectDir() + '/Screenshots/' + 'TC_Exchange_Insufficient_Points' + '.png')
 
 WebUI.closeBrowser()

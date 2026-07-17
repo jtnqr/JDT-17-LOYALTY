@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify that validation errors appear on the registration form when invalid input is provided</description>
+   <name>TC_Register_Validation_Errors</name>
+   <tag>validation,register,negative</tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>d3b6ec2a-f8b1-419b-a012-3298c2eaee95</testCaseGuid>
+</TestCaseEntity>

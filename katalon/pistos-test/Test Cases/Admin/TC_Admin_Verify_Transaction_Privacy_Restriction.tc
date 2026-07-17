@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify that the Admin sees the privacy restriction alert in the transactions directory</description>
+   <name>TC_Admin_Verify_Transaction_Privacy_Restriction</name>
+   <tag>admin,security,privacy</tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>d3b6ec2a-f8b1-419b-a012-3298c2eaee92</testCaseGuid>
+</TestCaseEntity>

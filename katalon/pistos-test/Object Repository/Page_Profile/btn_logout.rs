@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <WebElementEntity>
-   <description>Log Out button on profile page</description>
+   <description>Log Out button inside the member profile page on desktop</description>
    <name>btn_logout</name>
    <tag></tag>
-   <elementGuidId>a23d4b6c-e58f-4d37-88ea-8b4317f223ff</elementGuidId>
+   <elementGuidId>d3b6ec2a-f8b1-419b-a012-3298c2eaee74</elementGuidId>
    <selectorCollection>
       <entry>
          <key>XPATH</key>
-         <value>//button[contains(., 'Log Out')]</value>
+         <value>//div[contains(@class, 'hidden md:block')]//button[contains(., 'Log Out')]</value>
       </entry>
    </selectorCollection>
    <selectorMethod>XPATH</selectorMethod>

@@ -20,3 +20,13 @@ Thumbs.db
 *.iml
 .vscode/
 *.swp
+
+# Katalon Studio
+katalon/pistos-test/Screenshots/
+katalon/pistos-test/Reports/
+katalon/pistos-test/bin/
+katalon/pistos-test/Libs/
+katalon/pistos-test/.settings/
+katalon/pistos-test/.classpath
+katalon/pistos-test/.project
+
