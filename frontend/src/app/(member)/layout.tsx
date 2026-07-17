@@ -11,6 +11,11 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   const { member, isLoaded, logout } = useMember();
   const pathname = usePathname();
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Get active tab from pathname
   const rawTab = pathname.split("/")[1] || "dashboard";
   const activeTab = (
@@ -39,7 +44,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
     breadcrumbs = [{ label: "Profile" }];
   }
 
-  if (!isLoaded) {
+  if (!mounted || !isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />

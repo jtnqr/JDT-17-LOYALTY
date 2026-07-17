@@ -9,6 +9,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { isLoaded } = useAdmin();
   const pathname = usePathname();
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Get active tab from pathname
   const rawTab = pathname.split("/")[2] || "dashboard";
   const activeTab = (
@@ -17,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       : "dashboard"
   ) as "dashboard" | "exchange" | "transactions" | "members" | "rewards" | "partners";
 
-  if (!isLoaded) {
+  if (!mounted || !isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />

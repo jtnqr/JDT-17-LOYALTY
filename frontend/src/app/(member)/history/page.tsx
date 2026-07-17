@@ -49,6 +49,7 @@ function HistoryPageContent() {
   const selectedPartner = searchParams.get("partner") || "ALL";
   const startDateStr = searchParams.get("startDate") || "";
   const endDateStr = searchParams.get("endDate") || "";
+  const activeFilter = searchParams.get("filter") || "ALL";
 
   // Fetch partners list to populate dropdown
   const { data: apiPartners } = useQuery({
@@ -63,8 +64,6 @@ function HistoryPageContent() {
   const selectedPartnerText = selectedPartner === "ALL"
     ? "All Merchants"
     : (apiPartners?.find((p: any) => p.code === selectedPartner)?.name || "All Merchants");
-
-  const activeFilter = searchParams.get("filter") || "ALL";
 
   const selectedTypeText = activeFilter === "ALL"
     ? "All Transactions"
@@ -89,13 +88,17 @@ function HistoryPageContent() {
     params.set("filter", filter);
     params.delete("page");
     params.delete("q");
-    router.replace(`${pathname}?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+    }
   };
 
   const setPage = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(page));
-    router.replace(`${pathname}?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+    }
   };
 
   const setSearch = (q: string) => {
@@ -103,7 +106,9 @@ function HistoryPageContent() {
     if (q) params.set("q", q);
     else params.delete("q");
     params.delete("page");
-    router.replace(`${pathname}?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+    }
   };
 
   const setPartnerSelect = (partner: string) => {
@@ -111,7 +116,9 @@ function HistoryPageContent() {
     if (partner === "ALL") params.delete("partner");
     else params.set("partner", partner);
     params.delete("page");
-    router.replace(`${pathname}?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+    }
   };
 
   const setDateRange = (start: string, end: string) => {
@@ -121,13 +128,16 @@ function HistoryPageContent() {
     if (end) params.set("endDate", end);
     else params.delete("endDate");
     params.delete("page");
-    router.replace(`${pathname}?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+    }
   };
 
   const clearAllFilters = () => {
     const params = new URLSearchParams();
-    params.set("filter", "ALL");
-    router.replace(`${pathname}?${params.toString()}`);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+    }
   };
 
   const currentPage = Number(searchParams.get("page")) || 0;
@@ -326,7 +336,6 @@ function HistoryPageContent() {
 
   return (
     <div className="flex-grow flex flex-col h-full overflow-hidden">
-
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
