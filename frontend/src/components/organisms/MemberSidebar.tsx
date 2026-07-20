@@ -99,11 +99,13 @@ export function MemberSidebar({
       <div className="w-60 h-full flex flex-col justify-between shrink-0">
         <div className="flex flex-col flex-1">
           {/* Brand Logo Header */}
-          <div className="px-6 h-16 flex items-center border-b border-neutral-200/50 shrink-0">
-            <Link href="/dashboard" className="inline-block">
-              <h1 className="text-2xl font-black text-[#8B3D06] leading-none tracking-tight">
-                Pistos APP
-              </h1>
+          <div className="px-6 h-24 flex items-center justify-center border-b border-neutral-200/50 shrink-0">
+            <Link href="/dashboard" className="flex items-center justify-center w-full">
+              <img
+                src="/logo_pistos_landscape.webp"
+                alt="Pistos Logo"
+                className="w-40 h-auto object-contain"
+              />
             </Link>
           </div>
 

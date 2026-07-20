@@ -12,6 +12,9 @@ import Providers from "@/components/Providers";
 export const metadata: Metadata = {
   title: "Pistos | LoyaltyHub",
   description: "Points-based loyalty system with multi-partner point exchange.",
+  icons: {
+    icon: "/logo_pistos_square.webp",
+  },
 };
 
 export default function RootLayout({

@@ -107,11 +107,13 @@ export function AdminSidebar({ className, activeTab }: AdminSidebarProps) {
     >
       <div className="flex flex-col flex-1">
         {/* Brand Logo Header */}
-        <div className="px-6 pt-8 pb-10">
-          <Link href="/admin" className="inline-block group">
-            <h1 className="text-2xl font-black text-[#8B3D06] leading-none tracking-tight">
-              Pistos CMS
-            </h1>
+        <div className="px-6 h-24 flex items-center justify-center border-b border-neutral-200/50 shrink-0">
+          <Link href="/admin" className="flex items-center justify-center w-full">
+            <img
+              src="/logo_pistos_landscape.webp"
+              alt="Pistos Logo"
+              className="w-40 h-auto object-contain"
+            />
           </Link>
         </div>
 
