@@ -4,9 +4,9 @@ import { LoginForm } from "@/components/organisms/LoginForm";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Member Login | Pistos | LoyaltyHub",
+  title: "Member Login | PISTOS",
   description:
-    "Access your LoyaltyHub member account to manage points and redeem rewards.",
+    "Access your PISTOS member account to manage points and redeem rewards.",
 };
 
 export default function LoginPage() {
@@ -59,7 +59,7 @@ export default function LoginPage() {
             </div>
 
             <p className="text-[11px] text-neutral-400 text-center font-medium">
-              &copy; 2026 LoyaltyHub Inc. &bull; All rights reserved.
+              &copy; 2026 PISTOS Inc. &bull; All rights reserved.
             </p>
           </footer>
         </div>

@@ -201,7 +201,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-2xl text-brand-primary tracking-wider">
-                  LoyaltyHub
+                  PISTOS
                 </span>
               </div>
             </div>

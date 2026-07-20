@@ -4,9 +4,9 @@ import { RegisterForm } from "@/components/organisms/RegisterForm";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Member Registration | Pistos | LoyaltyHub",
+  title: "Member Registration | PISTOS",
   description:
-    "Join LoyaltyHub today to start earning points and unlocking rewards.",
+    "Join PISTOS today to start earning points and unlocking rewards.",
 };
 
 export default function RegisterPage() {
