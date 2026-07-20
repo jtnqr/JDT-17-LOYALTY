@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}").hasAnyRole("MEMBER", "ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/members/{id}").hasRole("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/admin/dashboard-stats").hasRole("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/exchange-rates").hasAnyRole("MEMBER", "ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/exchange-rates").hasRole("ADMIN")
                         .anyRequest().authenticated()
