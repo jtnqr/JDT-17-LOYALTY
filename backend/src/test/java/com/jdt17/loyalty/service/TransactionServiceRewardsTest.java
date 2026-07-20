@@ -551,4 +551,128 @@ class TransactionServiceRewardsTest {
         verify(pointBalanceRepository).save(balance2);
         verify(transactionRepository).save(any(Transaction.class));
     }
+
+    @Test
+    void testRedeemReward_SingleParam_Success() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(member.getId().toString(), null, java.util.List.of())
+        );
+
+        RedeemRequest request = RedeemRequest.builder().rewardId(reward.getId()).build();
+        PointBalance balance = PointBalance.builder().member(member).partner(partner).balance(500L).build();
+
+        when(memberRepository.findById(member.getId())).thenReturn(Optional.of(member));
+        when(rewardRepository.findById(reward.getId())).thenReturn(Optional.of(reward));
+        when(pointBalanceRepository.findByMemberIdAndPartnerId(member.getId(), partner.getId())).thenReturn(Optional.of(balance));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> {
+            Transaction t = i.getArgument(0);
+            t.setId(UUID.randomUUID());
+            return t;
+        });
+
+        RedeemResponse response = transactionService.redeemReward(request);
+
+        assertNotNull(response);
+        assertEquals(250L, response.getNewBalance());
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testRedeemReward_NullMemberIdParam_Success() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(member.getId().toString(), null, java.util.List.of())
+        );
+
+        RedeemRequest request = RedeemRequest.builder().rewardId(reward.getId()).build();
+        PointBalance balance = PointBalance.builder().member(member).partner(partner).balance(500L).build();
+
+        when(memberRepository.findById(member.getId())).thenReturn(Optional.of(member));
+        when(rewardRepository.findById(reward.getId())).thenReturn(Optional.of(reward));
+        when(pointBalanceRepository.findByMemberIdAndPartnerId(member.getId(), partner.getId())).thenReturn(Optional.of(balance));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> {
+            Transaction t = i.getArgument(0);
+            t.setId(UUID.randomUUID());
+            return t;
+        });
+
+        RedeemResponse response = transactionService.redeemReward(request, null);
+
+        assertNotNull(response);
+        assertEquals(250L, response.getNewBalance());
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testExchangePoints_SingleParam_Success() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(member.getId().toString(), null, java.util.List.of())
+        );
+
+        Partner targetPartner = Partner.builder().id(UUID.randomUUID()).name("McD").code("MCD").status("ACTIVE").build();
+        ExchangeRequest request = ExchangeRequest.builder()
+                .fromPartnerId(partner.getId())
+                .toPartnerId(targetPartner.getId())
+                .points(100L)
+                .build();
+
+        PointBalance fromBal = PointBalance.builder().member(member).partner(partner).balance(500L).build();
+        PointBalance toBal = PointBalance.builder().member(member).partner(targetPartner).balance(100L).build();
+        ExchangeRate rate = ExchangeRate.builder().fromPartner(partner).toPartner(targetPartner).rate(new BigDecimal("0.8000")).build();
+
+        when(memberRepository.findById(member.getId())).thenReturn(Optional.of(member));
+        when(partnerRepository.findById(partner.getId())).thenReturn(Optional.of(partner));
+        when(partnerRepository.findById(targetPartner.getId())).thenReturn(Optional.of(targetPartner));
+        when(exchangeRateRepository.findLatestRate(eq(partner.getId()), eq(targetPartner.getId()), any())).thenReturn(Optional.of(rate));
+        when(pointBalanceRepository.findByMemberIdAndPartnerId(member.getId(), partner.getId())).thenReturn(Optional.of(fromBal));
+        when(pointBalanceRepository.findByMemberIdAndPartnerId(member.getId(), targetPartner.getId())).thenReturn(Optional.of(toBal));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> {
+            Transaction t = i.getArgument(0);
+            t.setId(UUID.randomUUID());
+            return t;
+        });
+
+        ExchangeResponse response = transactionService.exchangePoints(request);
+
+        assertNotNull(response);
+        assertEquals(100L, response.getPointsDeducted());
+        assertEquals(80L, response.getPointsCredited());
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void testExchangePoints_NullMemberIdParam_Success() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(member.getId().toString(), null, java.util.List.of())
+        );
+
+        Partner targetPartner = Partner.builder().id(UUID.randomUUID()).name("McD").code("MCD").status("ACTIVE").build();
+        ExchangeRequest request = ExchangeRequest.builder()
+                .fromPartnerId(partner.getId())
+                .toPartnerId(targetPartner.getId())
+                .points(100L)
+                .build();
+
+        PointBalance fromBal = PointBalance.builder().member(member).partner(partner).balance(500L).build();
+        PointBalance toBal = PointBalance.builder().member(member).partner(targetPartner).balance(100L).build();
+        ExchangeRate rate = ExchangeRate.builder().fromPartner(partner).toPartner(targetPartner).rate(new BigDecimal("0.8000")).build();
+
+        when(memberRepository.findById(member.getId())).thenReturn(Optional.of(member));
+        when(partnerRepository.findById(partner.getId())).thenReturn(Optional.of(partner));
+        when(partnerRepository.findById(targetPartner.getId())).thenReturn(Optional.of(targetPartner));
+        when(exchangeRateRepository.findLatestRate(eq(partner.getId()), eq(targetPartner.getId()), any())).thenReturn(Optional.of(rate));
+        when(pointBalanceRepository.findByMemberIdAndPartnerId(member.getId(), partner.getId())).thenReturn(Optional.of(fromBal));
+        when(pointBalanceRepository.findByMemberIdAndPartnerId(member.getId(), targetPartner.getId())).thenReturn(Optional.of(toBal));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> {
+            Transaction t = i.getArgument(0);
+            t.setId(UUID.randomUUID());
+            return t;
+        });
+
+        ExchangeResponse response = transactionService.exchangePoints(request, null);
+
+        assertNotNull(response);
+        assertEquals(100L, response.getPointsDeducted());
+        assertEquals(80L, response.getPointsCredited());
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
 }

@@ -2,6 +2,7 @@ package com.jdt17.loyalty.controller;
 
 import com.jdt17.loyalty.dto.member.MemberPointsResponse;
 import com.jdt17.loyalty.dto.member.MemberResponse;
+import com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse;
 import com.jdt17.loyalty.dto.member.PagedMemberResponse;
 import com.jdt17.loyalty.dto.member.UpdateMemberRequest;
 import com.jdt17.loyalty.service.MemberService;
@@ -25,7 +26,6 @@ public class MemberController {
             @RequestParam(required = false) String status
     ) {
         PagedMemberResponse response = memberService.getAllMembers(page, size, status);
-
         return ResponseEntity.ok(response);
     }
 
@@ -41,12 +41,11 @@ public class MemberController {
             @Valid @RequestBody UpdateMemberRequest request
     ) {
         MemberResponse response = memberService.updateMember(id, request);
-
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/points")
-    public ResponseEntity<MemberPointsResponse> getMemberPoitnts(
+    public ResponseEntity<MemberPointsResponse> getMemberPoints(
             @PathVariable UUID id
     ) {
         MemberPointsResponse response = memberService.getMemberPoints(id);
@@ -54,13 +53,13 @@ public class MemberController {
     }
 
     @GetMapping("/{id}/transactions")
-    public ResponseEntity<com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse> getMemberTransactions(
+    public ResponseEntity<MemberTransactionHistoryResponse> getMemberTransactions(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String type
     ) {
-        com.jdt17.loyalty.dto.member.MemberTransactionHistoryResponse response =
+        MemberTransactionHistoryResponse response =
                 memberService.getMemberTransactions(id, page, size, type);
         return ResponseEntity.ok(response);
     }
