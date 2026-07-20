@@ -1,5 +1,10 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.AuditEventConstant;
+import com.jdt17.loyalty.constant.ErrorCodeConstant;
+import com.jdt17.loyalty.constant.ErrorMessageConstant;
+import com.jdt17.loyalty.constant.RoleConstant;
+import com.jdt17.loyalty.constant.StatusConstant;
 import com.jdt17.loyalty.dto.rate.CreateExchangeRateRequest;
 import com.jdt17.loyalty.dto.rate.ExchangeRateResponse;
 import com.jdt17.loyalty.dto.rate.ListExchangeRateResponse;
@@ -8,6 +13,7 @@ import com.jdt17.loyalty.entity.Partner;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.ExchangeRateRepository;
 import com.jdt17.loyalty.repository.PartnerRepository;
+import com.jdt17.loyalty.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,26 +42,36 @@ public class ExchangeRateService {
     }
 
     @Transactional
+    public ExchangeRateResponse createExchangeRate(CreateExchangeRateRequest request) {
+        UUID adminId = SecurityUtils.getRequiredCurrentUserId();
+        return createExchangeRate(request, adminId);
+    }
+
+    @Transactional
     public ExchangeRateResponse createExchangeRate(CreateExchangeRateRequest request, UUID adminId) {
+        if (adminId == null) {
+            adminId = SecurityUtils.getRequiredCurrentUserId();
+        }
+
         if (request.getFromPartnerId().equals(request.getToPartnerId())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "fromPartnerId cannot equal toPartnerId", "INVALID_EXCHANGE_RATE_PAIR");
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.INVALID_EXCHANGE_RATE_PAIR, ErrorCodeConstant.INVALID_EXCHANGE_RATE_PAIR);
         }
 
         Partner fromPartner = partnerRepository.findById(request.getFromPartnerId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "From partner not found", "PARTNER_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
         Partner toPartner = partnerRepository.findById(request.getToPartnerId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "To partner not found", "PARTNER_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
-        if (!"ACTIVE".equals(fromPartner.getStatus()) || !"ACTIVE".equals(toPartner.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Both partners must be active", "PARTNER_INACTIVE");
+        if (!StatusConstant.ACTIVE.equals(fromPartner.getStatus()) || !StatusConstant.ACTIVE.equals(toPartner.getStatus())) {
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.PARTNER_INACTIVE, ErrorCodeConstant.PARTNER_INACTIVE);
         }
 
         boolean exists = exchangeRateRepository.existsByFromPartnerIdAndToPartnerIdAndEffectiveFrom(
                 request.getFromPartnerId(), request.getToPartnerId(), request.getEffectiveFrom()
         );
         if (exists) {
-            throw new LoyaltyException(HttpStatus.CONFLICT, "Exchange rate for this pair and effective time already exists", "DUPLICATE_EXCHANGE_RATE");
+            throw new LoyaltyException(HttpStatus.CONFLICT, ErrorMessageConstant.DUPLICATE_EXCHANGE_RATE, ErrorCodeConstant.DUPLICATE_EXCHANGE_RATE);
         }
 
         ExchangeRate rate = ExchangeRate.builder()
@@ -69,10 +85,10 @@ public class ExchangeRateService {
         ExchangeRate saved = exchangeRateRepository.save(rate);
 
         auditTrailService.logEvent(
-                "EXCHANGE_RATE_CREATED",
+                AuditEventConstant.EXCHANGE_RATE_CREATED,
                 adminId,
-                "ADMIN",
-                "EXCHANGE_RATE",
+                RoleConstant.ADMIN,
+                AuditEventConstant.ENTITY_EXCHANGE_RATE,
                 saved.getId(),
                 null
         );

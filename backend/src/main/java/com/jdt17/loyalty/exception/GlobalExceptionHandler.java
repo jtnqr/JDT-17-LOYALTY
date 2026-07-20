@@ -1,7 +1,9 @@
 package com.jdt17.loyalty.exception;
 
+import com.jdt17.loyalty.constant.ErrorCodeConstant;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @Getter
@@ -44,18 +47,19 @@ public class GlobalExceptionHandler {
                 .status(400)
                 .error("BAD_REQUEST")
                 .message(message)
-                .code("VALIDATION_ERROR")
+                .code(ErrorCodeConstant.VALIDATION_ERROR)
                 .build();
         return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("Unhandled exception occurred: ", ex);
         ErrorResponse response = ErrorResponse.builder()
                 .status(500)
                 .error("INTERNAL_SERVER_ERROR")
-                .message(ex.getMessage())
-                .code("INTERNAL_ERROR")
+                .message("An unexpected internal error occurred. Please try again later.")
+                .code(ErrorCodeConstant.INTERNAL_ERROR)
                 .build();
 
         return ResponseEntity.internalServerError().body(response);

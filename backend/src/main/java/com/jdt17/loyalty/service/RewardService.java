@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.*;
 import com.jdt17.loyalty.dto.reward.CreateRewardRequest;
 import com.jdt17.loyalty.dto.reward.RewardResponse;
 import com.jdt17.loyalty.dto.reward.UpdateRewardRequest;
@@ -8,11 +9,10 @@ import com.jdt17.loyalty.entity.Reward;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.PartnerRepository;
 import com.jdt17.loyalty.repository.RewardRepository;
+import com.jdt17.loyalty.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,32 +30,27 @@ public class RewardService {
     private final AuditTrailService auditTrailService;
 
     private UUID getActorId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        try {
-            return UUID.fromString(authentication.getName());
-        } catch (Exception e) {
-            return null;
-        }
+        return SecurityUtils.getCurrentUserId();
     }
 
     @Transactional
     @CacheEvict(value = "rewards", allEntries = true)
     public RewardResponse createReward(CreateRewardRequest request) {
         Partner partner = partnerRepository.findById(request.getPartnerId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Partner does not exist", "PARTNER_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
         Reward reward = Reward.builder()
                 .partner(partner)
                 .name(request.getName())
                 .pointCost(request.getPointCost())
-                .status("ACTIVE")
+                .status(StatusConstant.ACTIVE)
                 .imageUrl(request.getImageUrl())
                 .build();
 
         Reward saved = rewardRepository.save(reward);
 
         // Audit Trail
-        auditTrailService.logEvent("REWARD_CREATED", getActorId(), "ADMIN", "REWARD", saved.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.REWARD_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, saved.getId(), null);
 
         return mapToResponse(saved);
     }
@@ -64,7 +59,7 @@ public class RewardService {
     @CacheEvict(value = "rewards", allEntries = true)
     public RewardResponse updateReward(UUID id, UpdateRewardRequest request) {
         Reward reward = rewardRepository.findById(id)
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Reward does not exist", "REWARD_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.REWARD_NOT_FOUND, ErrorCodeConstant.REWARD_NOT_FOUND));
 
         if (request.getName() != null) {
             reward.setName(request.getName());
@@ -82,7 +77,7 @@ public class RewardService {
         Reward updated = rewardRepository.save(reward);
 
         // Audit Trail
-        auditTrailService.logEvent("REWARD_UPDATED", getActorId(), "ADMIN", "REWARD", updated.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.REWARD_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, updated.getId(), null);
 
         return mapToResponse(updated);
     }
@@ -91,7 +86,7 @@ public class RewardService {
     @CacheEvict(value = "rewards", allEntries = true)
     public RewardResponse uploadRewardImage(UUID id, MultipartFile file) throws IOException {
         Reward reward = rewardRepository.findById(id)
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Reward does not exist", "REWARD_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.REWARD_NOT_FOUND, ErrorCodeConstant.REWARD_NOT_FOUND));
 
         // Delete old image if exists
         if (reward.getImageUrl() != null) {
@@ -104,7 +99,7 @@ public class RewardService {
         Reward updated = rewardRepository.save(reward);
 
         // Audit Trail
-        auditTrailService.logEvent("REWARD_IMAGE_UPLOADED", getActorId(), "ADMIN", "REWARD", updated.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.REWARD_IMAGE_UPLOADED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, updated.getId(), null);
 
         return mapToResponse(updated);
     }
