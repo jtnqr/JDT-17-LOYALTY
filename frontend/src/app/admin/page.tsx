@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   TrendingUp,
   Award,
+  Download,
 } from "lucide-react";
 
 interface PopularRewardDetail {
@@ -94,6 +95,19 @@ export default function AdminDashboardPage() {
   // Popular rewards
   const popularRewards = stats?.popularRewards ?? [];
 
+  const handleDownloadStats = () => {
+    if (!stats) return;
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(stats, null, 2)
+    )}`;
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", jsonString);
+    downloadAnchor.setAttribute("download", `pistos-dashboard-stats-${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   return (
     <>
       <AdminHeader
@@ -101,14 +115,16 @@ export default function AdminDashboardPage() {
         title="Overview Dashboard"
       />
       <div className="p-8 space-y-8 overflow-y-auto flex-1 bg-neutral-50/50">
-        <section className="space-y-1">
-          <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
-            System Performance & Operations
-          </h1>
-          <p className="text-sm font-medium text-neutral-500">
-            Real-time monitoring of registered members, merchant configurations, and platform transactions.
-          </p>
-        </section>
+        {/* Top actions/download row */}
+        <div className="flex justify-end items-center">
+          <button
+            onClick={handleDownloadStats}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-neutral-600 bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary rounded-xl shadow-sm transition-all focus:outline-none"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Report</span>
+          </button>
+        </div>
 
         {/* Key Metrics Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
