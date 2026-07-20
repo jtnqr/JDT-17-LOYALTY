@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.AuditEventConstant;
 import com.jdt17.loyalty.constant.ErrorCodeConstant;
 import com.jdt17.loyalty.constant.ErrorMessageConstant;
 import com.jdt17.loyalty.constant.RoleConstant;
@@ -79,7 +80,7 @@ public class MemberService {
         }
 
         // audit trails to TRX_AUDIT_TRAIL
-        auditTrailService.logEvent("MEMBER_REGISTERED", null, RoleConstant.SYSTEM, "MEMBER", savedMember.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.MEMBER_REGISTERED, null, RoleConstant.SYSTEM, AuditEventConstant.ENTITY_MEMBER, savedMember.getId(), null);
 
         String token = jwtService.generateToken(savedMember.getId().toString(), RoleConstant.MEMBER);
 
@@ -218,10 +219,10 @@ public class MemberService {
         member.setStatus(request.getStatus().toUpperCase());
         Member updatedMember = memberRepository.save(member);
 
-        auditTrailService.logEvent("MEMBER_UPDATED", adminId, RoleConstant.ADMIN, "MEMBER", updatedMember.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.MEMBER_UPDATED, adminId, RoleConstant.ADMIN, AuditEventConstant.ENTITY_MEMBER, updatedMember.getId(), null);
 
         if (statusChanged) {
-            auditTrailService.logEvent("MEMBER_STATUS_CHANGED", adminId, RoleConstant.ADMIN, "MEMBER", updatedMember.getId(), null);
+            auditTrailService.logEvent(AuditEventConstant.MEMBER_STATUS_CHANGED, adminId, RoleConstant.ADMIN, AuditEventConstant.ENTITY_MEMBER, updatedMember.getId(), null);
         }
 
         return MemberResponse.builder()

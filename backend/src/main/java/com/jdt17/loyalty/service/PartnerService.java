@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.AuditEventConstant;
 import com.jdt17.loyalty.constant.ErrorCodeConstant;
 import com.jdt17.loyalty.constant.ErrorMessageConstant;
 import com.jdt17.loyalty.constant.RoleConstant;
@@ -73,7 +74,7 @@ public class PartnerService {
         pointBalanceRepository.bulkInitPointBalances(savedPartner.getId());
 
         // Audit Trail
-        auditTrailService.logEvent("PARTNER_CREATED", getActorId(), RoleConstant.ADMIN, "PARTNER", savedPartner.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, savedPartner.getId(), null);
 
         return PartnerResponse.builder()
                 .id(savedPartner.getId())
@@ -110,7 +111,7 @@ public class PartnerService {
         Partner updatedPartner = partnerRepository.save(partner);
 
         // Audit Trail
-        auditTrailService.logEvent("PARTNER_UPDATED", getActorId(), RoleConstant.ADMIN, "PARTNER", updatedPartner.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, updatedPartner.getId(), null);
 
         return PartnerResponse.builder()
                 .id(updatedPartner.getId())
@@ -211,7 +212,7 @@ public class PartnerService {
         Partner saved = partnerRepository.save(partner);
 
         // Audit Trail
-        auditTrailService.logEvent("PARTNER_LOGO_UPLOADED", getActorId(), RoleConstant.ADMIN, "PARTNER", saved.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_LOGO_UPLOADED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, saved.getId(), null);
 
         return PartnerResponse.builder()
                 .id(saved.getId())

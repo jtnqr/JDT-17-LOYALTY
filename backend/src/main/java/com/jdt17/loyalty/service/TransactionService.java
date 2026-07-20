@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.AuditEventConstant;
 import com.jdt17.loyalty.constant.ErrorCodeConstant;
 import com.jdt17.loyalty.constant.ErrorMessageConstant;
 import com.jdt17.loyalty.constant.RoleConstant;
@@ -93,7 +94,7 @@ public class TransactionService {
                 .build();
         Transaction savedTx = transactionRepository.save(transaction);
 
-        auditTrailService.logEvent("POINTS_EARNED", null, RoleConstant.SYSTEM, "TRANSACTION", savedTx.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.POINTS_EARNED, null, RoleConstant.SYSTEM, AuditEventConstant.ENTITY_TRANSACTION, savedTx.getId(), null);
 
         return EarnPointsResponse.builder()
                 .transactionId(savedTx.getId())
@@ -198,10 +199,10 @@ public class TransactionService {
 
         // Audit log
         auditTrailService.logEvent(
-                "POINTS_REDEEMED",
+                AuditEventConstant.POINTS_REDEEMED,
                 memberId,
                 RoleConstant.MEMBER,
-                "MEMBER",
+                AuditEventConstant.ENTITY_MEMBER,
                 memberId,
                 "Member redeemed reward: " + reward.getName() + " for " + reward.getPointCost() + " points"
         );
@@ -306,10 +307,10 @@ public class TransactionService {
 
         // Audit log
         auditTrailService.logEvent(
-                "POINTS_EXCHANGED",
+                AuditEventConstant.POINTS_EXCHANGED,
                 memberId,
                 RoleConstant.MEMBER,
-                "MEMBER",
+                AuditEventConstant.ENTITY_MEMBER,
                 memberId,
                 "Member exchanged " + sourcePoints + " points from " + fromPartner.getName() + " to " + targetPoints + " points at " + toPartner.getName()
         );
@@ -377,10 +378,10 @@ public class TransactionService {
             expiredTx = transactionRepository.save(expiredTx);
 
             auditTrailService.logEvent(
-                    "POINT_EXPIRED",
+                    AuditEventConstant.POINT_EXPIRED,
                     null,
                     RoleConstant.SYSTEM,
-                    "TRANSACTION",
+                    AuditEventConstant.ENTITY_TRANSACTION,
                     expiredTx.getId(),
                     "Expired " + expiredPoints + " points for member " + member.getId() + " at partner " + partner.getName()
             );

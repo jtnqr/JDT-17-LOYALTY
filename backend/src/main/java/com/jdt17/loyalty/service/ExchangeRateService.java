@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.AuditEventConstant;
 import com.jdt17.loyalty.constant.ErrorCodeConstant;
 import com.jdt17.loyalty.constant.ErrorMessageConstant;
 import com.jdt17.loyalty.constant.RoleConstant;
@@ -84,10 +85,10 @@ public class ExchangeRateService {
         ExchangeRate saved = exchangeRateRepository.save(rate);
 
         auditTrailService.logEvent(
-                "EXCHANGE_RATE_CREATED",
+                AuditEventConstant.EXCHANGE_RATE_CREATED,
                 adminId,
                 RoleConstant.ADMIN,
-                "EXCHANGE_RATE",
+                AuditEventConstant.ENTITY_EXCHANGE_RATE,
                 saved.getId(),
                 null
         );
