@@ -96,16 +96,9 @@ export default function AdminDashboardPage() {
   const popularRewards = stats?.popularRewards ?? [];
 
   const handleDownloadStats = () => {
-    if (!stats) return;
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(stats, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", jsonString);
-    downloadAnchor.setAttribute("download", `pistos-dashboard-stats-${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    if (typeof window !== "undefined") {
+      window.print();
+    }
   };
 
   return (
@@ -116,13 +109,13 @@ export default function AdminDashboardPage() {
       />
       <div className="p-8 space-y-8 overflow-y-auto flex-1 bg-neutral-50/50">
         {/* Top actions/download row */}
-        <div className="flex justify-end items-center">
+        <div className="flex justify-end items-center print:hidden">
           <button
             onClick={handleDownloadStats}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-neutral-600 bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary rounded-xl shadow-sm transition-all focus:outline-none"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-neutral-600 bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary rounded-xl shadow-sm transition-all focus:outline-none cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>Download Report</span>
+            <span>Download PDF</span>
           </button>
         </div>
 
