@@ -8,7 +8,7 @@ import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import apiClient from "@/lib/apiClient";
-import { Search, ArrowRight, Coins, AlertTriangle } from "lucide-react";
+import { Search, ArrowRight, Coins, AlertTriangle, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import Avatar from "@/components/atoms/Avatar";
@@ -34,6 +34,23 @@ function RewardsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      setShowBackToTop(container.scrollTop > 200);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const searchQuery = searchParams.get("q") || "";
   const activePartnerFilter = searchParams.get("partner") || "ALL";
@@ -254,7 +271,7 @@ function RewardsPageContent() {
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
+        <div ref={scrollContainerRef} className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
           {/* Top Navbar */}
           <div className="px-5 pt-6 space-y-5">
             <div className="flex justify-between items-center">
@@ -392,6 +409,16 @@ function RewardsPageContent() {
               })}
             </div>
           </div>
+
+          {showBackToTop && (
+            <button
+              onClick={scrollToTop}
+              className="fixed bottom-20 right-4 z-40 bg-white border border-neutral-200 text-neutral-800 text-xs font-bold px-3 py-2 rounded-full shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+              Back to Top
+            </button>
+          )}
 
           {/* Bottom Tabs */}
           <BottomNavigation />

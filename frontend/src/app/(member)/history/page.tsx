@@ -21,6 +21,7 @@ import {
   Calendar,
   DollarSign,
   Info,
+  ArrowUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PartnerLogo } from "@/components/atoms/PartnerLogo";
@@ -45,6 +46,23 @@ function HistoryPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [showBackToTop, setShowBackToTop] = React.useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      setShowBackToTop(container.scrollTop > 200);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const searchQuery = searchParams.get("q") || "";
   const selectedPartner = searchParams.get("partner") || "ALL";
@@ -340,7 +358,7 @@ function HistoryPageContent() {
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200 overflow-y-auto">
+        <div ref={scrollContainerRef} className="md:hidden flex-grow flex flex-col pb-20 animate-in fade-in duration-200 overflow-y-auto">
           {/* Top Header */}
           <div className="px-5 pt-6 space-y-4">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
@@ -551,6 +569,15 @@ function HistoryPageContent() {
             )}
           </div>
 
+          {showBackToTop && (
+            <button
+              onClick={scrollToTop}
+              className="fixed bottom-20 right-4 z-40 bg-white border border-neutral-200 text-neutral-800 text-xs font-bold px-3 py-2 rounded-full shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+              Back to Top
+            </button>
+          )}
           <BottomNavigation />
         </div>
 
