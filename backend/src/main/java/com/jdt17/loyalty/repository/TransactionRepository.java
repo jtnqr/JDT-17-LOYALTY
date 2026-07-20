@@ -31,4 +31,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("partnerId") UUID partnerId,
             @Param("type") String type
     );
+
+    @Query("SELECT COALESCE(SUM(t.points), 0) FROM Transaction t WHERE t.type = :type")
+    long sumPointsByType(@Param("type") String type);
+
+    @Query("SELECT t FROM Transaction t WHERE t.type = :type ORDER BY t.createdAt ASC")
+    java.util.List<Transaction> findByType(@Param("type") String type);
 }

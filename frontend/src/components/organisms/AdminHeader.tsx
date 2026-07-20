@@ -48,7 +48,7 @@ export function AdminHeader({
   }, []);
 
   return (
-    <header className="h-16 border-b border-neutral-200/50 shadow-sm bg-white px-8 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 border-b border-neutral-200/50 shadow-sm bg-white px-8 flex items-center justify-between sticky top-0 z-30 print:hidden">
       <div>
         {/* Breadcrumbs */}
         <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-bold uppercase tracking-wider">

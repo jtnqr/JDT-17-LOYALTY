@@ -14,4 +14,6 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
     boolean existsByEmail(String email);
     boolean existsByPhone(String phone);
     Page<Member> findByStatus(String status, Pageable pageable);
+    long countByStatus(String status);
+    long countByCreatedAtAfter(java.time.OffsetDateTime dateTime);
 }
