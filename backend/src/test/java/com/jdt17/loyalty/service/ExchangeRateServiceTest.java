@@ -232,4 +232,66 @@ class ExchangeRateServiceTest {
         assertEquals(HttpStatus.CONFLICT, exception.getStatus());
         assertEquals("DUPLICATE_EXCHANGE_RATE", exception.getCode());
     }
+
+    @Test
+    void createExchangeRate_SingleParam_Success() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(adminId.toString(), null, java.util.List.of())
+        );
+
+        CreateExchangeRateRequest request = CreateExchangeRateRequest.builder()
+                .fromPartnerId(partnerA.getId())
+                .toPartnerId(partnerB.getId())
+                .rate(new BigDecimal("0.8500"))
+                .effectiveFrom(OffsetDateTime.now())
+                .build();
+
+        when(partnerRepository.findById(partnerA.getId())).thenReturn(Optional.of(partnerA));
+        when(partnerRepository.findById(partnerB.getId())).thenReturn(Optional.of(partnerB));
+        when(exchangeRateRepository.existsByFromPartnerIdAndToPartnerIdAndEffectiveFrom(any(), any(), any()))
+                .thenReturn(false);
+        when(exchangeRateRepository.save(any(ExchangeRate.class))).thenAnswer(i -> {
+            ExchangeRate r = i.getArgument(0);
+            r.setId(UUID.randomUUID());
+            return r;
+        });
+
+        ExchangeRateResponse response = exchangeRateService.createExchangeRate(request);
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("0.8500"), response.getRate());
+        verify(auditTrailService).logEvent(eq("EXCHANGE_RATE_CREATED"), eq(adminId), eq("ADMIN"), eq("EXCHANGE_RATE"), any(), any());
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void createExchangeRate_NullAdminId_Success() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(adminId.toString(), null, java.util.List.of())
+        );
+
+        CreateExchangeRateRequest request = CreateExchangeRateRequest.builder()
+                .fromPartnerId(partnerA.getId())
+                .toPartnerId(partnerB.getId())
+                .rate(new BigDecimal("0.8500"))
+                .effectiveFrom(OffsetDateTime.now())
+                .build();
+
+        when(partnerRepository.findById(partnerA.getId())).thenReturn(Optional.of(partnerA));
+        when(partnerRepository.findById(partnerB.getId())).thenReturn(Optional.of(partnerB));
+        when(exchangeRateRepository.existsByFromPartnerIdAndToPartnerIdAndEffectiveFrom(any(), any(), any()))
+                .thenReturn(false);
+        when(exchangeRateRepository.save(any(ExchangeRate.class))).thenAnswer(i -> {
+            ExchangeRate r = i.getArgument(0);
+            r.setId(UUID.randomUUID());
+            return r;
+        });
+
+        ExchangeRateResponse response = exchangeRateService.createExchangeRate(request, null);
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("0.8500"), response.getRate());
+        verify(auditTrailService).logEvent(eq("EXCHANGE_RATE_CREATED"), eq(adminId), eq("ADMIN"), eq("EXCHANGE_RATE"), any(), any());
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
 }

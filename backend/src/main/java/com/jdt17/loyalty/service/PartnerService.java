@@ -1,17 +1,21 @@
 package com.jdt17.loyalty.service;
 
+import com.jdt17.loyalty.constant.AuditEventConstant;
+import com.jdt17.loyalty.constant.ErrorCodeConstant;
+import com.jdt17.loyalty.constant.ErrorMessageConstant;
+import com.jdt17.loyalty.constant.RoleConstant;
+import com.jdt17.loyalty.constant.StatusConstant;
 import com.jdt17.loyalty.dto.partner.*;
 import com.jdt17.loyalty.entity.Partner;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.PartnerRepository;
 import com.jdt17.loyalty.repository.PointBalanceRepository;
 import com.jdt17.loyalty.security.JWTService;
+import com.jdt17.loyalty.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,24 +38,17 @@ public class PartnerService {
     private final ImageStorageService imageStorageService;
 
     private void verifyAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            throw new LoyaltyException(HttpStatus.UNAUTHORIZED, "Unauthorized", "UNAUTHORIZED");
-        }
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        if (!SecurityUtils.isAdmin()) {
+            throw new LoyaltyException(
+                    SecurityUtils.getAuthentication() == null ? HttpStatus.UNAUTHORIZED : HttpStatus.FORBIDDEN,
+                    SecurityUtils.getAuthentication() == null ? ErrorMessageConstant.UNAUTHORIZED : ErrorMessageConstant.FORBIDDEN,
+                    SecurityUtils.getAuthentication() == null ? ErrorCodeConstant.UNAUTHORIZED : ErrorCodeConstant.FORBIDDEN
+            );
         }
     }
 
     private UUID getActorId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        try {
-            return UUID.fromString(authentication.getName());
-        } catch (Exception e) {
-            return null;
-        }
+        return SecurityUtils.getCurrentUserId();
     }
 
     @Transactional
@@ -60,7 +57,7 @@ public class PartnerService {
         verifyAdmin();
 
         if (partnerRepository.existsByCode(request.getCode())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Partner code already exists", "DUPLICATE_PARTNER_CODE");
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.DUPLICATE_PARTNER_CODE, ErrorCodeConstant.DUPLICATE_PARTNER_CODE);
         }
 
         Partner partner = Partner.builder()
@@ -68,7 +65,7 @@ public class PartnerService {
                 .code(request.getCode())
                 .pointPerThousandIdr(request.getPointsPerThousandIDR())
                 .expiryDays(request.getExpiryDays())
-                .status("ACTIVE")
+                .status(StatusConstant.ACTIVE)
                 .build();
 
         Partner savedPartner = partnerRepository.save(partner);
@@ -77,7 +74,7 @@ public class PartnerService {
         pointBalanceRepository.bulkInitPointBalances(savedPartner.getId());
 
         // Audit Trail
-        auditTrailService.logEvent("PARTNER_CREATED", getActorId(), "ADMIN", "PARTNER", savedPartner.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, savedPartner.getId(), null);
 
         return PartnerResponse.builder()
                 .id(savedPartner.getId())
@@ -96,7 +93,7 @@ public class PartnerService {
         verifyAdmin();
 
         Partner partner = partnerRepository.findById(id)
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Partner does not exist", "PARTNER_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
         if (request.getName() != null) {
             partner.setName(request.getName());
@@ -114,7 +111,7 @@ public class PartnerService {
         Partner updatedPartner = partnerRepository.save(partner);
 
         // Audit Trail
-        auditTrailService.logEvent("PARTNER_UPDATED", getActorId(), "ADMIN", "PARTNER", updatedPartner.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, updatedPartner.getId(), null);
 
         return PartnerResponse.builder()
                 .id(updatedPartner.getId())
@@ -129,11 +126,11 @@ public class PartnerService {
 
     public PartnerTokenResponse getPartnerToken(PartnerTokenRequest request) {
         Partner partner = partnerRepository.findById(request.getPartnerId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNAUTHORIZED, "Invalid partner credentials", "INVALID_CREDENTIALS"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNAUTHORIZED, ErrorMessageConstant.INVALID_PARTNER_CREDENTIALS, ErrorCodeConstant.INVALID_CREDENTIALS));
 
-        if(!"ACTIVE".equalsIgnoreCase(partner.getStatus())) {
+        if (!StatusConstant.ACTIVE.equalsIgnoreCase(partner.getStatus())) {
             throw new LoyaltyException(
-                    HttpStatus.UNAUTHORIZED, "Invalid partner credentials", "INVALID_CREDENTIALS"
+                    HttpStatus.UNAUTHORIZED, ErrorMessageConstant.INVALID_PARTNER_CREDENTIALS, ErrorCodeConstant.INVALID_CREDENTIALS
             );
         }
 
@@ -142,8 +139,8 @@ public class PartnerService {
         if (partner.getApiKey() == null || !partner.getApiKey().equalsIgnoreCase(hashedInputKey)) {
             throw new LoyaltyException(
                     HttpStatus.UNAUTHORIZED,
-                    "Invalid partner credentials",
-                    "INVALID_CREDENTIALS"
+                    ErrorMessageConstant.INVALID_PARTNER_CREDENTIALS,
+                    ErrorCodeConstant.INVALID_CREDENTIALS
             );
         }
 
@@ -153,22 +150,16 @@ public class PartnerService {
                 .token(token)
                 .expiresIn(3600)
                 .build();
-
     }
 
     private String hashSHA256(String data) {
         try {
-            MessageDigest digest = MessageDigest.
-                    getInstance("SHA-256");
-            byte[] hash = digest.digest(data.
-                    getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new
-                    StringBuilder();
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
-                String hex = Integer.
-                        toHexString(0xff & b);
-                if (hex.length() == 1) hexString.
-                        append('0');
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
                 hexString.append(hex);
             }
             return hexString.toString();
@@ -179,14 +170,10 @@ public class PartnerService {
 
     @Cacheable("partners")
     public ListPartnerResponse getAllPartners() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAuthorized = SecurityUtils.isAdmin() || SecurityUtils.isMember();
 
-        boolean isAuthorized = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority()
-                        .equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MEMBER"));
-
-        if(!isAuthorized) {
-            throw new LoyaltyException(HttpStatus.FORBIDDEN, "Access denied", "FORBIDDEN");
+        if (!isAuthorized) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, ErrorMessageConstant.FORBIDDEN, ErrorCodeConstant.FORBIDDEN);
         }
 
         List<Partner> partners = partnerRepository.findAll();
@@ -214,7 +201,7 @@ public class PartnerService {
         verifyAdmin();
 
         Partner partner = partnerRepository.findById(id)
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Partner does not exist", "PARTNER_NOT_FOUND"));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
         if (partner.getLogoUrl() != null) {
             imageStorageService.delete(partner.getLogoUrl());
@@ -225,7 +212,7 @@ public class PartnerService {
         Partner saved = partnerRepository.save(partner);
 
         // Audit Trail
-        auditTrailService.logEvent("PARTNER_LOGO_UPLOADED", getActorId(), "ADMIN", "PARTNER", saved.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_LOGO_UPLOADED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, saved.getId(), null);
 
         return PartnerResponse.builder()
                 .id(saved.getId())

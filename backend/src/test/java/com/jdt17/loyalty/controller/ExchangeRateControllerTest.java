@@ -103,7 +103,7 @@ class ExchangeRateControllerTest {
                 .effectiveFrom(request.getEffectiveFrom())
                 .build();
 
-        when(exchangeRateService.createExchangeRate(any(CreateExchangeRateRequest.class), eq(adminId)))
+        when(exchangeRateService.createExchangeRate(any(CreateExchangeRateRequest.class)))
                 .thenReturn(response);
 
         mockMvc.perform(post("/api/v1/exchange-rates")

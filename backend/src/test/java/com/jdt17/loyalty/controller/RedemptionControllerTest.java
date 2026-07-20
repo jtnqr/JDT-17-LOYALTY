@@ -2,12 +2,12 @@ package com.jdt17.loyalty.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.jdt17.loyalty.dto.reward.ListRewardResponse;
-import com.jdt17.loyalty.dto.reward.RewardResponse;
-import com.jdt17.loyalty.dto.redeem.RedeemRequest;
-import com.jdt17.loyalty.dto.redeem.RedeemResponse;
 import com.jdt17.loyalty.dto.exchange.ExchangeRequest;
 import com.jdt17.loyalty.dto.exchange.ExchangeResponse;
+import com.jdt17.loyalty.dto.redeem.RedeemRequest;
+import com.jdt17.loyalty.dto.redeem.RedeemResponse;
+import com.jdt17.loyalty.dto.reward.ListRewardResponse;
+import com.jdt17.loyalty.dto.reward.RewardResponse;
 import com.jdt17.loyalty.service.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +16,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -29,7 +26,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -81,7 +78,6 @@ class RedemptionControllerTest {
 
     @Test
     void testRedeem_Success() throws Exception {
-        UUID memberId = UUID.randomUUID();
         UUID rewardId = UUID.randomUUID();
         UUID txId = UUID.randomUUID();
 
@@ -99,13 +95,7 @@ class RedemptionControllerTest {
                 .redeemedAt(OffsetDateTime.now())
                 .build();
 
-        SecurityContext securityContext = mock(SecurityContext.class);
-        Authentication authentication = mock(Authentication.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getName()).thenReturn(memberId.toString());
-        SecurityContextHolder.setContext(securityContext);
-
-        when(transactionService.redeemReward(any(RedeemRequest.class), eq(memberId))).thenReturn(response);
+        when(transactionService.redeemReward(any(RedeemRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/redeem")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -114,8 +104,6 @@ class RedemptionControllerTest {
                 .andExpect(jsonPath("$.transactionId").value(txId.toString()))
                 .andExpect(jsonPath("$.rewardName").value("Chicken 1pc"))
                 .andExpect(jsonPath("$.pointsDeducted").value(250));
-
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -143,13 +131,7 @@ class RedemptionControllerTest {
                 .exchangedAt(OffsetDateTime.now())
                 .build();
 
-        SecurityContext securityContext = mock(SecurityContext.class);
-        Authentication authentication = mock(Authentication.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getName()).thenReturn(memberId.toString());
-        SecurityContextHolder.setContext(securityContext);
-
-        when(transactionService.exchangePoints(any(ExchangeRequest.class), eq(memberId))).thenReturn(response);
+        when(transactionService.exchangePoints(any(ExchangeRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/exchange")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -157,7 +139,5 @@ class RedemptionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fromPartner").value("KFC"))
                 .andExpect(jsonPath("$.pointsCredited").value(80));
-
-        SecurityContextHolder.clearContext();
     }
 }
