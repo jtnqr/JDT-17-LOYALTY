@@ -286,7 +286,12 @@ export default function AdminDashboardPage() {
                         {/* Fixed Height Wrapper to Anchor Bottom */}
                         <div className="h-32 w-full flex items-end justify-center">
                           <div
-                            style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                            style={{ 
+                              height: `${Math.max(heightPercent, 4)}%`,
+                              backgroundColor: "#8B3D06",
+                              printColorAdjust: "exact",
+                              WebkitPrintColorAdjust: "exact"
+                            }}
                             className="w-8 bg-[#8B3D06] rounded-t-lg transition-all duration-500 hover:brightness-110 shadow-sm"
                           />
                         </div>
