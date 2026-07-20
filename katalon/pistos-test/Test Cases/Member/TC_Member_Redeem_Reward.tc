@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify reward redemption catalog works</description>
+   <name>TC_Member_Redeem_Reward</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>9315d74b-6c74-4336-8641-5e886f024948</testCaseGuid>
+</TestCaseEntity>

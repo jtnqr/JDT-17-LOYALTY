@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Ensure admin cannot view member private pages</description>
+   <name>TC_Admin_Privacy_Restriction</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>0ca743b4-489b-43f0-938b-625b50bf867e</testCaseGuid>
+</TestCaseEntity>

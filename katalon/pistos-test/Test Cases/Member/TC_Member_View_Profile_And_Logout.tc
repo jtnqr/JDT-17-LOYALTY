@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify that the Member can view profile details and log out successfully</description>
+   <name>TC_Member_View_Profile_And_Logout</name>
+   <tag>member,profile,logout</tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>d3b6ec2a-f8b1-419b-a012-3298c2eaee93</testCaseGuid>
+</TestCaseEntity>

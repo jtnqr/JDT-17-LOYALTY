@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Login with valid CMS admin credentials</description>
+   <name>TC_Admin_Login_Success</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>97b1c75a-fc38-4091-9924-9b75ba5d9364</testCaseGuid>
+</TestCaseEntity>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify point balance displayed on dashboard</description>
+   <name>TC_Member_View_Points</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>64e90b5e-bda0-4824-99f9-a3bc5b3fae5d</testCaseGuid>
+</TestCaseEntity>

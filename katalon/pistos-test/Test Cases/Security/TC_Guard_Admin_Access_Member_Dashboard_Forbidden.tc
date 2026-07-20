@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify admin is barred from member dashboard</description>
+   <name>TC_Guard_Admin_Access_Member_Dashboard_Forbidden</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>5a2c647a-4425-4239-b695-f3215652dbce</testCaseGuid>
+</TestCaseEntity>

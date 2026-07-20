@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify that the Admin can configure and save exchange rates between partners</description>
+   <name>TC_Admin_Configure_Exchange_Rate</name>
+   <tag>admin,exchange,rate</tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>d3b6ec2a-f8b1-419b-a012-3298c2eaee90</testCaseGuid>
+</TestCaseEntity>

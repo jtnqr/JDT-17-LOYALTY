@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify unauthenticated redirect to login page</description>
+   <name>TC_Guard_Unauthenticated_Redirect</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>766119ff-4031-4f3d-ad8c-d20a3fb4f73f</testCaseGuid>
+</TestCaseEntity>

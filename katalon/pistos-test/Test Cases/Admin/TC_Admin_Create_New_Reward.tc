@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify that the Admin can create a new reward in the catalog</description>
+   <name>TC_Admin_Create_New_Reward</name>
+   <tag>admin,reward,catalog</tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>d3b6ec2a-f8b1-419b-a012-3298c2eaee91</testCaseGuid>
+</TestCaseEntity>

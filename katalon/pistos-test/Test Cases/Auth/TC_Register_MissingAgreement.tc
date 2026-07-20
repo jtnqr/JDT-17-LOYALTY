@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Register without checking agreement checkbox</description>
+   <name>TC_Register_MissingAgreement</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a8f2dc5a-fb0c-4d37-88ea-8b4317f22318</testCaseGuid>
+</TestCaseEntity>

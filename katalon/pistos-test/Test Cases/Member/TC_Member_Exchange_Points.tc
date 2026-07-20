@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify cross-partner point exchange works</description>
+   <name>TC_Member_Exchange_Points</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>80dcfe27-ad88-4537-8bef-55a802566d73</testCaseGuid>
+</TestCaseEntity>
