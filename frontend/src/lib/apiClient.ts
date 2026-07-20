@@ -68,6 +68,15 @@ apiClient.interceptors.response.use(
       });
     }
 
+    if (error.response && error.response.status >= 400 && error.response.status < 500 && !isAuthEndpoint) {
+      const code = (error.response.data as any)?.code || "CLIENT_ERROR";
+      const message = (error.response.data as any)?.message || (error.response.data as any)?.error || "Request failed. Please try again.";
+      dispatchGlobalError({
+        type: code,
+        message: message,
+      });
+    }
+
     if (error.response && error.response.status >= 500) {
       console.error(
         `[API Client] Server error ${error.response.status} on`,

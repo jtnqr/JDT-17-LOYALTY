@@ -784,7 +784,7 @@ export default function AdminMembersPage() {
                 label="Email Address"
                 type="email"
                 placeholder="budi.santoso@example.com"
-                disabled={isSubmittingEdit}
+                disabled={true}
                 error={errorsEdit.email?.message}
                 {...registerEdit("email")}
               />

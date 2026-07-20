@@ -4,6 +4,7 @@ import React, { Suspense } from "react";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
+import { GlobalErrorPopup } from "@/components/organisms/GlobalErrorPopup";
 import { useMember } from "@/lib/hooks/useMember";
 import { usePathname } from "next/navigation";
 
@@ -77,6 +78,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
 
       {/* PERSISTENT MOBILE NAV */}
       <BottomNavigation />
+      <GlobalErrorPopup />
     </div>
   );
 }
