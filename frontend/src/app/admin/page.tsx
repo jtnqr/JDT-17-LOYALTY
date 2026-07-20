@@ -54,6 +54,28 @@ export default function AdminDashboardPage() {
     enabled: isLoaded,
   });
 
+  const [currentDateTime, setCurrentDateTime] = React.useState<string>("");
+
+  React.useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      setCurrentDateTime(
+        now.toLocaleString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        })
+      );
+    };
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
@@ -109,7 +131,10 @@ export default function AdminDashboardPage() {
       />
       <div className="p-8 space-y-8 overflow-y-auto flex-1 bg-neutral-50/50">
         {/* Top actions/download row */}
-        <div className="flex justify-end items-center print:hidden">
+        <div className="flex justify-between items-center print:hidden">
+          <div className="text-xs font-bold text-neutral-400 select-none">
+            System Time: <span className="font-extrabold text-neutral-600 tabular-nums">{currentDateTime}</span>
+          </div>
           <button
             onClick={handleDownloadStats}
             className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-neutral-600 bg-white border border-neutral-200 hover:border-brand-primary hover:text-brand-primary rounded-xl shadow-sm transition-all focus:outline-none cursor-pointer"
@@ -117,6 +142,14 @@ export default function AdminDashboardPage() {
             <Download className="w-4 h-4" />
             <span>Download PDF</span>
           </button>
+        </div>
+
+        {/* Print-only Header (shows current timestamp in PDF output) */}
+        <div className="hidden print:flex justify-between items-center border-b border-neutral-200 pb-4 mb-4">
+          <div className="text-lg font-black text-neutral-900">Overview Dashboard</div>
+          <div className="text-xs font-bold text-neutral-500">
+            Exported: <span className="font-extrabold text-neutral-700">{currentDateTime}</span>
+          </div>
         </div>
 
         {/* Key Metrics Cards Row */}
