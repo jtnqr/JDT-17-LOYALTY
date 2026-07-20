@@ -32,8 +32,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-neutral-50 flex font-sans">
-      <AdminSidebar activeTab={activeTab} />
-      <main className="flex-grow flex flex-col min-w-0">
+      <div className="print:hidden flex shrink-0">
+        <AdminSidebar activeTab={activeTab} />
+      </div>
+      <main className="flex-grow flex flex-col min-w-0 print:w-full print:bg-white print:p-0">
         {children}
       </main>
     </div>
