@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Toggle partner status between ACTIVE and INACTIVE</description>
+   <name>TC_Partner_Status_Toggle_ACTIVE_INACTIVE</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000006</testCaseGuid>
+</TestCaseEntity>

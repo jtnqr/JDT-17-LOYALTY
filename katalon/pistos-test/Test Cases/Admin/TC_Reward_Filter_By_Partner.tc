@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Filter rewards catalog by partner ID</description>
+   <name>TC_Reward_Filter_By_Partner</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0002-4000-8000-000000000002</testCaseGuid>
+</TestCaseEntity>

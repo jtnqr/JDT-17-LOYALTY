@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Update reward status between ACTIVE and INACTIVE</description>
+   <name>TC_Reward_Edit_Update_Status</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0002-4000-8000-000000000005</testCaseGuid>
+</TestCaseEntity>

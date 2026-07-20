@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Update partner point expiry days setting</description>
+   <name>TC_Partner_Edit_Update_ExpiryDays</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000005</testCaseGuid>
+</TestCaseEntity>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify partner code field is disabled/immutable after creation</description>
+   <name>TC_Partner_Code_Immutable_After_Create</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000007</testCaseGuid>
+</TestCaseEntity>
