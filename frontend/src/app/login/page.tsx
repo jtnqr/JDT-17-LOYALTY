@@ -26,7 +26,7 @@ export default function LoginPage() {
       {/* Form Section - Full width on mobile, split-view side on desktop */}
       <section className="flex-1 flex flex-col justify-between bg-white md:bg-neutral-100 md:items-center md:justify-center p-0 md:p-6">
         {/* Mobile Header (Gradient bg) - Hidden on desktop */}
-        <div className="md:hidden bg-linear-to-br from-brand-primary to-brand-primary-dark pt-12 pb-14 px-6 flex flex-col items-center justify-center relative">
+        <div className="md:hidden bg-linear-to-br from-brand-primary to-brand-primary-dark pt-12 pb-14 px-6 flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-[-20px] right-[-20px] w-[120px] h-[120px] rounded-full bg-white/5 blur-lg pointer-events-none" />
           <BrandLogo variant="light" showTagline={true} />
         </div>
