@@ -279,8 +279,8 @@ export default function AdminDashboardPage() {
                   {monthlyData.map((d, i) => {
                     const heightPercent = maxMonthValue > 0 ? (d.value / maxMonthValue) * 80 : 0;
                     return (
-                      <div key={i} className="flex flex-col items-center flex-1 group h-full justify-end">
-                        <span className="text-[10px] font-black text-neutral-900 md:opacity-0 group-hover:opacity-100 print:opacity-100 transition-opacity duration-200 mb-1">
+                      <div key={i} className="flex flex-col items-center flex-1 h-full justify-end">
+                        <span className="text-[10px] font-black text-neutral-900 mb-1">
                           {d.value.toLocaleString()}
                         </span>
                         {/* Fixed Height Wrapper to Anchor Bottom */}
