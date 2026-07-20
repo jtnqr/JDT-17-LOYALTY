@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import Link from "next/link";
 
 import { PointBalance } from "@/types";
@@ -58,6 +59,19 @@ export default function ProfilePage() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch partners list for logo matching
+  const { data: partnersData } = useQuery({
+    queryKey: ["partners-list"],
+    queryFn: async () => {
+      const response = await apiClient.get("/api/v1/partners");
+      return (response.data.data || []) as any[];
+    },
+    enabled: !!memberId,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
@@ -83,24 +97,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* 1. DESKTOP SIDEBAR NAVIGATION */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="profile"
-        userName={displayMember?.name || "Budi Santoso"}
-      />
-
-      {/* 2. MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        <DesktopNavbar
-          userName={displayMember?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          breadcrumbs={[{ label: "Profile" }]}
-          title="My Profile"
-        />
-
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
         {/* Outer Scroll Container */}
         <div className="flex-grow overflow-y-auto">
           {/* ========================================================
@@ -143,21 +140,37 @@ export default function ProfilePage() {
               </div>
 
               {/* Available Points Card */}
-              <div className="bg-white rounded-2xl flex items-center flex-col p-5 shadow-xs border border-neutral-200/50 border-t-4 border-t-amber-400">
-                <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                  Available Points
-                </p>
-                <p className="text-3xl font-black text-[#8B3D06] mt-1.5 tracking-tight">
-                  {totalPoints.toLocaleString()}
-                </p>
+              <div className="bg-white rounded-2xl flex items-center justify-between p-5 shadow-xs border border-neutral-200/50 border-t-4 border-t-[#8B3D06]">
+                <div>
+                  <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Aggregate Available Points
+                  </p>
+                  <p className="text-3xl font-black text-[#8B3D06] mt-1.5 tracking-tight">
+                    {totalPoints.toLocaleString()}{" "}
+                    <span className="text-xs font-bold text-neutral-400">
+                      pts
+                    </span>
+                  </p>
+                </div>
+                <div className="bg-[#FCF5F1] p-3 rounded-2xl border border-[#8B3D06]/5 text-right">
+                  <p className="text-[10px] font-bold text-[#8B3D06] uppercase tracking-wider">
+                    Estimated Value
+                  </p>
+                  <p className="text-sm font-black text-[#8B3D06] mt-0.5">
+                    Rp {(totalPoints * 1000).toLocaleString()}
+                  </p>
+                </div>
               </div>
 
               {/* From Partner Section */}
-              <div className="space-y-3">
+              <div className="max-h-60 overflow-y-auto overflow-x-hidden space-y-3 pr-1">
                 {balances.map((bal) => {
-                  const firstChar = bal.partnerName
-                    ? bal.partnerName.trim().charAt(0).toUpperCase()
-                    : "P";
+                  const partner = (partnersData || []).find(
+                    (p: any) =>
+                      p.id === bal.partnerId ||
+                      p.name?.toLowerCase() === bal.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partner?.logoUrl;
                   return (
                     <div
                       key={bal.partnerId}
@@ -167,9 +180,11 @@ export default function ProfilePage() {
                         onClick={() => handleViewRewards(bal.partnerId)}
                         className="flex flex-1 min-w-0 items-center gap-4 cursor-pointer"
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-[#8B3D06] text-white flex items-center justify-center shrink-0">
-                          {firstChar}
-                        </div>
+                        <PartnerLogo
+                          logoUrl={logoUrl}
+                          name={bal.partnerName}
+                          className="w-12 h-12 rounded-2xl border border-neutral-100 shadow-inner"
+                        />
 
                         <div className="flex-1 min-w-0">
                           <p className="truncate text-sm font-black text-neutral-800">
@@ -293,7 +308,7 @@ export default function ProfilePage() {
               {/* Column 2 & 3: Point Wallets & Partner Breakdown */}
               <div className="md:col-span-2 space-y-6">
                 {/* Total Points Header Card */}
-                <div className="bg-white rounded-3xl p-6 border border-neutral-200/50 shadow-xs border-t-4 border-t-amber-400 flex items-center justify-between">
+                <div className="bg-white rounded-3xl p-6 border border-neutral-200/50 shadow-xs border-t-4 border-t-[#8B3D06] flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
                       Aggregate Available Points
@@ -324,9 +339,12 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {balances.map((bal) => {
-                      const firstChar = bal.partnerName
-                        ? bal.partnerName.trim().charAt(0).toUpperCase()
-                        : "P";
+                      const partner = (partnersData || []).find(
+                        (p: any) =>
+                          p.id === bal.partnerId ||
+                          p.name?.toLowerCase() === bal.partnerName?.toLowerCase()
+                      );
+                      const logoUrl = partner?.logoUrl;
                       return (
                         <div
                           key={bal.partnerId}
@@ -334,9 +352,11 @@ export default function ProfilePage() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#FCF5F1] text-[#8B3D06] flex items-center justify-center shadow-inner font-black text-base select-none">
-                                {firstChar}
-                              </div>
+                              <PartnerLogo
+                                logoUrl={logoUrl}
+                                name={bal.partnerName}
+                                className="w-10 h-10 rounded-xl border border-neutral-200/50 shadow-inner"
+                              />
                               <div>
                                 <p className="text-xs font-bold text-neutral-800 leading-none">
                                   {bal.partnerName}
@@ -371,10 +391,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-
-        {/* 3. MOBILE BOTTOM NAVIGATION */}
-        <BottomNavigation />
       </div>
-    </div>
   );
 }

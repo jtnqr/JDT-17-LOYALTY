@@ -10,7 +10,7 @@ const inter = Inter({
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "Pistos | LoyaltyHub",
+  title: "PISTOS Loyalty Platform",
   description: "Points-based loyalty system with multi-partner point exchange.",
 };
 

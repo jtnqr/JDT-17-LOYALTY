@@ -49,29 +49,29 @@ export function BrandLogo({
 
   return (
     <div className={cn("flex flex-col items-center text-center", className)}>
-      <BrandLogoIcon
-        className={cn(
-          isLight
-            ? "bg-white/10 border-white/20"
-            : "bg-brand-primary/10 border-brand-primary/20"
-        )}
-      />
+      <div className="flex items-center justify-center bg-white rounded-3xl md:rounded-[36px] w-24 h-24 md:w-32 md:h-32 shadow-lg border border-neutral-100 p-0 overflow-hidden shrink-0">
+        <img
+          src="/logo_pistos_square.webp"
+          alt="Pistos Logo"
+          className="w-full h-full object-contain scale-115"
+        />
+      </div>
       <h2
         className={cn(
-          "text-2xl font-bold mt-4 tracking-tight",
+          "text-3xl md:text-5xl font-black mt-4 md:mt-6 tracking-tight",
           isLight ? "text-white" : "text-neutral-900"
         )}
       >
-        LoyaltyHub
+        PISTOS
       </h2>
       {showTagline && (
         <p
           className={cn(
-            "text-sm mt-1 max-w-[240px]",
+            "text-sm md:text-base mt-2 md:mt-4 max-w-[320px] md:max-w-[420px] font-medium leading-relaxed",
             isLight ? "text-white/80" : "text-neutral-500"
           )}
         >
-          Your gateway to exclusive rewards and smart point management.
+          The unified loyalty platform. Connect, exchange, and redeem points seamlessly across your favorite brands.
         </p>
       )}
     </div>

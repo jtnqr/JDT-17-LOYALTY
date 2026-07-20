@@ -17,6 +17,7 @@ import {
   Building2,
   Gift,
   Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,8 @@ export default function AdminRewardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [partnerFilter, setPartnerFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
 
   // Edit Form State
@@ -70,6 +73,10 @@ export default function AdminRewardsPage() {
     },
     enabled: isLoaded,
   });
+
+  const selectedPartnerText = partnerFilter === 'ALL'
+  ? 'All Partners'
+  : (partnersData?.find((p: any) => String(p.id) === String(partnerFilter))?.name || 'All Partners');
 
   // Fetch rewards list
   const {
@@ -228,32 +235,62 @@ export default function AdminRewardsPage() {
       partnerFilter === "ALL" || r.partnerId === partnerFilter;
     const matchesStatus = statusFilter === "ALL" || r.status === statusFilter;
     return matchesSearch && matchesPartner && matchesStatus;
+  }).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Reward] || "";
+    let bVal: any = b[sortField as keyof Reward] || "";
+
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      <AdminSidebar activeTab="rewards" />
+    <>
+      <AdminHeader
+        breadcrumbs={[{ label: "Rewards" }]}
+        title="Reward Catalog"
+      />
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <AdminHeader
-          breadcrumbs={[{ label: "Rewards" }]}
-          title="Reward Catalog"
-          showSearch={true}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search rewards..."
-        />
-
-        <div className="p-8 flex-grow flex flex-col space-y-6">
+      <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
-              {/* Partner Filter */}
+              {/* Status Filter */}
               <div className="relative">
-                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <Filter className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", statusFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className={cn(
+                    "text-sm pl-10 pr-8 py-2.5 rounded-xl border outline-none transition-colors appearance-none font-bold cursor-pointer",
+                    statusFilter !== "ALL"
+                      ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                      : "bg-white text-neutral-800 border-neutral-200 focus:border-[#8B3D06]"
+                  )}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+                <div className={cn("absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]", statusFilter !== "ALL" ? "border-t-[#8B3D06]" : "border-t-neutral-400")} />
+              </div>
+
+              {/* Partner Filter */}
+              <div className={cn(
+                "relative bg-white border rounded-xl focus-within:border-[#8B3D06] transition-colors",
+                partnerFilter !== "ALL" ? "bg-[#FCF5F1] border-[#8B3D06]" : "bg-white border-neutral-200"
+              )}>
+                <Filter className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", partnerFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                
+                {/* Invisible native select handling clicks and value */}
                 <select
                   value={partnerFilter}
                   onChange={(e) => setPartnerFilter(e.target.value)}
-                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 >
                   <option value="ALL">All Partners</option>
                   {partnersData?.map((p: any) => (
@@ -262,31 +299,32 @@ export default function AdminRewardsPage() {
                     </option>
                   ))}
                 </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+
+                {/* Visible text layer driving the dynamic container width */}
+                <div className={cn(
+                  "text-sm pl-10 pr-8 py-2.5 font-bold whitespace-nowrap select-none",
+                  partnerFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-800"
+                )}>
+                  {selectedPartnerText}
+                </div>
+
+                <div className={cn("absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]", partnerFilter !== "ALL" ? "border-t-[#8B3D06]" : "border-t-neutral-400")} />
               </div>
 
-              {/* Status Filter */}
-              <div className="relative">
-                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
-              </div>
+              {/* Search Input */}
               <div className="relative w-64">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <Search className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", searchQuery ? "text-[#8B3D06]" : "text-neutral-400")} />
                 <input
                   type="text"
                   placeholder="Search rewards..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400 animate-in fade-in duration-200"
+                  className={cn(
+                    "w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400",
+                    searchQuery
+                      ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                      : "bg-white text-neutral-800 border-neutral-200"
+                  )}
                 />
               </div>
             </div>
@@ -299,25 +337,132 @@ export default function AdminRewardsPage() {
             </button>
           </section>
 
+          {/* Active Filter Chips */}
+          {(statusFilter !== "ALL" || partnerFilter !== "ALL" || searchQuery || sortField) && (
+            <div className="flex flex-wrap items-center gap-2 select-none">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Active Filters:</span>
+              {statusFilter !== "ALL" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Status: {statusFilter === "ACTIVE" ? "Active" : "Inactive"}
+                  <button onClick={() => setStatusFilter("ALL")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              {partnerFilter !== "ALL" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Partner: {selectedPartnerText}
+                  <button onClick={() => setPartnerFilter("ALL")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Search: "{searchQuery}"
+                  <button onClick={() => setSearchQuery("")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              {sortField && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Sort: {sortField === "name" ? "Reward Name" : sortField === "partnerCode" ? "Partner" : sortField === "pointCost" ? "Points Cost" : "Status"} ({sortOrder === "asc" ? "Asc" : "Desc"})
+                  <button onClick={() => { setSortField("name"); setSortOrder("asc"); }} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setStatusFilter("ALL");
+                  setPartnerFilter("ALL");
+                  setSearchQuery("");
+                  setSortField("name");
+                  setSortOrder("asc");
+                }}
+                className="text-xs font-bold text-[#8B3D06] hover:underline cursor-pointer ml-2"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
           <section className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden flex-grow flex flex-col">
             <div className="overflow-x-auto flex-grow">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                  <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
                       Image
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Reward Name
+                    <th
+                      onClick={() => {
+                        if (sortField === "name") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("name");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "name" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Reward Name
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "name" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Partner
+                    <th
+                      onClick={() => {
+                        if (sortField === "partnerCode") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("partnerCode");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "partnerCode" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Partner
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "partnerCode" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Points Cost
+                    <th
+                      onClick={() => {
+                        if (sortField === "pointCost") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("pointCost");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "pointCost" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Points Cost
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "pointCost" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                      Status
+                    <th
+                      onClick={() => {
+                        if (sortField === "status") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("status");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "status" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Status
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "status" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 text-center">
                       Edit
@@ -381,7 +526,10 @@ export default function AdminRewardsPage() {
                         <td className="px-6 py-4 text-sm font-extrabold text-neutral-800">
                           {reward.name}
                         </td>
-                        <td className="px-6 py-4 text-sm font-extrabold text-[#8B3D06]">
+                        <td className={cn(
+                          "px-6 py-4 text-sm transition-colors",
+                          partnerFilter !== "ALL" ? "font-black text-[#8B3D06]" : "font-extrabold text-neutral-800"
+                        )}>
                           {reward.partnerCode}
                         </td>
                         <td className="px-6 py-4 text-sm font-bold text-neutral-700">
@@ -390,10 +538,11 @@ export default function AdminRewardsPage() {
                         <td className="px-6 py-4">
                           <span
                             className={cn(
-                              "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
+                              "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border transition-all",
                               reward.status === "ACTIVE"
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200/50"
-                                : "bg-neutral-100 text-neutral-500 border-neutral-200/30"
+                                : "bg-neutral-100 text-neutral-500 border-neutral-200/30",
+                              statusFilter !== "ALL" ? "ring-2 ring-[#8B3D06] scale-105" : ""
                             )}
                           >
                             {reward.status}
@@ -413,9 +562,15 @@ export default function AdminRewardsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Table Footer summary */}
+            <div className="border-t border-neutral-100 px-6 py-4 bg-neutral-50/20 text-xs font-bold text-neutral-400">
+              {statusFilter !== "ALL" || partnerFilter !== "ALL" || searchQuery
+                ? `Showing ${filteredRewards.length} of ${rewards.length} rewards (filtered)`
+                : `Total ${filteredRewards.length} rewards configured.`}
+            </div>
           </section>
         </div>
-      </main>
 
       {/* ========================================================
           EDIT REWARD MODAL
@@ -510,34 +665,24 @@ export default function AdminRewardsPage() {
                   </select>
                 </div>
 
-                <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
-                    Reward Image URL
+                {/* Image Upload & URL Input */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
+                    Reward Image (Upload or URL)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. https://example.com/voucher.jpg or upload below"
-                    value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06] mb-3"
-                  />
-
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-10 rounded overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
                       {formImageUrl ? (
                         <img
                           src={formImageUrl}
-                          alt="Preview"
+                          alt="Reward preview"
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Gift className="w-5 h-5 text-neutral-400" />
+                        <Gift className="w-6 h-6 text-neutral-400" />
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col gap-1">
-                      <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-                        Or upload local file
-                      </label>
+                    <div className="flex-1 flex flex-col gap-1.5">
                       <input
                         type="file"
                         accept="image/png, image/jpeg, image/webp"
@@ -554,6 +699,13 @@ export default function AdminRewardsPage() {
                           {imageError}
                         </span>
                       )}
+                      <input
+                        type="text"
+                        placeholder="Or enter reward image URL directly..."
+                        value={formImageUrl}
+                        onChange={(e) => setFormImageUrl(e.target.value)}
+                        className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] mt-1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -684,45 +836,59 @@ export default function AdminRewardsPage() {
                   />
                 </div>
 
-                <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
-                    Reward Image URL
+                {/* Image Upload & URL Input */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
+                    Reward Image (Upload or URL)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. https://example.com/voucher.jpg or upload below"
-                    value={createImageUrl}
-                    onChange={(e) => setCreateImageUrl(e.target.value)}
-                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 outline-none focus:border-[#8B3D06] mb-3"
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">
-                    Or upload local file
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        if (file.size > 2 * 1024 * 1024) {
-                          setCreateImageError("File size exceeds 2MB limit.");
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
+                      {createImageUrl ? (
+                        <img
+                          src={createImageUrl}
+                          alt="Reward preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Gift className="w-6 h-6 text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            if (file.size > 2 * 1024 * 1024) {
+                              setCreateImageError("File size exceeds 2MB limit.");
+                              setCreateImageFile(null);
+                            } else {
+                              setCreateImageError(null);
+                              setCreateImageFile(file);
+                              setCreateImageUrl(URL.createObjectURL(file));
+                            }
+                          }
+                        }}
+                        className="text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#8B3D06]/10 file:text-[#8B3D06] hover:file:bg-[#8B3D06]/20 file:cursor-pointer"
+                      />
+                      {createImageError && (
+                        <span className="text-[10px] text-red-500 font-bold">
+                          {createImageError}
+                        </span>
+                      )}
+                      <input
+                        type="text"
+                        placeholder="Or enter reward image URL directly..."
+                        value={createImageUrl}
+                        onChange={(e) => {
+                          setCreateImageUrl(e.target.value);
                           setCreateImageFile(null);
-                        } else {
-                          setCreateImageError(null);
-                          setCreateImageFile(file);
-                        }
-                      }
-                    }}
-                    className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-4 py-2.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] file:mr-4 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#FCF5F1] file:text-[#8B3D06] hover:file:bg-[#f6e6dc] cursor-pointer"
-                  />
-                  {createImageError && (
-                    <span className="text-[10px] text-red-600 mt-1 font-semibold">
-                      {createImageError}
-                    </span>
-                  )}
+                        }}
+                        className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] mt-1"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-3">
@@ -750,6 +916,6 @@ export default function AdminRewardsPage() {
           </form>
         </div>
       )}
-    </div>
+    </>
   );
 }

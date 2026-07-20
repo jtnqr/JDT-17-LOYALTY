@@ -14,7 +14,7 @@ apiClient.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
     if (token) {
       config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = "Bearer " + token;
     }
   }
   return config;
@@ -65,6 +65,15 @@ apiClient.interceptors.response.use(
         type: "CONNECTION_ERROR",
         message:
           "Unable to reach the server. Please check your connection and try again.",
+      });
+    }
+
+    if (error.response && error.response.status >= 400 && error.response.status < 500 && !isAuthEndpoint) {
+      const code = (error.response.data as any)?.code || "CLIENT_ERROR";
+      const message = (error.response.data as any)?.message || (error.response.data as any)?.error || "Request failed. Please try again.";
+      dispatchGlobalError({
+        type: code,
+        message: message,
       });
     }
 

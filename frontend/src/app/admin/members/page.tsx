@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Filter,
   AlertCircle,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -63,6 +64,10 @@ export default function AdminMembersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(0);
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const queryClient = useQueryClient();
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -251,7 +256,39 @@ export default function AdminMembersPage() {
 
     const matchesStatus = statusFilter === "ALL" || m.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    let matchesDate = true;
+    if (startDateFilter || endDateFilter) {
+      const regDate = new Date(m.createdAt);
+      regDate.setHours(0, 0, 0, 0);
+
+      if (startDateFilter) {
+        const start = new Date(startDateFilter);
+        start.setHours(0, 0, 0, 0);
+        if (regDate < start) matchesDate = false;
+      }
+      if (endDateFilter) {
+        const end = new Date(endDateFilter);
+        end.setHours(0, 0, 0, 0);
+        if (regDate > end) matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
+  }).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Member] || "";
+    let bVal: any = b[sortField as keyof Member] || "";
+
+    if (sortField === "createdAt") {
+      aVal = new Date(a.createdAt).getTime();
+      bVal = new Date(b.createdAt).getTime();
+    } else {
+      aVal = String(aVal).toLowerCase();
+      bVal = String(bVal).toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   const getStatusBadgeClass = (status: string) => {
@@ -267,47 +304,70 @@ export default function AdminMembersPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-neutral-50 flex font-sans">
-        {/* Reusable Sidebar matching public/sidebar-desktop.png */}
-        <AdminSidebar activeTab="members" />
+      {/* Top Header Bar */}
+      <AdminHeader
+        breadcrumbs={[{ label: "Members" }]}
+        title="Members Directory"
+      />
 
-        {/* Main CMS Content Container */}
-        <main className="flex-1 flex flex-col min-w-0">
-          {/* Top Header Bar */}
-          <AdminHeader
-            breadcrumbs={[{ label: "Members" }]}
-            title="Members Directory"
-            showSearch={true}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            searchPlaceholder="Search members by name, email..."
-          />
-
-          {/* Inner Content Area */}
-          <div className="p-8 flex-grow flex flex-col space-y-6">
+      {/* Inner Content Area */}
+      <div className="p-8 flex-grow flex flex-col space-y-6">
             {/* Toolbar Control Row */}
             <section className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
               {/* Left: Filter Inputs */}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Status Filter */}
                 <div className="relative">
-                  <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <Filter className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", statusFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-400")} />
                   <select
                     value={statusFilter}
                     onChange={(e) => {
                       setStatusFilter(e.target.value);
                       setCurrentPage(0);
                     }}
-                    className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
+                    className={cn(
+                      "text-sm pl-10 pr-8 py-2.5 rounded-xl border outline-none transition-colors appearance-none font-bold cursor-pointer",
+                      statusFilter !== "ALL"
+                        ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                        : "bg-white text-neutral-800 border-neutral-200 focus:border-[#8B3D06]"
+                    )}
                   >
                     <option value="ALL">All Statuses</option>
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
                   </select>
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+                  <div className={cn("absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]", statusFilter !== "ALL" ? "border-t-[#8B3D06]" : "border-t-neutral-400")} />
                 </div>
+
+                {/* Date Registration Range Filter */}
+                <div className={cn("flex items-center gap-1.5 border rounded-xl px-3 py-2.5 transition-colors", startDateFilter || endDateFilter ? "bg-[#FCF5F1] border-[#8B3D06]" : "bg-white border-neutral-200")}>
+                  <span className={cn("text-sm font-bold transition-colors", startDateFilter || endDateFilter ? "text-[#8B3D06]" : "text-neutral-800")}>Registered:</span>
+                  <input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => {
+                      setStartDateFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className={cn("text-xs font-bold bg-transparent outline-none cursor-pointer transition-colors", startDateFilter || endDateFilter ? "text-[#8B3D06]" : "text-neutral-700")}
+                  />
+                  <span className={cn("text-xs transition-colors", startDateFilter || endDateFilter ? "text-[#8B3D06]" : "text-neutral-300")}>-</span>
+                  <input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => {
+                      setEndDateFilter(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    onClick={(e) => e.currentTarget.showPicker?.()}
+                    className={cn("text-xs font-bold bg-transparent outline-none cursor-pointer transition-colors", startDateFilter || endDateFilter ? "text-[#8B3D06]" : "text-neutral-700")}
+                  />
+                </div>
+
+                {/* Search Input */}
                 <div className="relative w-64">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <Search className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", searchQuery ? "text-[#8B3D06]" : "text-neutral-400")} />
                   <input
                     type="text"
                     placeholder="Search members..."
@@ -316,7 +376,12 @@ export default function AdminMembersPage() {
                       setSearchQuery(e.target.value);
                       setCurrentPage(0);
                     }}
-                    className="bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
+                    className={cn(
+                      "w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400",
+                      searchQuery
+                        ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                        : "bg-white text-neutral-800 border-neutral-200"
+                    )}
                   />
                 </div>
               </div>
@@ -333,29 +398,153 @@ export default function AdminMembersPage() {
               </div>
             </section>
 
+            {/* Active Filter Chips */}
+            {(statusFilter !== "ALL" || startDateFilter || endDateFilter || searchQuery || sortField) && (
+              <div className="flex flex-wrap items-center gap-2 select-none">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Active Filters:</span>
+                {statusFilter !== "ALL" && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                    Status: {statusFilter === "ACTIVE" ? "Active" : "Inactive"}
+                    <button onClick={() => setStatusFilter("ALL")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                  </span>
+                )}
+                {(startDateFilter || endDateFilter) && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                    Registered: {startDateFilter || "Any"} to {endDateFilter || "Any"}
+                    <button onClick={() => { setStartDateFilter(""); setEndDateFilter(""); }} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                  </span>
+                )}
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                    Search: "{searchQuery}"
+                    <button onClick={() => setSearchQuery("")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                  </span>
+                )}
+                {sortField && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                    Sort: {sortField === "name" ? "Member Name" : sortField === "email" ? "Email Address" : sortField === "phone" ? "Phone Number" : sortField === "createdAt" ? "Registered Date" : "Status"} ({sortOrder === "asc" ? "Asc" : "Desc"})
+                    <button onClick={() => { setSortField("name"); setSortOrder("asc"); }} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    setStatusFilter("ALL");
+                    setStartDateFilter("");
+                    setEndDateFilter("");
+                    setSearchQuery("");
+                    setSortField("name");
+                    setSortOrder("asc");
+                  }}
+                  className="text-xs font-bold text-[#8B3D06] hover:underline cursor-pointer ml-2"
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
+
             {/* Members Table */}
             <section className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden flex-grow flex flex-col justify-between">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                    <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400 w-16">
                         #
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Member Name
+                      <th
+                        onClick={() => {
+                          if (sortField === "name") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("name");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className={cn(
+                          "px-6 py-4 text-xs uppercase tracking-wider cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                          sortField === "name" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Member Name
+                          <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "name" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Email Address
+                      <th
+                        onClick={() => {
+                          if (sortField === "email") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("email");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className={cn(
+                          "px-6 py-4 text-xs uppercase tracking-wider cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                          sortField === "email" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Email Address
+                          <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "email" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Phone Number
+                      <th
+                        onClick={() => {
+                          if (sortField === "phone") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("phone");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className={cn(
+                          "px-6 py-4 text-xs uppercase tracking-wider cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                          sortField === "phone" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Phone Number
+                          <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "phone" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
-                        Registered Date
+                      <th
+                        onClick={() => {
+                          if (sortField === "createdAt") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("createdAt");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className={cn(
+                          "px-6 py-4 text-xs uppercase tracking-wider cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                          sortField === "createdAt" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Registered Date
+                          <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "createdAt" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
-                        Status
+                      <th
+                        onClick={() => {
+                          if (sortField === "status") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("status");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className={cn(
+                          "px-6 py-4 text-xs uppercase tracking-wider w-32 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                          sortField === "status" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Status
+                          <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "status" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28 text-center">
                         Actions
@@ -431,14 +620,18 @@ export default function AdminMembersPage() {
                             <td className="px-6 py-4.5 text-sm font-medium text-neutral-600">
                               {member.phone}
                             </td>
-                            <td className="px-6 py-4.5 text-xs font-semibold text-neutral-400">
+                            <td className={cn(
+                              "px-6 py-4.5 text-xs transition-colors",
+                              (startDateFilter || endDateFilter) ? "font-extrabold text-[#8B3D06]" : "font-semibold text-neutral-400"
+                            )}>
                               {registeredDate}
                             </td>
                             <td className="px-6 py-4.5">
                               <span
                                 className={cn(
-                                  "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
-                                  getStatusBadgeClass(member.status || "ACTIVE")
+                                  "inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border transition-all",
+                                  getStatusBadgeClass(member.status || "ACTIVE"),
+                                  statusFilter !== "ALL" ? "ring-2 ring-[#8B3D06] scale-105" : ""
                                 )}
                               >
                                 {member.status || "ACTIVE"}
@@ -471,7 +664,7 @@ export default function AdminMembersPage() {
                 <span>
                   {totalElements === 0
                     ? "No members found"
-                    : searchQuery
+                    : (searchQuery || statusFilter !== "ALL" || startDateFilter || endDateFilter)
                     ? `Showing ${filteredMembers.length} of ${totalElements} members (filtered)`
                     : `Showing ${currentPage * pageSize + 1}–${Math.min((currentPage + 1) * pageSize, totalElements)} of ${totalElements} members`}
                 </span>
@@ -523,8 +716,6 @@ export default function AdminMembersPage() {
               </div>
             </section>
           </div>
-        </main>
-      </div>
 
       {/* Edit Member Modal */}
       {isEditOpen && selectedMember && (
@@ -593,7 +784,7 @@ export default function AdminMembersPage() {
                 label="Email Address"
                 type="email"
                 placeholder="budi.santoso@example.com"
-                disabled={isSubmittingEdit}
+                disabled={true}
                 error={errorsEdit.email?.message}
                 {...registerEdit("email")}
               />

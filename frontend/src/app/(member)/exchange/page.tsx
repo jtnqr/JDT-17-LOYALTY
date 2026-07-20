@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import { ExchangeConfirmModal } from "@/components/organisms/ExchangeConfirmModal";
 import { ExchangeSuccessModal } from "@/components/organisms/ExchangeSuccessModal";
 
@@ -63,6 +64,7 @@ export default function ExchangePointsPage() {
         name: p.name,
         logoBg,
         logoChar,
+        logoUrl: p.logoUrl,
       };
     });
   }, [apiPartners]);
@@ -101,6 +103,8 @@ export default function ExchangePointsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasInitializedAmount, setHasInitializedAmount] = useState(false);
+  const [lastPartnerId, setLastPartnerId] = useState<string | null>(null);
 
   useEffect(() => {
     setErrorMessage(null);
@@ -198,6 +202,37 @@ export default function ExchangePointsPage() {
   const isValidAmount =
     amountNumber > 0 && !isInsufficient && !isSamePartner && isRateConfigured;
 
+  // Auto-fill input amount with full balance on partner change or initial load
+  useEffect(() => {
+    if (balanceData && fromPartner) {
+      if (fromPartner.id !== lastPartnerId || !hasInitializedAmount) {
+        setLastPartnerId(fromPartner.id);
+        setHasInitializedAmount(true);
+        setExchangeAmount(fromBalance.toString());
+      }
+    }
+  }, [fromPartner, fromBalance, balanceData, lastPartnerId, hasInitializedAmount]);
+
+  // Clamp input amount if it exceeds selected partner's balance (only when balanceData is loaded)
+  useEffect(() => {
+    if (!balanceData) return;
+    const amount = Number(exchangeAmount) || 0;
+    if (amount > fromBalance) {
+      setExchangeAmount(fromBalance.toString());
+    }
+  }, [fromPartner, fromBalance, exchangeAmount, balanceData]);
+
+  const handleAmountChange = (val: string) => {
+    const num = Number(val) || 0;
+    if (num > fromBalance) {
+      setExchangeAmount(fromBalance.toString());
+    } else if (num < 0) {
+      setExchangeAmount("0");
+    } else {
+      setExchangeAmount(val);
+    }
+  };
+
   const handleConfirmExchange = async () => {
     if (!isValidAmount || isSubmitting) return;
 
@@ -260,33 +295,14 @@ export default function ExchangePointsPage() {
     setExchangeAmount("10"); // Minimum exchange limit
   };
 
-  if (!isLoaded || !fromPartner || !toPartner) {
-    return (
-      <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="exchange"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          breadcrumbs={[{ label: "Marketplace" }, { label: "Exchange" }]}
-          title="Exchange Center"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
+        {!isLoaded || !fromPartner || !toPartner ? (
+          <div className="flex-grow flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
@@ -322,8 +338,12 @@ export default function ExchangePointsPage() {
                         </option>
                       ))}
                     </select>
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Coins className="w-4 h-4 text-neutral-400" />
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <PartnerLogo
+                        logoUrl={fromPartner.logoUrl}
+                        name={fromPartner.name || "Pistos"}
+                        className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                      />
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                       <svg
@@ -353,9 +373,12 @@ export default function ExchangePointsPage() {
                   <input
                     type="number"
                     value={exchangeAmount}
-                    onChange={(e) => setExchangeAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="w-40 text-center font-black text-4xl text-neutral-900 outline-none border-b border-transparent focus:border-neutral-200 py-1"
                   />
+                </div>
+                <div className="text-[10px] font-bold text-neutral-400">
+                  Available: <button type="button" onClick={handleSetMax} className="text-[#8B3D06] hover:underline font-extrabold">{fromBalance.toLocaleString()} pts</button>
                 </div>
 
                 {/* Overlapping Swap button */}
@@ -399,8 +422,12 @@ export default function ExchangePointsPage() {
                           </option>
                         ))}
                     </select>
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Coins className="w-4 h-4 text-neutral-400" />
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <PartnerLogo
+                        logoUrl={toPartner.logoUrl}
+                        name={toPartner.name || "Pistos"}
+                        className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                      />
                     </div>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                       <svg
@@ -538,8 +565,12 @@ export default function ExchangePointsPage() {
                           </option>
                         ))}
                       </select>
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Coins className="w-4 h-4 text-neutral-400" />
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <PartnerLogo
+                          logoUrl={fromPartner.logoUrl}
+                          name={fromPartner.name || "Pistos"}
+                          className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                        />
                       </div>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                         <svg
@@ -594,8 +625,12 @@ export default function ExchangePointsPage() {
                             </option>
                           ))}
                       </select>
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Coins className="w-4 h-4 text-neutral-400" />
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <PartnerLogo
+                          logoUrl={toPartner.logoUrl}
+                          name={toPartner.name || "Pistos"}
+                          className="w-5 h-5 rounded-full border border-neutral-100 shadow-sm"
+                        />
                       </div>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
                         <svg
@@ -624,7 +659,7 @@ export default function ExchangePointsPage() {
                       <input
                         type="number"
                         value={exchangeAmount}
-                        onChange={(e) => setExchangeAmount(e.target.value)}
+                        onChange={(e) => handleAmountChange(e.target.value)}
                         className="w-full text-left font-black text-xl text-neutral-800 outline-none"
                         placeholder="Enter amount"
                       />
@@ -754,7 +789,8 @@ export default function ExchangePointsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </>
+      )}
 
       <ExchangeConfirmModal
         isOpen={showConfirmModal}

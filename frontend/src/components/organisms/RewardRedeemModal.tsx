@@ -3,6 +3,7 @@
 import React from "react";
 import { Coins, X, AlertTriangle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 
 interface RewardRedeemModalProps {
   isOpen: boolean;
@@ -15,7 +16,8 @@ interface RewardRedeemModalProps {
     partnerName: string;
     imageUrl: string;
     badgeBg: string;
-  };
+    logoUrl?: string;
+  } | null;
   currentBalance: number;
   remainingPoints: number;
   isInsufficient: boolean;
@@ -38,7 +40,7 @@ export function RewardRedeemModal({
   redeemSuccess,
   redeemError,
 }: RewardRedeemModalProps) {
-  if (!isOpen) return null;
+  if (!isOpen || !reward) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center animate-in fade-in duration-200">
@@ -104,15 +106,22 @@ export function RewardRedeemModal({
               </div>
               <div className="flex-grow flex flex-col justify-between py-1">
                 <div>
-                  <span
-                    className={cn(
-                      "text-[8px] font-black uppercase px-2 py-0.5 rounded",
-                      reward.badgeBg
-                    )}
-                  >
-                    {reward.partnerName}
-                  </span>
-                  <h3 className="text-sm font-black text-neutral-900 mt-1 leading-snug">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <PartnerLogo
+                      logoUrl={reward.logoUrl}
+                      name={reward.partnerName}
+                      className="w-4 h-4 rounded-full border border-neutral-100 shadow-sm"
+                    />
+                    <span
+                      className={cn(
+                        "text-[8px] font-black uppercase px-2 py-0.5 rounded",
+                        reward.badgeBg
+                      )}
+                    >
+                      {reward.partnerName}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black text-neutral-900 leading-snug">
                     {reward.name}
                   </h3>
                 </div>

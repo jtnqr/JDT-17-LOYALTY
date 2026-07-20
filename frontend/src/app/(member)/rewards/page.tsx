@@ -8,8 +8,9 @@ import { DesktopNavbar } from "@/components/organisms/DesktopNavbar";
 import { MemberSidebar } from "@/components/organisms/MemberSidebar";
 import { BottomNavigation } from "@/components/organisms/BottomNavigation";
 import apiClient from "@/lib/apiClient";
-import { Search, ArrowRight, Coins, AlertTriangle } from "lucide-react";
+import { Search, ArrowRight, Coins, AlertTriangle, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 import Avatar from "@/components/atoms/Avatar";
 import Link from "next/link";
 import { RewardRedeemModal } from "@/components/organisms/RewardRedeemModal";
@@ -18,7 +19,7 @@ export default function MemberRewardsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-full h-full flex items-center justify-center bg-[#FDFDFD] md:bg-neutral-50 min-h-[300px]">
           <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
         </div>
       }
@@ -33,6 +34,23 @@ function RewardsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      setShowBackToTop(container.scrollTop > 200);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const searchQuery = searchParams.get("q") || "";
   const activePartnerFilter = searchParams.get("partner") || "ALL";
@@ -71,9 +89,7 @@ function RewardsPageContent() {
       const data = (response.data.data || response.data || []) as any[];
       return data.map((r: any) => {
         const code = r.partnerCode?.toUpperCase();
-        let badgeBg = "bg-brand-primary text-white";
-        if (code === "KFC") badgeBg = "bg-red-500 text-white";
-        else if (code === "MCD") badgeBg = "bg-yellow-500 text-black";
+        const badgeBg = "bg-[#FCF5F1] text-[#8B3D06] border border-[#8B3D06]/10";
         return {
           ...r,
           badgeBg,
@@ -175,6 +191,10 @@ function RewardsPageContent() {
         }
       }
 
+      if (reward.status !== "ACTIVE") {
+        return false;
+      }
+
       const matchesSearch = reward.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
@@ -246,37 +266,16 @@ function RewardsPageContent() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* DESKTOP SIDEBAR (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="rewards"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0">
-        {/* DESKTOP TOP BAR HEADER (Hidden on Mobile) */}
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          searchQuery={searchQuery}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search rewards..."
-          showSearch={true}
-          breadcrumbs={[{ label: "Marketplace" }, { label: "Rewards" }]}
-          title="Rewards Catalog"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
             ======================================================== */}
-        <div className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
+        <div ref={scrollContainerRef} className="md:hidden flex-grow flex flex-col pb-32 overflow-y-auto">
           {/* Top Navbar */}
           <div className="px-5 pt-6 space-y-5">
-            <div className="flex justify-between">
-              <h1 className="text-2xl font-black text-neutral-950 tracking-tight">
+            <div className="flex justify-between items-center">
+              <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
                 Rewards
               </h1>
 
@@ -336,46 +335,60 @@ function RewardsPageContent() {
                     key={p.id}
                     onClick={() => setPartnerFilter(p.code)}
                     className={cn(
-                      "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0",
+                      "px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer border border-transparent shrink-0 whitespace-nowrap",
                       activePartnerFilter === p.code
                         ? "bg-[#8B3D06] text-white"
                         : "bg-[#F5F5F5] text-neutral-700 hover:bg-neutral-100"
                     )}
                   >
-                    {p.name.split(" ")[0]}
+                    {p.name}
                   </button>
                 ))}
             </div>
 
             {/* Mobile Grid */}
             <div className="grid grid-cols-2 gap-4">
-              {filteredRewards.map((reward) => (
-                <div
-                  key={reward.id}
-                  onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
-                  className={cn(
-                    "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.03)] flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:border-t-brand-primary active:scale-98 transition-all",
-                    reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:border-t-neutral-100 active:scale-100"
-                  )}
-                >
-                  <div className="p-3">
-                    {/* Food Image */}
-                    <div className="h-28 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-3">
-                      <img
-                        src={reward.imageUrl}
-                        alt={reward.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+              {filteredRewards.map((reward) => {
+                const partner = (apiPartners || []).find(
+                  (p: any) =>
+                    p.code === reward.partnerCode ||
+                    p.name?.toLowerCase() === reward.partnerName?.toLowerCase()
+                );
+                const logoUrl = partner?.logoUrl;
+                return (
+                  <div
+                    key={reward.id}
+                    onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                    className={cn(
+                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer active:scale-98 transition-all hover:shadow-md",
+                      reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed active:scale-100"
+                    )}
+                  >
+                    <div className="p-3">
+                      {/* Food Image */}
+                      <div className="h-28 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-3">
+                        <img
+                          src={reward.imageUrl}
+                          alt={reward.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
 
-                    <span
-                      className={cn(
-                        "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                        reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
-                      )}
-                    >
-                      {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
-                    </span>
+                      <div className="flex items-center gap-1 mb-1">
+                        <PartnerLogo
+                          logoUrl={logoUrl}
+                          name={reward.partnerName}
+                          className="w-4 h-4 rounded-full border border-neutral-100 shadow-sm"
+                        />
+                        <span
+                          className={cn(
+                            "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                            reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
+                          )}
+                        >
+                          {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
+                        </span>
+                      </div>
                     <h3 className={cn(
                       "text-xs font-black mt-2 leading-snug line-clamp-2",
                       reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
@@ -392,9 +405,20 @@ function RewardsPageContent() {
                     <span>{reward.pointCost} pts</span>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
+
+          {showBackToTop && (
+            <button
+              onClick={scrollToTop}
+              className="fixed bottom-20 right-4 z-40 bg-white border border-neutral-200 text-neutral-800 text-xs font-bold px-3 py-2 rounded-full shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+              Back to Top
+            </button>
+          )}
 
           {/* Bottom Tabs */}
           <BottomNavigation />
@@ -409,33 +433,47 @@ function RewardsPageContent() {
             <div className="col-span-3 space-y-6">
               {/* Desktop Catalog Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRewards.map((reward) => (
-                  <div
-                    key={reward.id}
-                    onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
-                    className={cn(
-                      "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer border-t-4 border-t-neutral-100 hover:shadow-md transition-all group",
-                      reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
-                    )}
-                  >
-                    <div className="p-4">
-                      {/* Image */}
-                      <div className="h-36 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-4">
-                        <img
-                          src={reward.imageUrl}
-                          alt={reward.name}
-                          className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-                        />
-                      </div>
+                {filteredRewards.map((reward) => {
+                  const partner = (apiPartners || []).find(
+                    (p: any) =>
+                      p.code === reward.partnerCode ||
+                      p.name?.toLowerCase() === reward.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partner?.logoUrl;
+                  return (
+                    <div
+                      key={reward.id}
+                      onClick={() => reward.status === "ACTIVE" && setSelectedReward(reward)}
+                      className={cn(
+                        "bg-white rounded-2xl overflow-hidden border border-neutral-200/50 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group",
+                        reward.status !== "ACTIVE" && "opacity-60 grayscale cursor-not-allowed hover:shadow-sm"
+                      )}
+                    >
+                      <div className="p-4">
+                        {/* Image */}
+                        <div className="h-36 w-full rounded-xl overflow-hidden bg-neutral-50 relative mb-4">
+                          <img
+                            src={reward.imageUrl}
+                            alt={reward.name}
+                            className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                          />
+                        </div>
 
-                      <span
-                        className={cn(
-                          "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                          reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
-                        )}
-                      >
-                        {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
-                      </span>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <PartnerLogo
+                            logoUrl={logoUrl}
+                            name={reward.partnerName}
+                            className="w-4 h-4 rounded-full border border-neutral-100 shadow-sm"
+                          />
+                          <span
+                            className={cn(
+                              "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                              reward.status !== "ACTIVE" ? "bg-neutral-400 text-white" : reward.badgeBg
+                            )}
+                          >
+                            {reward.partnerName} {reward.status !== "ACTIVE" && "(INACTIVE)"}
+                          </span>
+                        </div>
                       <h3 className={cn(
                         "text-sm font-black mt-2.5 leading-snug",
                         reward.status !== "ACTIVE" ? "text-neutral-400" : "text-neutral-900"
@@ -464,7 +502,8 @@ function RewardsPageContent() {
                       )}
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             </div>
             {/* Right Sidebar Category filters */}
@@ -550,22 +589,21 @@ function RewardsPageContent() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+          </div>
 
-      <RewardRedeemModal
-        isOpen={!!selectedReward}
-        onClose={closeRedeemModal}
-        onConfirm={handleRedeemConfirm}
-        reward={selectedReward}
-        currentBalance={currentBalance}
-        remainingPoints={remainingPoints}
-        isInsufficient={isInsufficient}
-        neededPoints={neededPoints}
-        isRedeeming={isRedeeming}
-        redeemSuccess={redeemSuccess}
-        redeemError={redeemError}
-      />
-    </div>
-  );
-}
+          <RewardRedeemModal
+          isOpen={!!selectedReward}
+          onClose={closeRedeemModal}
+          onConfirm={handleRedeemConfirm}
+          reward={selectedReward}
+          currentBalance={currentBalance}
+          remainingPoints={remainingPoints}
+          isInsufficient={isInsufficient}
+          neededPoints={neededPoints}
+          isRedeeming={isRedeeming}
+          redeemSuccess={redeemSuccess}
+          redeemError={redeemError}
+          />
+          </div>
+          );
+          }

@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { ChevronRight, Search, Bell } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import Avatar from "../atoms/Avatar";
 import { useAdmin } from "@/lib/hooks/useAdmin";
+import { cn } from "@/lib/utils";
 
 export interface BreadcrumbItem {
   label: string;
@@ -71,6 +72,24 @@ export function AdminHeader({
           {title}
         </h2>
       </div>
+
+      {showSearch && setSearchQuery && (
+        <div className="relative w-80 max-w-sm hidden md:block">
+          <Search className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors", searchQuery ? "text-[#8B3D06]" : "text-neutral-400")} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            className={cn(
+              "w-full text-xs pl-10 pr-4 py-2 border rounded-xl outline-none focus:bg-white focus:border-[#8B3D06] transition-all font-semibold placeholder:text-neutral-400",
+              searchQuery
+                ? "bg-[#FCF5F1] border-[#8B3D06] text-[#8B3D06]"
+                : "bg-neutral-50 border-neutral-200 text-neutral-800"
+            )}
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-6">
         <div className="relative" ref={popoverRef}>

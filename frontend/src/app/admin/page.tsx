@@ -6,59 +6,12 @@ import { AdminSidebar } from "@/components/organisms/AdminSidebar";
 import { AdminHeader } from "@/components/organisms/AdminHeader";
 import { useAdmin } from "@/lib/hooks/useAdmin";
 import apiClient from "@/lib/apiClient";
-import Link from "next/link";
 import {
   Users,
   Building2,
   RefreshCw,
   Gift,
-  Bell,
-  ArrowRight,
-  TrendingUp,
-  Activity,
-  ArrowDownRight,
-  ArrowUpRight,
-  Settings,
 } from "lucide-react";
-
-// Privacy-compliant mock audit logs (anonymized system-level logs)
-const AUDIT_LOGS = [
-  {
-    id: "audit-001",
-    timestamp: "2026-07-07T14:10:00Z",
-    eventType: "MEMBER_REGISTERED",
-    payload: "New member account registered (ID: 550e8400...)",
-    actor: "System",
-  },
-  {
-    id: "audit-002",
-    timestamp: "2026-07-07T13:42:00Z",
-    eventType: "POINTS_EXCHANGED",
-    payload: "Cross-partner point exchange processed (KFC &rarr; MCD)",
-    actor: "System",
-  },
-  {
-    id: "audit-003",
-    timestamp: "2026-07-06T18:15:00Z",
-    eventType: "REWARD_REDEMPTION",
-    payload: "Voucher reward redemption completed (McDonald's program)",
-    actor: "System",
-  },
-  {
-    id: "audit-004",
-    timestamp: "2026-07-06T10:05:00Z",
-    eventType: "PARTNER_CONFIG_UPDATED",
-    payload: "Admin modified KFC point expiry days from 180 to 365 days",
-    actor: "Admin (Daniel)",
-  },
-  {
-    id: "audit-005",
-    timestamp: "2026-07-05T14:20:00Z",
-    eventType: "POINTS_EARNED",
-    payload: "Transaction points credit processed (McDonald's program)",
-    actor: "System",
-  },
-];
 
 export default function AdminDashboardPage() {
   const { isLoaded } = useAdmin();
@@ -83,21 +36,6 @@ export default function AdminDashboardPage() {
     enabled: isLoaded,
   });
 
-  const getEventBadge = (type: string) => {
-    switch (type) {
-      case "MEMBER_REGISTERED":
-        return "bg-blue-50 text-blue-700 border-blue-200/50";
-      case "POINTS_EXCHANGED":
-        return "bg-purple-50 text-purple-700 border-purple-200/50";
-      case "REWARD_REDEMPTION":
-        return "bg-orange-50 text-[#8B3D06] border-orange-200/50";
-      case "PARTNER_CONFIG_UPDATED":
-        return "bg-neutral-100 text-neutral-700 border-neutral-200/50";
-      default:
-        return "bg-emerald-50 text-emerald-700 border-emerald-200/50";
-    }
-  };
-
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
@@ -107,20 +45,12 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      {/* Sidebar Navigation */}
-      <AdminSidebar activeTab="dashboard" />
-
-      {/* Main Content Area */}
-      <main className="flex-grow flex flex-col min-w-0">
-        {/* Top Header Bar */}
-        <AdminHeader
-          breadcrumbs={[{ label: "Dashboard" }]}
-          title="Overview Dashboard"
-        />
-
-        {/* Content Body */}
-        <div className="p-8 space-y-6 overflow-y-auto flex-1">
+    <>
+      <AdminHeader
+        breadcrumbs={[{ label: "Dashboard" }]}
+        title="Overview Dashboard"
+      />
+      <div className="p-8 space-y-6 overflow-y-auto flex-1">
           <section className="space-y-1">
             <h1 className="text-xl font-bold text-neutral-950 tracking-tight">
               System Performance & Operations
@@ -185,6 +115,9 @@ export default function AdminDashboardPage() {
                     exchanges
                   </span>
                 </p>
+                <span className="text-[10px] text-neutral-400 font-semibold block mt-1">
+                  (Demo data)
+                </span>
               </div>
             </div>
             {/* Metric 4: Redemptions Count */}
@@ -204,6 +137,9 @@ export default function AdminDashboardPage() {
                     claims
                   </span>
                 </p>
+                <span className="text-[10px] text-neutral-400 font-semibold block mt-1">
+                  (Demo data)
+                </span>
               </div>
             </div>
           </div>
@@ -214,8 +150,11 @@ export default function AdminDashboardPage() {
             <div className="lg:col-span-2 space-y-6">
               {/* Conversion Statistics Flow Indicator */}
               <div className="bg-white border border-neutral-200/60 rounded-2xl p-5 shadow-sm space-y-4">
-                <h3 className="text-xs font-black text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2">
-                  Exchange Transaction Flows Breakdown
+                <h3 className="text-xs font-black text-neutral-400 uppercase tracking-widest border-b border-neutral-100 pb-2 flex justify-between items-center">
+                  <span>Exchange Transaction Flows Breakdown</span>
+                  <span className="text-[9px] text-neutral-400 font-bold lowercase tracking-normal bg-neutral-100 px-1.5 py-0.5 rounded">
+                    (demo data)
+                  </span>
                 </h3>
 
                 <div className="space-y-3.5 text-xs font-semibold text-neutral-600">
@@ -249,15 +188,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Lucide breadcrumb helper */}
-      <div className="hidden">
-        <Settings />
-        <ArrowDownRight />
-        <ArrowUpRight />
-      </div>
-    </div>
+      </>
   );
 }
 

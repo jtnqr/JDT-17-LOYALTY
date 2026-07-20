@@ -7,7 +7,6 @@ import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormField } from "../molecules/FormField";
-import { Button } from "../ui/button";
 import { LogIn, AlertCircle } from "lucide-react";
 import apiClient from "@/lib/apiClient";
 import { setAuthCookies } from "@/lib/authCookies";
@@ -122,7 +121,7 @@ export function LoginForm() {
         </div> */}
       </div>
 
-      <Button
+      <button
         type="submit"
         disabled={isLoading}
         className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white rounded-xl py-6 font-semibold transition-all shadow-md active:translate-y-px mt-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
@@ -135,7 +134,7 @@ export function LoginForm() {
             <LogIn className="w-4 h-4" />
           </>
         )}
-      </Button>
+      </button>
     </form>
   );
 }

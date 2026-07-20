@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PointBalance, Transaction } from "@/types";
+import { PartnerLogo } from "@/components/atoms/PartnerLogo";
 
 export default function DashboardPage() {
   const { member, memberId, isLoaded, logout } = useMember();
@@ -72,6 +73,19 @@ export default function DashboardPage() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch partners list for logo matching
+  const { data: partnersData } = useQuery({
+    queryKey: ["partners-list"],
+    queryFn: async () => {
+      const response = await apiClient.get("/api/v1/partners");
+      return (b => b.data || [])(response.data) as any[];
+    },
+    enabled: !!memberId,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  });
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
@@ -90,7 +104,7 @@ export default function DashboardPage() {
       ?.balance ?? 0;
 
   const combinedBalance = kfcPoints + mcdPoints;
-  const estimatedValue = combinedBalance * 0.01; // $60.50 style
+  const estimatedValue = combinedBalance * 1000; // Rp 1,000 per point style
 
   const transactions = transactionData || [];
   const rewardsList = rewardsData || [];
@@ -120,18 +134,15 @@ export default function DashboardPage() {
       color = "text-emerald-600";
       sign = "+";
     } else if (isRedeem) {
-      // Find matching reward by pointCost and partnerName similarity
+      const rewardPointsCost = Math.abs(tx.points);
       const matchedReward = rewardsList.find(
         (r) =>
-          r.pointCost === Math.abs(tx.points) &&
-          (r.partnerName
-            ?.toLowerCase()
-            .includes(tx.partnerName?.toLowerCase()) ||
-            tx.partnerName
-              ?.toLowerCase()
-              .includes(r.partnerName?.toLowerCase()))
+          r.pointCost === rewardPointsCost &&
+          r.partnerName?.toLowerCase() === tx.partnerName?.toLowerCase()
       );
-      label = matchedReward ? `${matchedReward.name}` : "Redeemed reward";
+      const rewardName = matchedReward ? matchedReward.name : "reward";
+      const displayReward = rewardName.length > 25 ? rewardName.slice(0, 25) + "..." : rewardName;
+      label = matchedReward ? `Redeemed ${displayReward}` : "Redeemed reward";
       color = "text-red-500";
       sign = "-";
     } else if (isExchangeIn) {
@@ -179,23 +190,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="h-screen bg-[#FDFDFD] md:bg-neutral-50 font-sans flex overflow-hidden">
-      {/* 1. DESKTOP SIDEBAR NAVIGATION (Hidden on Mobile) */}
-      <MemberSidebar
-        className="hidden md:flex"
-        activeTab="home"
-        userName={member?.name || "Budi Santoso"}
-      />
-
-      {/* 2. MAIN LAYOUT WRAPPER */}
-      <div className="flex-grow flex flex-col min-w-0 h-full overflow-hidden">
-        <DesktopNavbar
-          userName={member?.name || "Budi Santoso"}
-          onLogout={logout}
-          showBrand={false}
-          breadcrumbs={[{ label: "Home" }]}
-          title="Dashboard"
-        />
+    <div className="flex-grow flex flex-col h-full overflow-hidden">
 
         {/* ========================================================
             MOBILE VIEW (Visible on Mobile inspect, hidden on Desktop)
@@ -206,12 +201,12 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-2xl text-brand-primary tracking-wider">
-                  LoyaltyHub
+                  PISTOS
                 </span>
               </div>
             </div>
 
-            <div className="space-y-1 bg-linear-to-br from-brand-primary to-[#F4A261] p-6 rounded-lg">
+            <div className="space-y-1 bg-gradient-to-br from-[#8B3D06] via-[#A65B28] to-[#C17A4A] p-6 rounded-lg">
               <h2 className="text-xl font-bold tracking-tight">
                 {getGreeting()}, {member?.name?.split(" ")[0]} 👋
               </h2>
@@ -225,9 +220,9 @@ export default function DashboardPage() {
           <section className="mt-6 px-5 z-10">
             <div className="flex justify-between items-center pb-2">
               <p className="font-semibold text-base">Your wallets</p>
-              <p className="flex items-center text-brand-primary text-xs">
-                View All <ArrowRight height={16} width={16} />
-              </p>
+              <Link href="/profile" className="flex items-center text-brand-primary text-xs">
+                View all <ArrowRight height={16} width={16} className="ml-1" />
+              </Link>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-none snap-x snap-mandatory">
               {isBalancesLoading ? (
@@ -246,21 +241,13 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 apiBalances.map((b) => {
-                  const firstChar = b.partnerName
-                    ? b.partnerName.trim().charAt(0).toUpperCase()
-                    : "P";
-                  const isKfc = b.partnerName.toLowerCase().includes("kfc");
-                  const isMcd = b.partnerName.toLowerCase().includes("mcd");
-
-                  let borderTop = "border-t-[#8B3D06]";
-                  let iconBg = "bg-[#FCF5F1] text-[#8B3D06]";
-                  if (isKfc) {
-                    borderTop = "border-t-[#C8102E]";
-                    iconBg = "bg-red-50 text-[#C8102E]";
-                  } else if (isMcd) {
-                    borderTop = "border-t-[#FFC72C]";
-                    iconBg = "bg-yellow-50 text-[#D89F0E]";
-                  }
+                  const partnerInfo = (partnersData || []).find(
+                    (p: any) =>
+                      p.id === b.partnerId ||
+                      p.name?.toLowerCase() === b.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partnerInfo?.logoUrl;
+                  const borderTop = "border-t-[#8B3D06]";
 
                   return (
                     <Link
@@ -273,27 +260,25 @@ export default function DashboardPage() {
                         );
                       }}
                       className={cn(
-                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start active:scale-98 transition-all hover:shadow-md cursor-pointer",
+                        "flex-shrink-0 w-[170px] bg-white rounded-2xl p-4 border border-neutral-100 shadow-sm border-t-4 snap-start active:scale-98 transition-all hover:shadow-md cursor-pointer relative",
                         borderTop
                       )}
                     >
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center font-black text-xs mb-2 shadow-inner",
-                          iconBg
-                        )}
-                      >
-                        {firstChar}
-                      </div>
-                      <p className="text-[11px] font-semibold text-neutral-500 truncate">
+                      <PartnerLogo
+                        logoUrl={logoUrl}
+                        name={b.partnerName}
+                        className="w-8 h-8 rounded-full border border-neutral-100 shadow-inner mb-2"
+                      />
+                      <p className="text-[11px] font-semibold text-neutral-500 truncate pr-4">
                         {b.partnerName}
                       </p>
-                      <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight truncate">
+                      <p className="text-2xl font-black text-neutral-900 mt-1 tracking-tight truncate pr-4">
                         {b.balance.toLocaleString()}{" "}
                         <span className="text-xs font-bold text-neutral-500">
                           pts
                         </span>
                       </p>
+                      <ArrowRight className="absolute bottom-4 right-4 w-4 h-4 text-neutral-300" />
                     </Link>
                   );
                 })
@@ -303,44 +288,56 @@ export default function DashboardPage() {
 
           {/* Actions grid */}
           <section className="px-5 mt-6">
-            <div className="rounded-2xl p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] border border-neutral-100/50">
+            <div className="bg-white rounded-2xl p-5 border border-neutral-200/50 shadow-sm space-y-4">
               <h3 className="text-xs font-bold text-black uppercase tracking-wider mb-3">
                 Quick Actions
               </h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3.5">
                 <Link
                   href="/rewards"
-                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                 >
-                  <div className="w-11 h-11 rounded-full bg-brand-primary text-brand-primary-light flex items-center justify-center shadow-sm border border-orange-100/50 mb-2">
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                     <Gift className="w-5 h-5" />
                   </div>
-                  <span className="text-[13px] font-bold text-neutral-700">
-                    Redeem
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    Rewards Catalog
                   </span>
                 </Link>
 
                 <Link
                   href="/exchange"
-                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                 >
-                  <div className="w-11 h-11 rounded-full bg-brand-primary text-brand-primary-light flex items-center justify-center shadow-sm border border-blue-100/50 mb-2">
-                    <ArrowLeftRight className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <RefreshCw className="w-5 h-5" />
                   </div>
-                  <span className="text-[13px] font-bold text-neutral-700">
-                    Exchange
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    Exchange Points
                   </span>
                 </Link>
 
                 <Link
                   href="/history"
-                  className="flex flex-col items-center p-3 rounded-xl bg-gray-100/60 hover:bg-neutral-50 active:scale-95 transition-all text-center select-none"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
                 >
-                  <div className="w-11 h-11 rounded-full bg-gray-600 text-white flex items-center justify-center shadow-sm border border-purple-100/50 mb-2">
-                    <History className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <Clock className="w-5 h-5" />
                   </div>
-                  <span className="text-[13px] font-bold text-neutral-700">
-                    History
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    Point History
+                  </span>
+                </Link>
+
+                <Link
+                  href="/profile"
+                  className="flex flex-col items-center justify-center p-4 border border-neutral-100 rounded-2xl hover:bg-neutral-50 active:scale-98 transition-all group cursor-pointer"
+                >
+                  <div className="w-12 h-12 rounded-full bg-[#FDF2E9] text-[#8B3D06] flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-700 mt-2.5 text-center">
+                    My Profile
                   </span>
                 </Link>
               </div>
@@ -348,71 +345,91 @@ export default function DashboardPage() {
           </section>
 
           {/* Activity List */}
-          <section className="px-5 mt-6 flex-grow">
-            <div className="rounded-2xl p-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-4">
+          <section className="px-5 mt-6 pb-4">
+            <div className="rounded-2xl p-5 border border-neutral-200/50 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-3.5">
                 <h3 className="text-xs font-bold text-black uppercase tracking-wider">
                   Recent Activity
                 </h3>
                 <Link
                   href="/history"
-                  className="text-xs font-semibold text-brand-primary flex items-center gap-0.5 hover:underline"
+                  className="text-xs font-bold text-brand-primary hover:underline"
                 >
-                  See All <ArrowRight height={16} width={16} />
+                  See all
                 </Link>
               </div>
 
-              <div className="space-y-4 bg-gray-100/70 rounded-xl p-3">
-                {isTrxsLoading
-                  ? Array.from({ length: 3 }).map((_, idx) => (
+              <div className="space-y-4">
+                {isTrxsLoading ? (
+                  Array.from({ length: 3 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 animate-pulse py-1"
+                    />
+                  ))
+                ) : transactions.length === 0 ? (
+                  <p className="text-xs text-neutral-400 italic py-4 text-center">
+                    No recent activity.
+                  </p>
+                ) : (
+                  transactions.slice(0, 5).map((tx) => {
+                    const details = getTransactionDetails(tx, transactions);
+                    const isEarn =
+                      tx.type === "EARN" || tx.type === "EXCHANGE_IN";
+                    const partnerInfo = (partnersData || []).find(
+                      (p: any) =>
+                        p.name?.toLowerCase() === tx.partnerName?.toLowerCase()
+                    );
+                    const logoUrl = partnerInfo?.logoUrl;
+                    return (
                       <div
-                        key={idx}
-                        className="flex items-center gap-3 animate-pulse py-1"
-                      />
-                    ))
-                  : transactions.slice(0, 8).map((tx) => {
-                      const details = getTransactionDetails(tx, transactions);
-                      return (
-                        <div
-                          key={tx.id}
-                          className="flex items-center justify-between gap-3 border-b border-neutral-200/50 pb-3 last:border-0 last:pb-0"
-                        >
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-[13px] font-black text-neutral-900 leading-none truncate">
+                        key={tx.id}
+                        className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 last:border-0 last:pb-0"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <PartnerLogo
+                            logoUrl={logoUrl}
+                            name={tx.partnerName || "Pistos"}
+                            className="w-8 h-8 rounded-full border border-neutral-100 shadow-inner"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
                               {tx.type
                                 .toLowerCase()
                                 .split("_")
                                 .map(
                                   (word) =>
-                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                    word.charAt(0).toUpperCase() +
+                                    word.slice(1)
                                 )
                                 .join(" ")}
-                            </span>
-                            <span className="text-[10px] text-neutral-500 font-semibold mt-1 truncate">
+                            </p>
+                            <span className="text-[10px] text-neutral-500 font-semibold mt-0.5 block truncate">
                               {details.label}
                             </span>
-                            <span className="text-[9px] text-neutral-400 font-bold mt-0.5">
+                            <span className="text-[9px] text-neutral-400 font-bold block mt-0.5">
                               {details.dateText}
                             </span>
                           </div>
-                          <span
-                            className={cn(
-                              "text-xs font-black shrink-0",
-                              details.color
-                            )}
-                          >
-                            {details.sign}
-                            {Math.abs(tx.points).toLocaleString()} pts
-                          </span>
                         </div>
-                      );
-                    })}
+                        <span
+                          className={cn(
+                            "text-xs font-black shrink-0",
+                            details.color
+                          )}
+                        >
+                          {details.sign}
+                          {Math.abs(tx.points).toLocaleString()} pts
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </section>
 
           {/* Tab Navigation */}
-          <BottomNavigation />
         </div>
 
         {/* ========================================================
@@ -527,6 +544,12 @@ export default function DashboardPage() {
                         r.partnerName?.toLowerCase() === b.partnerName?.toLowerCase() ||
                         r.partnerCode?.toUpperCase() === cardPartnerCode)
                   ).length;
+                  const partnerInfo = (partnersData || []).find(
+                    (p: any) =>
+                      p.id === b.partnerId ||
+                      p.name?.toLowerCase() === b.partnerName?.toLowerCase()
+                  );
+                  const logoUrl = partnerInfo?.logoUrl;
                   return (
                     <BalanceCardDesktop
                       key={b.partnerId}
@@ -536,6 +559,7 @@ export default function DashboardPage() {
                       badgeText="REDEEM NOW"
                       partnerCode={cardPartnerCode}
                       activeRewardsCount={count}
+                      logoUrl={logoUrl}
                     />
                   );
                 })
@@ -563,24 +587,22 @@ export default function DashboardPage() {
                       const details = getTransactionDetails(tx, transactions);
                       const isEarn =
                         tx.type === "EARN" || tx.type === "EXCHANGE_IN";
+                      const partnerInfo = (partnersData || []).find(
+                        (p: any) =>
+                          p.name?.toLowerCase() === tx.partnerName?.toLowerCase()
+                      );
+                      const logoUrl = partnerInfo?.logoUrl;
                       return (
                         <div
                           key={tx.id}
                           className="flex items-center justify-between gap-3 border-b border-neutral-100 pb-3 last:border-0 last:pb-0"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div
-                              className={cn(
-                                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-inner",
-                                isEarn ? "bg-emerald-50" : "bg-red-50"
-                              )}
-                            >
-                              {isEarn ? (
-                                <ArrowDownLeft className="w-4 h-4 text-emerald-600" />
-                              ) : (
-                                <ArrowUpRight className="w-4 h-4 text-red-500" />
-                              )}
-                            </div>
+                            <PartnerLogo
+                              logoUrl={logoUrl}
+                              name={tx.partnerName || "Pistos"}
+                              className="w-8 h-8 rounded-full border border-neutral-100 shadow-inner"
+                            />
                             <div className="min-w-0 flex-1">
                               <p className="text-[13px] font-bold text-neutral-800 leading-tight truncate">
                                 {tx.type
@@ -620,6 +642,5 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

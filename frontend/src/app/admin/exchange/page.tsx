@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Bell,
   AlertTriangle,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ export default function AdminExchangePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
+        <div className="w-full h-full flex items-center justify-center bg-neutral-100 min-h-[300px]">
           <div className="w-10 h-10 border-4 border-[#8B3D06] border-t-transparent rounded-full animate-spin" />
         </div>
       }
@@ -55,6 +56,10 @@ function ExchangePageContent() {
   const { isLoaded } = useAdmin();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [detailSortField, setDetailSortField] = useState<string>("name");
+  const [detailSortOrder, setDetailSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(
     null
   );
@@ -95,6 +100,8 @@ function ExchangePageContent() {
   const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
   // Save notification states [targetPartnerId]: boolean
   const [saveStatus, setSaveStatus] = useState<Record<string, boolean>>({});
+  // Error states per target partner [targetPartnerId]: string | null
+  const [errorStatus, setErrorStatus] = useState<Record<string, string | null>>({});
 
   // 1. Fetch Partner List via React Query
   const { data: apiPartners, isLoading } = useQuery({
@@ -201,13 +208,30 @@ function ExchangePageContent() {
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Partner] || "";
+    let bVal: any = b[sortField as keyof Partner] || "";
+
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   // Update a single rate input value
   const handleInputChange = (fromId: string, toId: string, val: string) => {
     setRateInputs((prev) => ({
       ...prev,
       [`${fromId}_${toId}`]: val,
+    }));
+    const otherId = fromId === selectedPartnerId ? toId : fromId;
+    setErrorStatus((prev) => ({
+      ...prev,
+      [otherId]: null,
     }));
   };
 
@@ -222,7 +246,10 @@ function ExchangePageContent() {
     const rawInStr = rateInputs[inKey];
 
     if (!rawOutStr || !rawInStr) {
-      alert("Please enter a valid rate for both conversion directions.");
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: "Please enter a valid rate for both directions.",
+      }));
       return;
     }
 
@@ -230,7 +257,10 @@ function ExchangePageContent() {
     const rawIn = parseFloat(rawInStr);
 
     if (isNaN(rawOut) || rawOut <= 0 || isNaN(rawIn) || rawIn <= 0) {
-      alert("Please enter a valid positive decimal number for both rates.");
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: "Please enter a valid positive decimal number.",
+      }));
       return;
     }
 
@@ -238,6 +268,11 @@ function ExchangePageContent() {
     const inRate = rawIn;
 
     try {
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: null,
+      }));
+
       // 1. Post Outward Rate (Selected -> Other)
       await apiClient.post(
         "/api/v1/exchange-rates",
@@ -262,6 +297,7 @@ function ExchangePageContent() {
 
       // Invalidate queries to reload from backend
       queryClient.invalidateQueries({ queryKey: ["admin-exchange-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exchange-partners"] });
 
       // Show temporary success feedback
       setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
@@ -272,7 +308,10 @@ function ExchangePageContent() {
       console.error("Failed to save pair rates to API:", error);
       const errMsg =
         error.response?.data?.message || error.message || "Unknown error";
-      alert(`Failed to save exchange rates: ${errMsg}`);
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: `Failed to save exchange rates: ${errMsg}`,
+      }));
     }
   };
 
@@ -305,6 +344,11 @@ function ExchangePageContent() {
     }));
 
     try {
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: null,
+      }));
+
       // 1. Post default Outward Rate (Selected -> Other)
       await apiClient.post(
         "/api/v1/exchange-rates",
@@ -329,6 +373,7 @@ function ExchangePageContent() {
 
       // Invalidate queries to reload from backend
       queryClient.invalidateQueries({ queryKey: ["admin-exchange-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-exchange-partners"] });
 
       setSaveStatus((prev) => ({ ...prev, [otherPartnerId]: true }));
       setTimeout(() => {
@@ -338,49 +383,72 @@ function ExchangePageContent() {
       console.error("Failed to reset rates via API:", error);
       const errMsg =
         error.response?.data?.message || error.message || "Unknown error";
-      alert(`Failed to reset exchange rates: ${errMsg}`);
+      setErrorStatus((prev) => ({
+        ...prev,
+        [otherPartnerId]: `Failed to reset exchange rates: ${errMsg}`,
+      }));
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === "ACTIVE" ? (
-      <span className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/50">
-        ACTIVE
-      </span>
-    ) : (
-      <span className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-200/30">
-        INACTIVE
-      </span>
+  const getStatusBadge = (partner: Partner) => {
+    if (partner.status !== "ACTIVE") {
+      return (
+        <div className="w-28 mx-auto">
+          <span className="w-full text-center inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-neutral-100 text-neutral-500 border-neutral-200/30">
+            INACTIVE
+          </span>
+        </div>
+      );
+    }
+
+    const relations = partners.filter((o) => o.id !== partner.id);
+    const isAnyRateMissing = relations.some((other) => {
+      const outRate = getRateValue(partner.id, other.id);
+      const inRate = getRateValue(other.id, partner.id);
+      return outRate === null || inRate === null;
+    });
+
+    if (isAnyRateMissing) {
+      return (
+        <div className="flex flex-col gap-1 items-center w-28 mx-auto">
+          <span className="w-full text-center inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/50">
+            ACTIVE
+          </span>
+          <span className="w-full text-center inline-flex flex-col items-center justify-center text-[9px] leading-tight font-black uppercase px-1.5 py-1 rounded-md border bg-amber-50 text-amber-700 border-amber-200/50 whitespace-normal">
+            <span>PARTIALLY</span>
+            <span>CONFIGURED</span>
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-28 mx-auto">
+        <span className="w-full text-center inline-flex items-center justify-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/50">
+          ACTIVE
+        </span>
+      </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      {/* Sidebar Navigation */}
-      <AdminSidebar activeTab="exchange" />
+    <>
+      {/* Top Header */}
+      <AdminHeader
+        breadcrumbs={
+          selectedPartner
+            ? [{ label: "Exchange Matrix" }, { label: selectedPartner.name }]
+            : [{ label: "Exchange Matrix" }]
+        }
+        title={
+          selectedPartner
+            ? `${selectedPartner.name} Relations`
+            : "Points Exchange Configuration"
+        }
+      />
 
-      {/* Main Content */}
-      <main className="flex-grow flex flex-col min-w-0">
-        {/* Top Header */}
-        <AdminHeader
-          breadcrumbs={
-            selectedPartner
-              ? [{ label: "Exchange Matrix" }, { label: selectedPartner.name }]
-              : [{ label: "Exchange Matrix" }]
-          }
-          title={
-            selectedPartner
-              ? `${selectedPartner.name} Relations`
-              : "Points Exchange Configuration"
-          }
-          showSearch={!selectedPartner}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search partners..."
-        />
-
-        {/* Content Body */}
-        <div className="p-8 flex-grow flex flex-col space-y-6">
+      {/* Content Body */}
+      <div className="p-8 flex-grow flex flex-col space-y-6">
           {/* ========================================================
               VIEW 1: PARTNERS LIST TABLE
               ======================================================== */}
@@ -389,18 +457,57 @@ function ExchangePageContent() {
               <div className="overflow-x-auto flex-grow">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                    <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-16">
                         #
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">
-                        Merchant Name
+                      <th
+                        onClick={() => {
+                          if (sortField === "name") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("name");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Merchant Name
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24">
-                        Code
+                      <th
+                        onClick={() => {
+                          if (sortField === "code") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("code");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Code
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
-                        Status
+                      <th
+                        onClick={() => {
+                          if (sortField === "status") {
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                          } else {
+                            setSortField("status");
+                            setSortOrder("asc");
+                          }
+                        }}
+                        className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          Status
+                          <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                        </div>
                       </th>
                       <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
                         Outbound Rates Mappings
@@ -454,7 +561,7 @@ function ExchangePageContent() {
                               {partner.code}
                             </td>
                             <td className="px-6 py-5">
-                              {getStatusBadge(partner.status)}
+                              {getStatusBadge(partner)}
                             </td>
                             <td className="px-6 py-5">
                               <div className="flex flex-wrap gap-2">
@@ -475,7 +582,7 @@ function ExchangePageContent() {
                                         </span>
                                       ) : (
                                         <span className="text-red-600 font-bold bg-amber-100 px-1.5 py-0.2 rounded border border-amber-100/50 text-[10px] uppercase">
-                                          Not Configured
+                                          MISSING
                                         </span>
                                       )}
                                     </span>
@@ -554,9 +661,22 @@ function ExchangePageContent() {
                 <div className="overflow-x-auto flex-grow">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52">
-                          Target Partner
+                      <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
+                        <th
+                          onClick={() => {
+                            if (detailSortField === "name") {
+                              setDetailSortOrder(detailSortOrder === "asc" ? "desc" : "asc");
+                            } else {
+                              setDetailSortField("name");
+                              setDetailSortOrder("asc");
+                            }
+                          }}
+                          className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-52 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            Target Partner
+                            <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                          </div>
                         </th>
                         <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700">
                           Outbound Conversion Rate ({selectedPartner.code}{" "}
@@ -574,6 +694,19 @@ function ExchangePageContent() {
                     <tbody className="divide-y divide-neutral-100">
                       {partners
                         .filter((other) => other.id !== selectedPartner.id)
+                        .sort((a, b) => {
+                          let aVal: any = a[detailSortField as keyof Partner] || "";
+                          let bVal: any = b[detailSortField as keyof Partner] || "";
+
+                          if (typeof aVal === "string") {
+                            aVal = aVal.toLowerCase();
+                            bVal = bVal.toLowerCase();
+                          }
+
+                          if (aVal < bVal) return detailSortOrder === "asc" ? -1 : 1;
+                          if (aVal > bVal) return detailSortOrder === "asc" ? 1 : -1;
+                          return 0;
+                        })
                         .map((other) => {
                           const outKey = `${selectedPartner.id}_${other.id}`;
                           const inKey = `${other.id}_${selectedPartner.id}`;
@@ -638,6 +771,11 @@ function ExchangePageContent() {
                                     </div>
                                   </div>
                                 </div>
+                                {errorStatus[other.id] && (
+                                  <div className="mt-2 text-[10px] font-bold text-red-600 leading-tight bg-red-50 border border-red-200/50 rounded-lg px-2.5 py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                                    {errorStatus[other.id]}
+                                  </div>
+                                )}
                               </td>
 
                               {/* Outbound input */}
@@ -751,7 +889,6 @@ function ExchangePageContent() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </>
   );
 }

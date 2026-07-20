@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Avatar } from "../atoms/Avatar";
-import { Bell, Search, Menu, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 export interface BreadcrumbItem {
   label: string;
@@ -11,7 +11,6 @@ export interface BreadcrumbItem {
 interface DesktopNavbarProps {
   userName?: string;
   onLogout?: () => void;
-  showBrand?: boolean;
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
   searchPlaceholder?: string;
@@ -23,7 +22,6 @@ interface DesktopNavbarProps {
 export function DesktopNavbar({
   userName = "Alex Thompson",
   onLogout,
-  showBrand = true,
   searchQuery = "",
   onSearchChange,
   searchPlaceholder = "Search...",
@@ -51,7 +49,7 @@ export function DesktopNavbar({
   }, []);
 
   return (
-    <header className="hidden md:flex h-16 border-b border-neutral-200/50 bg-white px-8 items-center justify-between sticky top-0 z-50 shadow-sm">
+    <header className="hidden md:flex h-16 shrink-0 border-b border-neutral-200/50 bg-white px-8 items-center justify-between sticky top-0 z-50 shadow-sm">
       {/* Left: Brand Logo / Breadcrumbs */}
       <div className="flex items-center gap-4 animate-in fade-in duration-200">
         {breadcrumbs && breadcrumbs.length > 0 ? (
@@ -78,12 +76,6 @@ export function DesktopNavbar({
                 {title}
               </h2>
             )}
-          </div>
-        ) : showBrand ? (
-          <div className="flex items-center gap-2 text-brand-primary animate-in fade-in duration-300">
-            <span className="font-extrabold text-xl tracking-tight">
-              Pistos APP
-            </span>
           </div>
         ) : null}
       </div>

@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Plus,
   Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,12 +41,15 @@ export default function AdminPartnersPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
 
   // Local form state for Edit Partner modal
   const [formPointsRate, setFormPointsRate] = useState<number>(1);
   const [formExpiryDays, setFormExpiryDays] = useState<number>(365);
   const [formStatus, setFormStatus] = useState<string>("ACTIVE");
+  const [formLogoUrl, setFormLogoUrl] = useState<string>("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
 
@@ -57,11 +61,11 @@ export default function AdminPartnersPage() {
     setLogoError(null);
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
       const response = await apiClient.put(
-        `/api/v1/partners/${editingPartner.id}/logo`,
+        `/api/v1/partners/${editingPartner.id}/image`,
         formData,
         {
           headers: {
@@ -75,6 +79,7 @@ export default function AdminPartnersPage() {
           logoUrl: response.data.logoUrl,
         });
       }
+      setFormLogoUrl(response.data.logoUrl);
       refetch();
     } catch (err: any) {
       console.error("Logo upload failed:", err);
@@ -93,10 +98,23 @@ export default function AdminPartnersPage() {
   const [createCode, setCreateCode] = useState("");
   const [createPointsRate, setCreatePointsRate] = useState<number>(1);
   const [createExpiryDays, setCreateExpiryDays] = useState<number>(365);
+  const [createLogoUrl, setCreateLogoUrl] = useState("");
+  const [createLogoFile, setCreateLogoFile] = useState<File | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [createdPartnerId, setCreatedPartnerId] = useState<string | null>(null);
   const [createApiError, setCreateApiError] = useState<string | null>(null);
+  const [uploadingCreateLogo, setUploadingCreateLogo] = useState(false);
+  const [createLogoError, setCreateLogoError] = useState<string | null>(null);
+
+  const handleCreateLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCreateLogoFile(file);
+    // Create local object URL for previewing
+    setCreateLogoUrl(URL.createObjectURL(file));
+  };
 
   const handleCreatePartner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,9 +130,50 @@ export default function AdminPartnersPage() {
 
     try {
       const response = await apiClient.post("/api/v1/partners", payload);
-
       const newPartner = response.data;
-      setCreatedPartnerId(newPartner.id || null);
+      const newPartnerId = newPartner.id;
+
+      // Now upload the logo image file if present
+      if (createLogoFile && newPartnerId) {
+        setUploadingCreateLogo(true);
+        const formData = new FormData();
+        formData.append("image", createLogoFile);
+
+        try {
+          await apiClient.put(`/api/v1/partners/${newPartnerId}/image`, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        } catch (uploadErr) {
+          console.error("Failed to upload partner logo image during create:", uploadErr);
+        } finally {
+          setUploadingCreateLogo(false);
+        }
+      } else if (createLogoUrl && createLogoUrl.startsWith("http") && newPartnerId) {
+        // Fetch manual URL and upload it
+        setUploadingCreateLogo(true);
+        try {
+          const response = await fetch(createLogoUrl);
+          const blob = await response.blob();
+          const file = new File([blob], "logo.png", { type: blob.type || "image/png" });
+
+          const formData = new FormData();
+          formData.append("image", file);
+
+          await apiClient.put(`/api/v1/partners/${newPartnerId}/image`, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        } catch (uploadErr) {
+          console.error("Failed to fetch and upload logo URL during create:", uploadErr);
+        } finally {
+          setUploadingCreateLogo(false);
+        }
+      }
+
+      setCreatedPartnerId(newPartnerId || null);
       setCreateSuccess(true);
       setIsCreating(false);
       refetch();
@@ -162,6 +221,18 @@ export default function AdminPartnersPage() {
       p.code.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    let aVal: any = a[sortField as keyof Partner] || "";
+    let bVal: any = b[sortField as keyof Partner] || "";
+
+    if (typeof aVal === "string") {
+      aVal = aVal.toLowerCase();
+      bVal = bVal.toLowerCase();
+    }
+
+    if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+    if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   const openEditModal = (partner: Partner) => {
@@ -169,6 +240,7 @@ export default function AdminPartnersPage() {
     setFormPointsRate(partner.pointsPerThousandIDR);
     setFormExpiryDays(partner.expiryDays);
     setFormStatus(partner.status);
+    setFormLogoUrl(partner.logoUrl || "");
     setSaveSuccess(false);
     setApiError(null);
   };
@@ -183,11 +255,38 @@ export default function AdminPartnersPage() {
     setIsSaving(true);
     setApiError(null);
 
+    let uploadedLogoUrl = formLogoUrl;
+
+    if (formLogoUrl && formLogoUrl !== editingPartner?.logoUrl && formLogoUrl.startsWith("http")) {
+      try {
+        const response = await fetch(formLogoUrl);
+        const blob = await response.blob();
+        const file = new File([blob], "logo.png", { type: blob.type || "image/png" });
+
+        const uploadFormData = new FormData();
+        uploadFormData.append("image", file);
+
+        const uploadRes = await apiClient.put(
+          `/api/v1/partners/${editingPartner?.id}/image`,
+          uploadFormData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        uploadedLogoUrl = uploadRes.data.logoUrl || uploadRes.data.url;
+      } catch (uploadErr) {
+        console.warn("Failed to upload manually entered logo URL:", uploadErr);
+      }
+    }
+
     const payload = {
       name: editingPartner?.name,
       pointsPerThousandIDR: formPointsRate,
       expiryDays: formExpiryDays,
       status: formStatus,
+      logoUrl: uploadedLogoUrl,
     };
 
     try {
@@ -228,48 +327,51 @@ export default function AdminPartnersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex font-sans">
-      {/* Sidebar Navigation */}
-      <AdminSidebar activeTab="partners" />
+    <>
+      {/* Top Header */}
+      <AdminHeader
+        breadcrumbs={[{ label: "Partners" }]}
+        title="Partner Merchants"
+      />
 
-      {/* Main CMS Layout */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <AdminHeader
-          breadcrumbs={[{ label: "Partners" }]}
-          title="Partner Merchants"
-          showSearch={true}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchPlaceholder="Search partners..."
-        />
-
-        {/* Content Body */}
-        <div className="p-8 flex-grow flex flex-col space-y-6">
+      {/* Content Body */}
+      <div className="p-8 flex-grow flex flex-col space-y-6">
           <section className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
               {/* Status Filter */}
               <div className="relative">
-                <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <Filter className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", statusFilter !== "ALL" ? "text-[#8B3D06]" : "text-neutral-400")} />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-white text-sm text-neutral-800 pl-10 pr-8 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors appearance-none font-bold cursor-pointer"
+                  className={cn(
+                    "text-sm pl-10 pr-8 py-2.5 rounded-xl border outline-none transition-colors appearance-none font-bold cursor-pointer",
+                    statusFilter !== "ALL"
+                      ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                      : "bg-white text-neutral-800 border-neutral-200 focus:border-[#8B3D06]"
+                  )}
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
                 </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-neutral-400" />
+                <div className={cn("absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]", statusFilter !== "ALL" ? "border-t-[#8B3D06]" : "border-t-neutral-400")} />
               </div>
+
+              {/* Search Input */}
               <div className="relative w-64">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <Search className={cn("absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors", searchQuery ? "text-[#8B3D06]" : "text-neutral-400")} />
                 <input
                   type="text"
                   placeholder="Search partners..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white text-sm text-neutral-800 pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400"
+                  className={cn(
+                    "w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:border-[#8B3D06] transition-colors font-bold placeholder:text-neutral-400",
+                    searchQuery
+                      ? "bg-[#FCF5F1] text-[#8B3D06] border-[#8B3D06]"
+                      : "bg-white text-neutral-800 border-neutral-200"
+                  )}
                 />
               </div>
             </div>
@@ -282,26 +384,142 @@ export default function AdminPartnersPage() {
             </button>
           </section>
 
+          {/* Active Filter Chips */}
+          {(statusFilter !== "ALL" || searchQuery || sortField) && (
+            <div className="flex flex-wrap items-center gap-2 select-none">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Active Filters:</span>
+              {statusFilter !== "ALL" && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Status: {statusFilter === "ACTIVE" ? "Active" : "Inactive"}
+                  <button onClick={() => setStatusFilter("ALL")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Search: "{searchQuery}"
+                  <button onClick={() => setSearchQuery("")} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              {sortField && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FCF5F1] border border-[#8B3D06]/20 text-[#8B3D06] rounded-full text-xs font-bold animate-in fade-in duration-200">
+                  Sort: {sortField === "name" ? "Merchant Name" : sortField === "code" ? "Code" : sortField === "pointsPerThousandIDR" ? "Accumulation Rate" : sortField === "expiryDays" ? "Expiry Days" : "Status"} ({sortOrder === "asc" ? "Asc" : "Desc"})
+                  <button onClick={() => { setSortField("name"); setSortOrder("asc"); }} className="hover:text-red-600 font-extrabold cursor-pointer ml-0.5">×</button>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setStatusFilter("ALL");
+                  setSearchQuery("");
+                  setSortField("name");
+                  setSortOrder("asc");
+                }}
+                className="text-xs font-bold text-[#8B3D06] hover:underline cursor-pointer ml-2"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
           {/* Partners Table */}
           <section className="bg-white border border-neutral-200/60 rounded-2xl shadow-sm overflow-hidden flex-grow flex flex-col">
             <div className="overflow-x-auto flex-grow">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
-                      Merchant Name
+                  <tr className="border-b border-neutral-100 bg-neutral-50/50 select-none">
+                    <th
+                      onClick={() => {
+                        if (sortField === "name") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("name");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "name" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Merchant Name
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "name" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-28">
-                      Code
+                    <th
+                      onClick={() => {
+                        if (sortField === "code") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("code");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 w-24 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "code" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Code
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "code" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-44">
-                      Accumulation Rate
+                    <th
+                      onClick={() => {
+                        if (sortField === "pointsPerThousandIDR") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("pointsPerThousandIDR");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 w-44 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "pointsPerThousandIDR" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Accumulation Rate
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "pointsPerThousandIDR" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-36">
-                      Expiry Days
+                    <th
+                      onClick={() => {
+                        if (sortField === "expiryDays") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("expiryDays");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider text-neutral-700 w-36 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "expiryDays" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Expiry Days
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "expiryDays" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-32">
-                      Status
+                    <th
+                      onClick={() => {
+                        if (sortField === "status") {
+                          setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                        } else {
+                          setSortField("status");
+                          setSortOrder("asc");
+                        }
+                      }}
+                      className={cn(
+                        "px-6 py-4 text-xs uppercase tracking-wider w-32 cursor-pointer hover:bg-neutral-100/50 transition-colors",
+                        sortField === "status" ? "font-black text-[#8B3D06]" : "font-bold text-neutral-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Status
+                        <ArrowUpDown className={cn("w-3.5 h-3.5", sortField === "status" ? "text-[#8B3D06]" : "text-neutral-400")} />
+                      </div>
                     </th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-700 w-24 text-center">
                       Edit
@@ -377,7 +595,12 @@ export default function AdminPartnersPage() {
                           {partner.expiryDays} days
                         </td>
                         <td className="px-6 py-5">
-                          {getStatusBadge(partner.status)}
+                          <span className={cn(
+                            "transition-all",
+                            statusFilter !== "ALL" ? "inline-block ring-2 ring-[#8B3D06] scale-105 rounded-full" : ""
+                          )}>
+                            {getStatusBadge(partner.status)}
+                          </span>
                         </td>
                         <td className="px-6 py-5">
                           <button
@@ -397,12 +620,12 @@ export default function AdminPartnersPage() {
 
             {/* Table Footer summary */}
             <div className="border-t border-neutral-100 px-6 py-4 bg-neutral-50/20 text-xs font-bold text-neutral-400">
-              Total {filteredPartners.length} active loyalty partner merchants
-              configured.
+              {statusFilter !== "ALL" || searchQuery
+                ? `Showing ${filteredPartners.length} of ${partners.length} partner merchants (filtered)`
+                : `Total ${filteredPartners.length} active loyalty partner merchants configured.`}
             </div>
           </section>
         </div>
-      </main>
 
       {/* ========================================================
           EDIT PARTNER DETAILS & EXCHANGE RATE CONFIG MODAL
@@ -478,16 +701,16 @@ export default function AdminPartnersPage() {
                   </select>
                 </div>
 
-                {/* Logo Upload */}
+                {/* Logo Upload & URL Input */}
                 <div className="flex flex-col gap-2">
                   <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
-                    Merchant Logo
+                    Merchant Logo (Upload or URL)
                   </label>
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
-                      {(editingPartner as any)?.logoUrl ? (
+                      {formLogoUrl ? (
                         <img
-                          src={(editingPartner as any).logoUrl}
+                          src={formLogoUrl}
                           alt="Logo preview"
                           className="w-full h-full object-cover"
                         />
@@ -495,7 +718,7 @@ export default function AdminPartnersPage() {
                         <Building2 className="w-6 h-6 text-neutral-400" />
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex-1 flex flex-col gap-1.5">
                       <input
                         type="file"
                         accept="image/png, image/jpeg, image/webp"
@@ -512,6 +735,13 @@ export default function AdminPartnersPage() {
                           {logoError}
                         </span>
                       )}
+                      <input
+                        type="text"
+                        placeholder="Or enter logo image URL directly..."
+                        value={formLogoUrl}
+                        onChange={(e) => setFormLogoUrl(e.target.value)}
+                        className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] mt-1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -694,6 +924,51 @@ export default function AdminPartnersPage() {
                   />
                 </div>
 
+                {/* Logo Upload & URL Input */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] uppercase tracking-wider text-neutral-400 font-bold">
+                    Merchant Logo (Upload or URL)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100 border flex items-center justify-center shrink-0 shadow-inner">
+                      {createLogoUrl ? (
+                        <img
+                          src={createLogoUrl}
+                          alt="Logo preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="w-6 h-6 text-neutral-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={handleCreateLogoUpload}
+                        className="text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#8B3D06]/10 file:text-[#8B3D06] hover:file:bg-[#8B3D06]/20 file:cursor-pointer"
+                      />
+                      {uploadingCreateLogo && (
+                        <span className="text-[10px] text-neutral-400 animate-pulse">
+                          Uploading logo...
+                        </span>
+                      )}
+                      {createLogoError && (
+                        <span className="text-[10px] text-red-500 font-bold">
+                          {createLogoError}
+                        </span>
+                      )}
+                      <input
+                        type="text"
+                        placeholder="Or enter logo image URL directly..."
+                        value={createLogoUrl}
+                        onChange={(e) => setCreateLogoUrl(e.target.value)}
+                        className="bg-neutral-50/50 border border-neutral-200 rounded-xl px-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#8B3D06] mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Points accumulation Rate */}
                 <div className="flex flex-col">
                   <label className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold flex items-center gap-1">
@@ -756,6 +1031,6 @@ export default function AdminPartnersPage() {
           </form>
         </div>
       )}
-    </div>
+    </>
   );
 }

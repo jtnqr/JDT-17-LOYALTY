@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Gift, RefreshCw, Clock, CircleUser } from "lucide-react";
+import { Home, Gift, RefreshCw, Clock } from "lucide-react";
 import { useMember } from "@/lib/hooks/useMember";
 import Avatar from "../atoms/Avatar";
 
@@ -22,7 +22,7 @@ function NavItem({ href, label, icon, active }: NavItemProps) {
       className={cn(
         "flex flex-col items-center justify-center py-1.5 flex-1 transition-all select-none",
         active
-          ? "text-brand-primary font-semibold"
+          ? "text-[#8B3D06] font-semibold"
           : "text-neutral-400 hover:text-neutral-500"
       )}
     >
@@ -40,7 +40,7 @@ function NavItem({ href, label, icon, active }: NavItemProps) {
 }
 
 export function BottomNavigation() {
-  const { member, memberId, isLoaded, logout } = useMember();
+  const { member } = useMember();
   const pathname = usePathname();
 
   const navItems = [
