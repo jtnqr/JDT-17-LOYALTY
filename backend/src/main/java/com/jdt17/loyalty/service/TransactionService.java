@@ -18,12 +18,11 @@ import com.jdt17.loyalty.entity.*;
 import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.*;
 import com.jdt17.loyalty.security.SecurityUtils;
+import com.jdt17.loyalty.util.ValidationUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -49,26 +48,14 @@ public class TransactionService {
         Partner partner = partnerRepository.findByCode(request.getPartner())
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
-        if (StatusConstant.INACTIVE.equalsIgnoreCase(partner.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.PARTNER_INACTIVE, ErrorCodeConstant.PARTNER_INACTIVE);
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentPartnerId = authentication.getName();
-        boolean isPartner = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(RoleConstant.ROLE_PARTNER));
-
-        if (!isPartner || !partner.getId().toString().equals(currentPartnerId)) {
-            throw new LoyaltyException(HttpStatus.FORBIDDEN, ErrorMessageConstant.FORBIDDEN, ErrorCodeConstant.FORBIDDEN);
-        }
+        ValidationUtils.validatePartnerActive(partner.getStatus());
+        SecurityUtils.validatePartnerAccess(partner.getId());
 
         Member member = memberRepository.findByPhone(request.getMemberIdentifier())
                 .or(() -> memberRepository.findByEmail(request.getMemberIdentifier()))
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.MEMBER_NOT_FOUND, ErrorCodeConstant.MEMBER_NOT_FOUND));
 
-        if (StatusConstant.INACTIVE.equalsIgnoreCase(member.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MEMBER_INACTIVE, ErrorCodeConstant.MEMBER_INACTIVE);
-        }
+        ValidationUtils.validateMemberActive(member.getStatus());
 
         long pointsEarned = (request.getTrxAmount() / 1000 * partner.getPointPerThousandIdr());
         OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(partner.getExpiryDays());
@@ -152,30 +139,24 @@ public class TransactionService {
         }
 
         if (request.getRewardId() == null) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Reward ID is required", ErrorCodeConstant.REWARD_NOT_FOUND);
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.REWARD_ID_REQUIRED, ErrorCodeConstant.REWARD_NOT_FOUND);
         }
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.MEMBER_NOT_FOUND, ErrorCodeConstant.MEMBER_NOT_FOUND));
 
-        if (!StatusConstant.ACTIVE.equals(member.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MEMBER_INACTIVE, ErrorCodeConstant.MEMBER_INACTIVE);
-        }
+        ValidationUtils.validateMemberActive(member.getStatus());
 
         Reward reward = rewardRepository.findById(request.getRewardId())
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.REWARD_NOT_FOUND, ErrorCodeConstant.REWARD_NOT_FOUND));
 
-        if (!StatusConstant.ACTIVE.equals(reward.getStatus())) {
-            throw new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.REWARD_INACTIVE, ErrorCodeConstant.REWARD_INACTIVE);
-        }
+        ValidationUtils.validateRewardActive(reward.getStatus());
 
         Partner partner = reward.getPartner();
-        if (!StatusConstant.ACTIVE.equals(partner.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.PARTNER_INACTIVE, ErrorCodeConstant.PARTNER_INACTIVE);
-        }
+        ValidationUtils.validatePartnerActive(partner.getStatus());
 
         PointBalance balance = pointBalanceRepository.findByMemberIdAndPartnerId(memberId, partner.getId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY, "No point balance for this partner", ErrorCodeConstant.INSUFFICIENT_BALANCE));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY, ErrorMessageConstant.NO_POINT_BALANCE_PARTNER, ErrorCodeConstant.INSUFFICIENT_BALANCE));
 
         if (balance.getBalance() < reward.getPointCost()) {
             throw new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -231,7 +212,7 @@ public class TransactionService {
         }
 
         if (request.getFromPartnerId() == null || request.getToPartnerId() == null) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "From and To Partner IDs are required", ErrorCodeConstant.PARTNER_NOT_FOUND);
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.PARTNER_IDS_REQUIRED, ErrorCodeConstant.PARTNER_NOT_FOUND);
         }
 
         if (request.getFromPartnerId().equals(request.getToPartnerId())) {
@@ -239,35 +220,29 @@ public class TransactionService {
         }
 
         if (request.getPoints() == null || request.getPoints() <= 0) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Points must be greater than 0", ErrorCodeConstant.INVALID_EXCHANGE_RATE_PAIR);
+            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.POINTS_MUST_POSITIVE, ErrorCodeConstant.INVALID_EXCHANGE_RATE_PAIR);
         }
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.MEMBER_NOT_FOUND, ErrorCodeConstant.MEMBER_NOT_FOUND));
 
-        if (!StatusConstant.ACTIVE.equals(member.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MEMBER_INACTIVE, ErrorCodeConstant.MEMBER_INACTIVE);
-        }
+        ValidationUtils.validateMemberActive(member.getStatus());
 
         Partner fromPartner = partnerRepository.findById(request.getFromPartnerId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Source partner does not exist", ErrorCodeConstant.PARTNER_NOT_FOUND));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.SOURCE_PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
-        if (!StatusConstant.ACTIVE.equals(fromPartner.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Source partner is INACTIVE", ErrorCodeConstant.PARTNER_INACTIVE);
-        }
+        ValidationUtils.validatePartnerActive(fromPartner.getStatus());
 
         Partner toPartner = partnerRepository.findById(request.getToPartnerId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, "Target partner does not exist", ErrorCodeConstant.PARTNER_NOT_FOUND));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.TARGET_PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
-        if (!StatusConstant.ACTIVE.equals(toPartner.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, "Target partner is INACTIVE", ErrorCodeConstant.PARTNER_INACTIVE);
-        }
+        ValidationUtils.validatePartnerActive(toPartner.getStatus());
 
         ExchangeRate rate = exchangeRateRepository.findLatestRate(fromPartner.getId(), toPartner.getId(), OffsetDateTime.now())
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.EXCHANGE_RATE_NOT_CONFIGURED, ErrorCodeConstant.EXCHANGE_RATE_NOT_CONFIGURED));
 
         PointBalance fromBalance = pointBalanceRepository.findByMemberIdAndPartnerId(memberId, fromPartner.getId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY, "No point balance for source partner", ErrorCodeConstant.INSUFFICIENT_BALANCE));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY, ErrorMessageConstant.NO_POINT_BALANCE_SOURCE_PARTNER, ErrorCodeConstant.INSUFFICIENT_BALANCE));
 
         if (fromBalance.getBalance() < request.getPoints()) {
             throw new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -276,7 +251,7 @@ public class TransactionService {
         }
 
         PointBalance toBalance = pointBalanceRepository.findByMemberIdAndPartnerId(memberId, toPartner.getId())
-                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY, "No point balance for target partner", ErrorCodeConstant.INSUFFICIENT_BALANCE));
+                .orElseThrow(() -> new LoyaltyException(HttpStatus.UNPROCESSABLE_ENTITY, ErrorMessageConstant.NO_POINT_BALANCE_TARGET_PARTNER, ErrorCodeConstant.INSUFFICIENT_BALANCE));
 
         long sourcePoints = request.getPoints();
         long targetPoints = (long) Math.floor(sourcePoints * rate.getRate().doubleValue());

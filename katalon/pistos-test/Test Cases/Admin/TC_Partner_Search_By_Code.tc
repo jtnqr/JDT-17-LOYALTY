@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Search partner by partner code</description>
+   <name>TC_Partner_Search_By_Code</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000010</testCaseGuid>
+</TestCaseEntity>

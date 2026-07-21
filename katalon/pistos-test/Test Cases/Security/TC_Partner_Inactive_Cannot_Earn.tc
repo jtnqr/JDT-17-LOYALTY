@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify inactive partner cannot earn points</description>
+   <name>TC_Partner_Inactive_Cannot_Earn</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0003-4000-8000-000000000001</testCaseGuid>
+</TestCaseEntity>

@@ -68,6 +68,9 @@ public final class SecurityUtils {
         return hasRole(RoleConstant.ROLE_PARTNER);
     }
 
+
+
+
     public static void validateAdminOrSelfAccess(UUID memberId) {
         String currentUserId = getCurrentUserIdStr();
         boolean isAdmin = isAdmin();
@@ -80,6 +83,15 @@ public final class SecurityUtils {
         String currentUserId = getCurrentUserIdStr();
         boolean isMember = isMember();
         if (!isMember || currentUserId == null || !memberId.toString().equals(currentUserId)) {
+            throw new LoyaltyException(HttpStatus.FORBIDDEN, ErrorMessageConstant.FORBIDDEN, ErrorCodeConstant.FORBIDDEN);
+        }
+    }
+
+    public static void validatePartnerAccess(UUID partnerId) {
+        String currentPartnerId = getCurrentUserIdStr();
+        boolean isPartnerRole = isPartner();
+
+        if (!isPartnerRole || currentPartnerId == null || !partnerId.toString().equals(currentPartnerId)) {
             throw new LoyaltyException(HttpStatus.FORBIDDEN, ErrorMessageConstant.FORBIDDEN, ErrorCodeConstant.FORBIDDEN);
         }
     }

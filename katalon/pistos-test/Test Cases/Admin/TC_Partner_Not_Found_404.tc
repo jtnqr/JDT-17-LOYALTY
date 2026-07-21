@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify 404 response when querying non-existent partner</description>
+   <name>TC_Partner_Not_Found_404</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000011</testCaseGuid>
+</TestCaseEntity>

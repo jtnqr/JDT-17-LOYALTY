@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Validate duplicate partner code error when creating partner</description>
+   <name>TC_Partner_Create_Duplicate_Code_Error</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000002</testCaseGuid>
+</TestCaseEntity>

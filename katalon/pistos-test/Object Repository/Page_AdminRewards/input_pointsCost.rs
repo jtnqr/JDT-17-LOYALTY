@@ -7,7 +7,7 @@
    <selectorCollection>
       <entry>
          <key>XPATH</key>
-         <value>//form[.//h2[text()='Create New Reward']]//input[@type='number']</value>
+         <value>//form//input[@type='number'] | //input[@type='number']</value>
       </entry>
    </selectorCollection>
    <selectorMethod>XPATH</selectorMethod>

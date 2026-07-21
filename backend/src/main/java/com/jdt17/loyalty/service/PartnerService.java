@@ -12,6 +12,7 @@ import com.jdt17.loyalty.repository.PartnerRepository;
 import com.jdt17.loyalty.repository.PointBalanceRepository;
 import com.jdt17.loyalty.security.JWTService;
 import com.jdt17.loyalty.security.SecurityUtils;
+import com.jdt17.loyalty.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -128,7 +129,9 @@ public class PartnerService {
         Partner partner = partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.UNAUTHORIZED, ErrorMessageConstant.INVALID_PARTNER_CREDENTIALS, ErrorCodeConstant.INVALID_CREDENTIALS));
 
-        if (!StatusConstant.ACTIVE.equalsIgnoreCase(partner.getStatus())) {
+        try {
+            ValidationUtils.validatePartnerActive(partner.getStatus());
+        } catch (LoyaltyException e) {
             throw new LoyaltyException(
                     HttpStatus.UNAUTHORIZED, ErrorMessageConstant.INVALID_PARTNER_CREDENTIALS, ErrorCodeConstant.INVALID_CREDENTIALS
             );

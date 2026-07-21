@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Validate error when points per thousand rate is zero or invalid</description>
+   <name>TC_Partner_Create_Invalid_Rate_Zero</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>a1b2c3d4-0001-4000-8000-000000000003</testCaseGuid>
+</TestCaseEntity>

@@ -347,4 +347,92 @@ class SecurityUtilsTest {
         LoyaltyException ex3 = assertThrows(LoyaltyException.class, () -> SecurityUtils.validateSelfMemberAccessOnly(memberId));
         assertEquals(HttpStatus.FORBIDDEN, ex3.getStatus());
     }
+
+    @Test
+    void testValidatePartnerAccess_WhenPartnerAccessesOwnId_Success() {
+        UUID partnerId = UUID.randomUUID();
+        UsernamePasswordAuthenticationToken partnerAuth = new UsernamePasswordAuthenticationToken(
+                partnerId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_PARTNER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(partnerAuth);
+
+        assertDoesNotThrow(() -> SecurityUtils.validatePartnerAccess(partnerId));
+    }
+
+    @Test
+    void testValidatePartnerAccess_WhenPartnerAccessesDifferentId_ThrowsForbidden() {
+        UUID partnerId = UUID.randomUUID();
+        UUID otherId = UUID.randomUUID();
+        UsernamePasswordAuthenticationToken partnerAuth = new UsernamePasswordAuthenticationToken(
+                partnerId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_PARTNER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(partnerAuth);
+
+        LoyaltyException ex = assertThrows(LoyaltyException.class, () -> SecurityUtils.validatePartnerAccess(otherId));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
+        assertEquals("FORBIDDEN", ex.getCode());
+    }
+
+    @Test
+    void testValidatePartnerAccess_WhenNonPartnerRole_ThrowsForbidden() {
+        UUID partnerId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        UsernamePasswordAuthenticationToken memberAuth = new UsernamePasswordAuthenticationToken(
+                memberId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(memberAuth);
+
+        LoyaltyException ex = assertThrows(LoyaltyException.class, () -> SecurityUtils.validatePartnerAccess(partnerId));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
+    }
+
+    @Test
+    void testValidatePartnerAccess_WhenAdminRole_ThrowsForbidden() {
+        UUID partnerId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        UsernamePasswordAuthenticationToken adminAuth = new UsernamePasswordAuthenticationToken(
+                adminId.toString(), null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(adminAuth);
+
+        LoyaltyException ex = assertThrows(LoyaltyException.class, () -> SecurityUtils.validatePartnerAccess(partnerId));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
+    }
+
+    @Test
+    void testValidatePartnerAccess_WhenCurrentUserIdIsNull_ThrowsForbidden() {
+        UUID partnerId = UUID.randomUUID();
+        Authentication authWithNullName = new AbstractAuthenticationToken(List.of(new SimpleGrantedAuthority("ROLE_PARTNER"))) {
+            @Override public Object getCredentials() { return null; }
+            @Override public Object getPrincipal() { return null; }
+            @Override public String getName() { return null; }
+        };
+        SecurityContextHolder.getContext().setAuthentication(authWithNullName);
+
+        LoyaltyException ex = assertThrows(LoyaltyException.class, () -> SecurityUtils.validatePartnerAccess(partnerId));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
+    }
+
+    @Test
+    void testValidatePartnerAccess_WhenUnauthenticated_ThrowsForbidden() {
+        UUID partnerId = UUID.randomUUID();
+        SecurityContextHolder.clearContext();
+
+        LoyaltyException ex = assertThrows(LoyaltyException.class, () -> SecurityUtils.validatePartnerAccess(partnerId));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
+    }
+
+    @Test
+    void testValidatePartnerAccess_WhenPartnerHasMultipleRoles_Success() {
+        UUID partnerId = UUID.randomUUID();
+        UsernamePasswordAuthenticationToken multiRoleAuth = new UsernamePasswordAuthenticationToken(
+                partnerId.toString(), null, List.of(
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("ROLE_PARTNER")
+                )
+        );
+        SecurityContextHolder.getContext().setAuthentication(multiRoleAuth);
+
+        assertDoesNotThrow(() -> SecurityUtils.validatePartnerAccess(partnerId));
+    }
 }

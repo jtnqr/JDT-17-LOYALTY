@@ -124,4 +124,256 @@ class AdminDashboardServiceTest {
         assertEquals(1, stats.getExchangeTraffic().getKfcToMcdCount());
         assertEquals(1, stats.getExchangeTraffic().getMcdToKfcCount());
     }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_MultipleTransactions() {
+        setUpBasicMocks();
+
+        // Create multiple exchange transactions with various partners
+        Transaction ex1 = new Transaction();
+        ex1.setPartner(kfcPartner);
+
+        Transaction ex2 = new Transaction();
+        ex2.setPartner(mcdPartner);
+
+        Transaction ex3 = new Transaction();
+        ex3.setPartner(kfcPartner);
+
+        Transaction ex4 = new Transaction();
+        ex4.setPartner(mcdPartner);
+
+        Transaction ex5 = new Transaction();
+        ex5.setPartner(kfcPartner);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Arrays.asList(ex1, ex2, ex3, ex4, ex5));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        // 3 from KFC, 2 from MCD
+        assertEquals(3, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(2, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_WithNullPartner() {
+        setUpBasicMocks();
+
+        // Create transactions where partner is null
+        Transaction exWithoutPartner = new Transaction();
+        exWithoutPartner.setPartner(null);
+
+        Transaction exWithPartner = new Transaction();
+        exWithPartner.setPartner(kfcPartner);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Arrays.asList(exWithoutPartner, exWithPartner));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        // Should only count valid partner transactions, null should be ignored
+        assertEquals(1, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(0, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_McdPartnerBranch() {
+        setUpBasicMocks();
+
+        // Create transactions ONLY from MCD partner to ensure else-if branch is covered
+        Transaction exMcd1 = new Transaction();
+        exMcd1.setPartner(mcdPartner);
+
+        Transaction exMcd2 = new Transaction();
+        exMcd2.setPartner(mcdPartner);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Arrays.asList(exMcd1, exMcd2));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        // Should count MCD transactions in mcdToKfcCount
+        assertEquals(0, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(2, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_MixedKfcAndMcd() {
+        setUpBasicMocks();
+
+        // Create mixed transactions from both KFC and MCD
+        Transaction exKfc1 = new Transaction();
+        exKfc1.setPartner(kfcPartner);
+
+        Transaction exMcd1 = new Transaction();
+        exMcd1.setPartner(mcdPartner);
+
+        Transaction exKfc2 = new Transaction();
+        exKfc2.setPartner(kfcPartner);
+
+        Transaction exMcd2 = new Transaction();
+        exMcd2.setPartner(mcdPartner);
+
+        Transaction exKfc3 = new Transaction();
+        exKfc3.setPartner(kfcPartner);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Arrays.asList(exKfc1, exMcd1, exKfc2, exMcd2, exKfc3));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        // Should count 3 KFC and 2 MCD transactions
+        assertEquals(3, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(2, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_UnknownPartnerCode() {
+        setUpBasicMocks();
+
+        // Create transaction with partner that has code not matching KFC or MCD
+        Partner unknownPartner = new Partner();
+        unknownPartner.setId(UUID.randomUUID());
+        unknownPartner.setCode("UNKNOWN");
+        unknownPartner.setName("Unknown Partner");
+
+        Transaction exUnknown = new Transaction();
+        exUnknown.setPartner(unknownPartner);
+
+        Transaction exKfc = new Transaction();
+        exKfc.setPartner(kfcPartner);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Arrays.asList(exUnknown, exKfc));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        // Should only count KFC (unknown partner code should not be counted)
+        assertEquals(1, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(0, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_PartnerIsNull() {
+        setUpBasicMocks();
+
+        // Transaction with NULL partner (tests first condition in if statement)
+        Transaction exWithNullPartner = new Transaction();
+        exWithNullPartner.setPartner(null);
+
+        Transaction exValid = new Transaction();
+        exValid.setPartner(kfcPartner);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Arrays.asList(exWithNullPartner, exValid));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        // Should only count valid partner transactions
+        assertEquals(1, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(0, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    @Test
+    void testGetDashboardStats_DuplicateRewardIdsInToMap() {
+        setUpBasicMocks();
+
+        UUID duplicateId = UUID.randomUUID();
+        Reward r1 = new Reward();
+        r1.setId(duplicateId);
+        r1.setName("Burger Alpha");
+
+        Reward r2 = new Reward();
+        r2.setId(duplicateId);
+        r2.setName("Burger Beta");
+
+        when(rewardRepository.findAll()).thenReturn(Arrays.asList(r1, r2));
+
+        Transaction redemption = new Transaction();
+        redemption.setRewardId(duplicateId);
+        redemption.setPoints(100L);
+        redemption.setCreatedAt(OffsetDateTime.parse("2026-07-20T10:00:00Z"));
+
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.singletonList(redemption));
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        assertNotNull(stats);
+        assertEquals(1, stats.getPopularRewards().size());
+        assertEquals("Burger Alpha", stats.getPopularRewards().get(0).getName());
+    }
+
+    @Test
+    void testGetDashboardStats_RedemptionWithNullRewardIdAndUnknownReward() {
+        setUpBasicMocks();
+
+        // Redemption with NULL reward ID to cover filter(t -> t.getRewardId() != null) returning false
+        Transaction redemptionNullReward = new Transaction();
+        redemptionNullReward.setRewardId(null);
+        redemptionNullReward.setPoints(50L);
+        redemptionNullReward.setCreatedAt(OffsetDateTime.parse("2026-07-20T10:00:00Z"));
+
+        // Redemption with unknown reward ID to cover rewardNameMap.getOrDefault returning "Unknown Reward"
+        UUID unknownRewardId = UUID.randomUUID();
+        Transaction redemptionUnknownReward = new Transaction();
+        redemptionUnknownReward.setRewardId(unknownRewardId);
+        redemptionUnknownReward.setPoints(150L);
+        redemptionUnknownReward.setCreatedAt(OffsetDateTime.parse("2026-07-20T10:00:00Z"));
+
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Arrays.asList(redemptionNullReward, redemptionUnknownReward));
+        when(rewardRepository.findAll()).thenReturn(Collections.singletonList(burgerReward));
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        assertNotNull(stats);
+        assertEquals(1, stats.getPopularRewards().size());
+        assertEquals("Unknown Reward", stats.getPopularRewards().get(0).getName());
+        assertEquals(1, stats.getPopularRewards().get(0).getCount());
+    }
+
+    @Test
+    void testGetDashboardStats_ExchangeTraffic_PartnerCodeIsNull() {
+        setUpBasicMocks();
+
+        Partner partnerWithNullCode = new Partner();
+        partnerWithNullCode.setId(UUID.randomUUID());
+        partnerWithNullCode.setCode(null);
+        partnerWithNullCode.setName("No Code Partner");
+
+        Transaction exNullCode = new Transaction();
+        exNullCode.setPartner(partnerWithNullCode);
+
+        when(transactionRepository.findByType("EXCHANGE_OUT")).thenReturn(Collections.singletonList(exNullCode));
+        when(transactionRepository.findByType("REDEEM")).thenReturn(Collections.emptyList());
+        when(rewardRepository.findAll()).thenReturn(Collections.emptyList());
+
+        AdminDashboardStatsResponse stats = adminDashboardService.getDashboardStats();
+
+        assertEquals(0, stats.getExchangeTraffic().getKfcToMcdCount());
+        assertEquals(0, stats.getExchangeTraffic().getMcdToKfcCount());
+    }
+
+    // ==================== Helper Methods ====================
+
+    private void setUpBasicMocks() {
+        when(memberRepository.count()).thenReturn(10L);
+        when(memberRepository.countByStatus("ACTIVE")).thenReturn(8L);
+        when(memberRepository.countByStatus("INACTIVE")).thenReturn(2L);
+        when(memberRepository.countByCreatedAtAfter(any(OffsetDateTime.class))).thenReturn(3L);
+
+        when(transactionRepository.sumPointsByType("EARN")).thenReturn(1000L);
+        when(transactionRepository.sumPointsByType("REDEEM")).thenReturn(400L);
+        when(transactionRepository.sumPointsByType("EXPIRED")).thenReturn(50L);
+
+        when(partnerRepository.count()).thenReturn(5L);
+        when(rewardRepository.count()).thenReturn(12L);
+    }
 }

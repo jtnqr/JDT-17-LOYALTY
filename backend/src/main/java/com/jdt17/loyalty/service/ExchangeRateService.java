@@ -14,6 +14,7 @@ import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.ExchangeRateRepository;
 import com.jdt17.loyalty.repository.PartnerRepository;
 import com.jdt17.loyalty.security.SecurityUtils;
+import com.jdt17.loyalty.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -63,9 +64,8 @@ public class ExchangeRateService {
         Partner toPartner = partnerRepository.findById(request.getToPartnerId())
                 .orElseThrow(() -> new LoyaltyException(HttpStatus.NOT_FOUND, ErrorMessageConstant.PARTNER_NOT_FOUND, ErrorCodeConstant.PARTNER_NOT_FOUND));
 
-        if (!StatusConstant.ACTIVE.equals(fromPartner.getStatus()) || !StatusConstant.ACTIVE.equals(toPartner.getStatus())) {
-            throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.PARTNER_INACTIVE, ErrorCodeConstant.PARTNER_INACTIVE);
-        }
+        ValidationUtils.validatePartnerActive(fromPartner.getStatus());
+        ValidationUtils.validatePartnerActive(toPartner.getStatus());
 
         boolean exists = exchangeRateRepository.existsByFromPartnerIdAndToPartnerIdAndEffectiveFrom(
                 request.getFromPartnerId(), request.getToPartnerId(), request.getEffectiveFrom()
