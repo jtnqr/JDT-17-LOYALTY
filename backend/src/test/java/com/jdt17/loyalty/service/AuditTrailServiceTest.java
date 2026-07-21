@@ -11,6 +11,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -144,6 +147,7 @@ class AuditTrailServiceTest {
         auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
 
         // Assert
+        ArgumentCaptor<ArgumentCaptor> verifyMock = mock(ArgumentCaptor.class); // dummy
         ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
         verify(auditTrailRepository, times(1)).save(captor.capture());
 
@@ -217,5 +221,99 @@ class AuditTrailServiceTest {
         );
 
         assertTrue(exception.getMessage().contains("Failed to write audit trail log"));
+    }
+
+    @Test
+    void testLogEvent_Success_SanitizeSensitiveStringPayload() {
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+        String payload = "{\"password\": \"secret123\", \"email\": \"test@test.com\", \"nested\": {\"api_key\": \"key123\"}}";
+
+        auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        String result = captor.getValue().getPayload();
+        assertTrue(result.contains("\"password\":\"******\""));
+        assertTrue(result.contains("\"email\":\"test@test.com\""));
+        assertTrue(result.contains("\"api_key\":\"******\""));
+    }
+
+    @Test
+    void testLogEvent_Success_SanitizeMapObjectPayload() {
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("password", "secret123");
+        payload.put("email", "test@test.com");
+        payload.put("nullKey", null);
+        payload.put("apikey", "key123");
+        payload.put("secret", "val");
+        payload.put("token", "val");
+        
+        Map<String, Object> nested = new HashMap<>();
+        nested.put("apiKey", "key123");
+        nested.put("list", List.of("a", "b"));
+        payload.put("nested", nested);
+
+        // Edge case coverages for key validation
+        payload.put(null, "nullValue");
+
+        auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        String result = captor.getValue().getPayload();
+        assertTrue(result.contains("\"password\":\"******\""));
+        assertTrue(result.contains("\"email\":\"test@test.com\""));
+        assertTrue(result.contains("\"apiKey\":\"******\""));
+        
+        // Directly test isKeySensitive(null) coverage
+        assertFalse(auditTrailService.isKeySensitiveForTesting(null));
+    }
+
+    @Test
+    void testLogEvent_Success_SanitizeListObjectPayload() {
+        String eventType = "MEMBER_REGISTERED";
+        UUID actorId = UUID.randomUUID();
+        String actorType = "SYSTEM";
+        String entityType = "MEMBER";
+        UUID entityId = UUID.randomUUID();
+
+        List<Object> payload = List.of("plainValue", Map.of("password", "secret123"));
+
+        auditTrailService.logEvent(eventType, actorId, actorType, entityType, entityId, payload);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        String result = captor.getValue().getPayload();
+        assertTrue(result.contains("\"password\":\"******\""));
+    }
+
+    @Test
+    void testLogEvent_Success_ContainsSensitiveKeys_EdgeCases() {
+        assertFalse(auditTrailService.logEventContainsSensitiveKeysForTesting(null));
+        assertTrue(auditTrailService.logEventContainsSensitiveKeysForTesting("api_key"));
+        assertTrue(auditTrailService.logEventContainsSensitiveKeysForTesting("apikey"));
+        assertTrue(auditTrailService.logEventContainsSensitiveKeysForTesting("secret"));
+        assertTrue(auditTrailService.logEventContainsSensitiveKeysForTesting("token"));
+        
+        assertNull(auditTrailService.sanitizeJsonStringForTesting(null));
+        assertEquals("bad-json", auditTrailService.sanitizeJsonStringForTesting("bad-json"));
+        // Force JSON parse exception to cover catch block
+        assertEquals("{invalid json api_key", auditTrailService.sanitizeJsonStringForTesting("{invalid json api_key"));
+    }
+
+    @Test
+    void testLogEvent_Success_SanitizeValue_EdgeCases() {
+        assertNull(auditTrailService.sanitizeValueForTesting(null));
+        assertEquals("normal-value", auditTrailService.sanitizeValueForTesting("normal-value"));
     }
 }
