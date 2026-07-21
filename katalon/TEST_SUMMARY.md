@@ -1,12 +1,12 @@
 # PISTOS LOYALTY APP — KATALON TEST IMPLEMENTATION SUMMARY
 
-Total Test Cases: **47 Test Cases**  
+Total Test Cases: **53 Test Cases**  
 Total Test Suites: **8 Test Suites**  
 Test Suite Collections: **`TSC_Full_E2E_Suites.tsc`** & **`TSC_All_Suites.tsc`**
 
 ---
 
-## 📋 Complete Test Cases Inventory (47 Test Cases)
+## 📋 Complete Test Cases Inventory (53 Test Cases)
 
 ### 1. Authentication & Authorization (7 TC)
 * **Test Suite:** `TS_Auth_Smoke` (Smoke Tests) & `TS_Auth_Negative` (Negative Tests)
@@ -41,7 +41,7 @@ Test Suite Collections: **`TSC_Full_E2E_Suites.tsc`** & **`TSC_All_Suites.tsc`**
 
 ---
 
-### 3. Partner / Merchant Management (10 TC)
+### 3. Partner / Merchant Management (13 TC)
 * **Test Suite:** `TS_Partner_Management`
 * **Location:** `Test Cases/Admin/`
 
@@ -57,23 +57,29 @@ Test Suite Collections: **`TSC_Full_E2E_Suites.tsc`** & **`TSC_All_Suites.tsc`**
 | 23 | `TC_Partner_Code_Immutable_After_Create` | Verify partner code field is disabled/read-only on edit modal | ✅ Active |
 | 24 | `TC_Partner_Edit_Not_Found_404` | Verify 404 response for editing non-existent partner ID | ✅ Active |
 | 25 | `TC_Partner_Not_Found_404` | Verify 404 response when querying invalid partner ID | ✅ Active |
+| 26 | `TC_Partner_Upload_Logo_Success` | Verify uploading valid PNG/JPG logo to partner returns 200 OK & logoUrl | ✅ Active |
+| 27 | `TC_Partner_Upload_Logo_Invalid_Format` | Verify uploading TIFF/BMP logo fails with 400 & INVALID_FILE_TYPE | ✅ Active |
+| 28 | `TC_Partner_Upload_Logo_Exceeds_Size` | Verify uploading logo >2MB fails with 400 & FILE_TOO_LARGE | ✅ Active |
 
 ---
 
-### 4. Reward Catalog Management (8 TC)
+### 4. Reward Catalog Management (11 TC)
 * **Test Suite:** `TS_Reward_Management`
 * **Location:** `Test Cases/Admin/`
 
 | # | Test Case ID | Description | Status |
 |---|---|---|---|
-| 26 | `TC_Reward_View_All` | Verify admin can view all reward items in catalog | ✅ Active |
-| 27 | `TC_Reward_Filter_By_Partner` | Verify filtering rewards by specific partner ID | ✅ Active |
-| 28 | `TC_Reward_Create_Partner_Not_Found` | Verify error when creating reward for invalid partner ID | ✅ Active |
-| 29 | `TC_Reward_Edit_Update_Name` | Verify updating reward title/name | ✅ Active |
-| 30 | `TC_Reward_Edit_Update_Cost` | Verify updating reward point cost | ✅ Active |
-| 31 | `TC_Reward_Edit_Update_Status` | Verify toggling reward status ACTIVE / INACTIVE | ✅ Active |
-| 32 | `TC_Reward_Edit_Not_Found` | Verify 404 response when editing non-existent reward ID | ✅ Active |
-| 33 | `TC_Reward_Cache_Invalidation_After_Edit` | Verify reward updates immediately invalidate client cache | ✅ Active |
+| 29 | `TC_Reward_View_All` | Verify admin can view all reward items in catalog | ✅ Active |
+| 30 | `TC_Reward_Filter_By_Partner` | Verify filtering rewards by specific partner ID | ✅ Active |
+| 31 | `TC_Reward_Create_Partner_Not_Found` | Verify error when creating reward for invalid partner ID | ✅ Active |
+| 32 | `TC_Reward_Edit_Update_Name` | Verify updating reward title/name | ✅ Active |
+| 33 | `TC_Reward_Edit_Update_Cost` | Verify updating reward point cost | ✅ Active |
+| 34 | `TC_Reward_Edit_Update_Status` | Verify toggling reward status ACTIVE / INACTIVE | ✅ Active |
+| 35 | `TC_Reward_Edit_Not_Found` | Verify 404 response when editing non-existent reward ID | ✅ Active |
+| 36 | `TC_Reward_Cache_Invalidation_After_Edit` | Verify reward updates immediately invalidate client cache | ✅ Active |
+| 37 | `TC_Reward_Upload_Image_Success` | Verify uploading valid PNG/JPG image to reward returns 200 OK & imageUrl | ✅ Active |
+| 38 | `TC_Reward_Upload_Image_Invalid_Format` | Verify uploading TIFF/BMP image fails with 400 & INVALID_FILE_TYPE | ✅ Active |
+| 39 | `TC_Reward_Upload_Image_Exceeds_Size` | Verify uploading image >2MB fails with 400 & FILE_TOO_LARGE | ✅ Active |
 
 ---
 
@@ -83,11 +89,11 @@ Test Suite Collections: **`TSC_Full_E2E_Suites.tsc`** & **`TSC_All_Suites.tsc`**
 
 | # | Test Case ID | Description | Status |
 |---|---|---|---|
-| 34 | `TC_Member_View_Points` | Verify member can view point balance per partner on dashboard | ✅ Active |
-| 35 | `TC_Member_Transaction_History` | Verify member can view transaction history log | ✅ Active |
-| 36 | `TC_Member_View_Profile_And_Logout` | Verify member profile viewing and logout mechanism | ✅ Active |
-| 37 | `TC_Member_Exchange_Points` | Verify successful point exchange between partner pairs | ✅ Active |
-| 38 | `TC_Member_Redeem_Reward` | Verify successful reward redemption from catalog | ✅ Active |
+| 40 | `TC_Member_View_Points` | Verify member can view point balance per partner on dashboard | ✅ Active |
+| 41 | `TC_Member_Transaction_History` | Verify member can view transaction history log | ✅ Active |
+| 42 | `TC_Member_View_Profile_And_Logout` | Verify member profile viewing and logout mechanism | ✅ Active |
+| 43 | `TC_Member_Exchange_Points` | Verify successful point exchange between partner pairs | ✅ Active |
+| 44 | `TC_Member_Redeem_Reward` | Verify successful reward redemption from catalog | ✅ Active |
 
 ---
 
@@ -97,11 +103,11 @@ Test Suite Collections: **`TSC_Full_E2E_Suites.tsc`** & **`TSC_All_Suites.tsc`**
 
 | # | Test Case ID | Description | Status |
 |---|---|---|---|
-| 39 | `TC_Guard_Unauthenticated_Redirect` | Verify unauthenticated users attempting protected routes are redirected to `/login` | ✅ Active |
-| 40 | `TC_Guard_Member_Access_Admin_Forbidden` | Verify MEMBER role accessing `/admin` is redirected back to `/dashboard` | ✅ Active |
-| 41 | `TC_Guard_Admin_Access_Member_Dashboard_Forbidden` | Verify ADMIN role accessing `/dashboard` is redirected back to `/admin` | ✅ Active |
-| 42 | `TC_Partner_Inactive_Cannot_Redeem` | Verify inactive partner cannot participate in reward redemptions on `/rewards` | ✅ Active |
-| 43 | `TC_Partner_Inactive_Cannot_Exchange` | Verify inactive partner cannot participate in point exchange | ✅ Active |
+| 45 | `TC_Guard_Unauthenticated_Redirect` | Verify unauthenticated users attempting protected routes are redirected to `/login` | ✅ Active |
+| 46 | `TC_Guard_Member_Access_Admin_Forbidden` | Verify MEMBER role accessing `/admin` is redirected back to `/dashboard` | ✅ Active |
+| 47 | `TC_Guard_Admin_Access_Member_Dashboard_Forbidden` | Verify ADMIN role accessing `/dashboard` is redirected back to `/admin` | ✅ Active |
+| 48 | `TC_Partner_Inactive_Cannot_Redeem` | Verify inactive partner cannot participate in reward redemptions on `/rewards` | ✅ Active |
+| 49 | `TC_Partner_Inactive_Cannot_Exchange` | Verify inactive partner cannot participate in point exchange | ✅ Active |
 
 ---
 
@@ -111,16 +117,16 @@ Test Suite Collections: **`TSC_Full_E2E_Suites.tsc`** & **`TSC_All_Suites.tsc`**
 
 | # | Test Case ID | Description | Status |
 |---|---|---|---|
-| 44 | `TC_Exchange_Insufficient_Points` | Verify UI auto-clamps/caps input amount to max available balance | ✅ Active |
-| 45 | `TC_Register_Duplicate_Phone` | Verify registration rejection for duplicate phone number (V6 constraint) | ✅ Active |
-| 46 | `TC_Login_Invalid_Credentials` | Verify login failure message for non-existent account | ✅ Active |
-| 47 | `TC_Register_Validation_Errors` | Verify form input inline error messages for invalid inputs | ✅ Active |
+| 50 | `TC_Exchange_Insufficient_Points` | Verify UI auto-clamps/caps input amount to max available balance | ✅ Active |
+| 51 | `TC_Register_Duplicate_Phone` | Verify registration rejection for duplicate phone number (V6 constraint) | ✅ Active |
+| 52 | `TC_Login_Invalid_Credentials` | Verify login failure message for non-existent account | ✅ Active |
+| 53 | `TC_Register_Validation_Errors` | Verify form input inline error messages for invalid inputs | ✅ Active |
 
 ---
 
 ## 🚀 How to Execute All Test Suites
 
-To execute the entire 47 Test Cases suite sequentially in Katalon Studio:
+To execute the entire 53 Test Cases suite sequentially in Katalon Studio:
 
 1. Open Katalon Studio.
 2. In the **Tests Explorer** panel, navigate to `Test Suites`.

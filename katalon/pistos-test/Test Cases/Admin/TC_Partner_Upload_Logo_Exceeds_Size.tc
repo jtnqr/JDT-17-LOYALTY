@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify uploading logo exceeding 2MB limit to partner fails with 400 Bad Request</description>
+   <name>TC_Partner_Upload_Logo_Exceeds_Size</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>fe8741ab-83bc-429a-b123-5fc1fbf83706</testCaseGuid>
+</TestCaseEntity>
