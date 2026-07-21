@@ -385,7 +385,7 @@ class PartnerServiceTest {
         verify(partnerRepository).existsByCode("SBUX");
         verify(partnerRepository).save(any(Partner.class));
         verify(pointBalanceRepository).bulkInitPointBalances(savedPartner.getId());
-        verify(auditTrailService).logEvent("PARTNER_CREATED", adminId, "ADMIN", "PARTNER", savedPartner.getId(), null);
+        verify(auditTrailService).logEvent(eq("PARTNER_CREATED"), eq(adminId), eq("ADMIN"), eq("PARTNER"), eq(savedPartner.getId()), any());
 
         SecurityContextHolder.clearContext();
     }
@@ -459,7 +459,7 @@ class PartnerServiceTest {
         assertEquals("ACTIVE", response.getStatus());
 
         verify(partnerRepository).save(partner);
-        verify(auditTrailService).logEvent("PARTNER_UPDATED", adminId, "ADMIN", "PARTNER", partnerId, null);
+        verify(auditTrailService).logEvent(eq("PARTNER_UPDATED"), eq(adminId), eq("ADMIN"), eq("PARTNER"), eq(partnerId), any());
 
         SecurityContextHolder.clearContext();
     }
@@ -550,7 +550,7 @@ class PartnerServiceTest {
 
         PartnerResponse response = partnerService.createPartner(request);
         assertNotNull(response);
-        verify(auditTrailService).logEvent("PARTNER_CREATED", null, "ADMIN", "PARTNER", savedPartner.getId(), null);
+        verify(auditTrailService).logEvent(eq("PARTNER_CREATED"), eq(null), eq("ADMIN"), eq("PARTNER"), eq(savedPartner.getId()), any());
         SecurityContextHolder.clearContext();
     }
 
@@ -583,7 +583,7 @@ class PartnerServiceTest {
 
         PartnerResponse response = partnerService.createPartner(request);
         assertNotNull(response);
-        verify(auditTrailService).logEvent("PARTNER_CREATED", null, "ADMIN", "PARTNER", savedPartner.getId(), null);
+        verify(auditTrailService).logEvent(eq("PARTNER_CREATED"), eq(null), eq("ADMIN"), eq("PARTNER"), eq(savedPartner.getId()), any());
         SecurityContextHolder.clearContext();
     }
 
@@ -648,7 +648,7 @@ class PartnerServiceTest {
 
         PartnerResponse response = partnerService.updatePartner(partnerId, request);
         assertNotNull(response);
-        verify(auditTrailService).logEvent("PARTNER_UPDATED", null, "ADMIN", "PARTNER", partnerId, null);
+        verify(auditTrailService).logEvent(eq("PARTNER_UPDATED"), eq(null), eq("ADMIN"), eq("PARTNER"), eq(partnerId), any());
         SecurityContextHolder.clearContext();
      }
 

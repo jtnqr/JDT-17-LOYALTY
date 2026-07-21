@@ -81,7 +81,7 @@ public class TransactionService {
                 .build();
         Transaction savedTx = transactionRepository.save(transaction);
 
-        auditTrailService.logEvent(AuditEventConstant.POINTS_EARNED, null, RoleConstant.SYSTEM, AuditEventConstant.ENTITY_TRANSACTION, savedTx.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.POINTS_EARNED, null, RoleConstant.SYSTEM, AuditEventConstant.ENTITY_TRANSACTION, savedTx.getId(), request);
 
         return EarnPointsResponse.builder()
                 .transactionId(savedTx.getId())
@@ -185,7 +185,7 @@ public class TransactionService {
                 RoleConstant.MEMBER,
                 AuditEventConstant.ENTITY_MEMBER,
                 memberId,
-                "Member redeemed reward: " + reward.getName() + " for " + reward.getPointCost() + " points"
+                request
         );
 
         return RedeemResponse.builder()
@@ -287,7 +287,7 @@ public class TransactionService {
                 RoleConstant.MEMBER,
                 AuditEventConstant.ENTITY_MEMBER,
                 memberId,
-                "Member exchanged " + sourcePoints + " points from " + fromPartner.getName() + " to " + targetPoints + " points at " + toPartner.getName()
+                request
         );
 
         Map<String, Long> updatedBalances = new HashMap<>();

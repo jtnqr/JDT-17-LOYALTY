@@ -90,7 +90,7 @@ public class ExchangeRateService {
                 RoleConstant.ADMIN,
                 AuditEventConstant.ENTITY_EXCHANGE_RATE,
                 saved.getId(),
-                null
+                request
         );
 
         return mapToResponse(saved);
