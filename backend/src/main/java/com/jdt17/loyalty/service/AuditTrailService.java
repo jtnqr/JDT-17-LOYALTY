@@ -21,6 +21,7 @@ public class AuditTrailService {
     public AuditTrailService(AuditTrailRepository auditTrailRepository) {
         this.auditTrailRepository = auditTrailRepository;
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -71,10 +72,24 @@ public class AuditTrailService {
         }
     }
 
+    protected String sanitizeJsonStringForTesting(String jsonStr) {
+        return sanitizeJsonString(jsonStr);
+    }
+
     private boolean containsSensitiveKeys(String str) {
-        if (str == null) return false;
+        if (str == null) {
+            return false;
+        }
         String lower = str.toLowerCase();
-        return lower.contains("password") || lower.contains("apikey") || lower.contains("api_key") || lower.contains("secret") || lower.contains("token");
+        return lower.contains("password") ||
+               lower.contains("apikey") ||
+               lower.contains("api_key") ||
+               lower.contains("secret") ||
+               lower.contains("token");
+    }
+
+    protected boolean logEventContainsSensitiveKeysForTesting(String str) {
+        return containsSensitiveKeys(str);
     }
 
     private Object sanitizeObject(Object obj) {
@@ -87,6 +102,14 @@ public class AuditTrailService {
             }
             return sanitized;
         }
+        if (obj instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) obj;
+            java.util.List<Object> sanitized = new java.util.ArrayList<>();
+            for (Object item : list) {
+                sanitized.add(sanitizeObject(item));
+            }
+            return sanitized;
+        }
         return obj;
     }
 
@@ -94,8 +117,7 @@ public class AuditTrailService {
         if (value == null) {
             return null;
         }
-        String lowerKey = key.toLowerCase();
-        if (lowerKey.contains("password") || lowerKey.contains("apikey") || lowerKey.contains("api_key") || lowerKey.contains("secret") || lowerKey.contains("token")) {
+        if (isKeySensitive(key)) {
             return "******";
         }
         if (value instanceof Map || value instanceof java.util.List) {
@@ -104,10 +126,30 @@ public class AuditTrailService {
         return value;
     }
 
+    private boolean isKeySensitive(String key) {
+        if (key == null) {
+            return false;
+        }
+        String lowerKey = key.toLowerCase();
+        return lowerKey.contains("password") ||
+               lowerKey.contains("apikey") ||
+               lowerKey.contains("api_key") ||
+               lowerKey.contains("secret") ||
+               lowerKey.contains("token");
+    }
+
+    protected boolean isKeySensitiveForTesting(String key) {
+        return isKeySensitive(key);
+    }
+
     private Object sanitizeValue(String value) {
         if (value == null) {
             return null;
         }
         return value;
+    }
+
+    protected Object sanitizeValueForTesting(String value) {
+        return sanitizeValue(value);
     }
 }
