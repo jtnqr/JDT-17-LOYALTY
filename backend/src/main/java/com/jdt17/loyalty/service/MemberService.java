@@ -16,6 +16,7 @@ import com.jdt17.loyalty.exception.LoyaltyException;
 import com.jdt17.loyalty.repository.*;
 import com.jdt17.loyalty.security.JWTService;
 import com.jdt17.loyalty.security.SecurityUtils;
+import com.jdt17.loyalty.util.ValidationUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -108,9 +109,7 @@ public class MemberService {
                 throw new LoyaltyException(HttpStatus.UNAUTHORIZED, ErrorMessageConstant.INVALID_CREDENTIALS, ErrorCodeConstant.INVALID_CREDENTIALS);
             }
 
-            if (StatusConstant.INACTIVE.equalsIgnoreCase(member.getStatus())) {
-                throw new LoyaltyException(HttpStatus.BAD_REQUEST, ErrorMessageConstant.MEMBER_INACTIVE, ErrorCodeConstant.MEMBER_INACTIVE);
-            }
+            ValidationUtils.validateMemberActive(member.getStatus());
 
             String token = jwtService.generateToken(member.getId().toString(), RoleConstant.MEMBER);
 

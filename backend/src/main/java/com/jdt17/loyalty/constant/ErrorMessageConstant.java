@@ -22,4 +22,14 @@ public final class ErrorMessageConstant {
     public static final String INVALID_EXCHANGE_RATE_PAIR = "fromPartnerId equals toPartnerId";
     public static final String DUPLICATE_EXCHANGE_RATE = "Same pair + effectiveFrom already exists";
     public static final String INVALID_TRANSACTION_TYPE = "Invalid transaction type";
+    public static final String REWARD_ID_REQUIRED = "Reward ID is required";
+    public static final String NO_POINT_BALANCE_PARTNER = "No point balance for this partner";
+    public static final String NO_POINT_BALANCE_SOURCE_PARTNER = "No point balance for source partner";
+    public static final String NO_POINT_BALANCE_TARGET_PARTNER = "No point balance for target partner";
+    public static final String PARTNER_IDS_REQUIRED = "From and To Partner IDs are required";
+    public static final String POINTS_MUST_POSITIVE = "Points must be greater than 0";
+    public static final String SOURCE_PARTNER_NOT_FOUND = "Source partner does not exist";
+    public static final String TARGET_PARTNER_NOT_FOUND = "Target partner does not exist";
+    public static final String SOURCE_PARTNER_INACTIVE = "Source partner is INACTIVE";
+    public static final String TARGET_PARTNER_INACTIVE = "Target partner is INACTIVE";
 }

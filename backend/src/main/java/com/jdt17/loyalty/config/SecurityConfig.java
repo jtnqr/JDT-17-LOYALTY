@@ -1,5 +1,6 @@
 package com.jdt17.loyalty.config;
 
+import com.jdt17.loyalty.constant.RoleConstant;
 import com.jdt17.loyalty.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,19 +41,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}/points").hasRole("MEMBER")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}/transactions").hasRole("MEMBER")
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/exchange").hasRole("MEMBER")
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/redeem").hasRole("MEMBER")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/rewards").hasAnyRole("MEMBER", "ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/rewards").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/rewards/**").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}").hasAnyRole("MEMBER", "ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/members/{id}").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/admin/dashboard-stats").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/exchange-rates").hasAnyRole("MEMBER", "ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/exchange-rates").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}/points").hasRole(RoleConstant.MEMBER)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}/transactions").hasRole(RoleConstant.MEMBER)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/exchange").hasRole(RoleConstant.MEMBER)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/redeem").hasRole(RoleConstant.MEMBER)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/rewards").hasAnyRole(RoleConstant.MEMBER, RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/rewards").hasRole(RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/rewards/**").hasRole(RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}").hasAnyRole(RoleConstant.MEMBER, RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/v1/members/{id}").hasRole(RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members").hasRole(RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/admin/dashboard-stats").hasRole(RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/exchange-rates").hasAnyRole(RoleConstant.MEMBER, RoleConstant.ADMIN)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/exchange-rates").hasRole(RoleConstant.ADMIN)
                         .anyRequest().authenticated()
                 ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
