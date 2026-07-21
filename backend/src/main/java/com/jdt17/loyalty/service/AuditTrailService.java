@@ -135,11 +135,11 @@ public class AuditTrailService {
                lowerKey.contains("api_key") ||
                lowerKey.contains("secret") ||
                lowerKey.contains("token");
-     }
+    }
 
-     protected boolean isKeySensitiveForTesting(String key) {
-         return isKeySensitive(key);
-     }
+    protected boolean isKeySensitiveForTesting(String key) {
+        return isKeySensitive(key);
+    }
 
     private Object sanitizeValue(String value) {
         if (value == null) {
