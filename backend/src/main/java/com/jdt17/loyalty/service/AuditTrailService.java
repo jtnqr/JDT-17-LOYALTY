@@ -21,6 +21,7 @@ public class AuditTrailService {
     public AuditTrailService(AuditTrailRepository auditTrailRepository) {
         this.auditTrailRepository = auditTrailRepository;
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
