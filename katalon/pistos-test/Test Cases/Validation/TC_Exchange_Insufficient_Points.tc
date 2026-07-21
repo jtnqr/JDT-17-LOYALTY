@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <TestCaseEntity>
-   <description>Verify system handles insufficient point balance exchange</description>
+   <description>Verify input is automatically capped to max balance when user attempts to enter points exceeding current balance (TC_Exchange_Input_Capped_To_Max_Balance)</description>
    <name>TC_Exchange_Insufficient_Points</name>
    <tag></tag>
    <comment></comment>
    <recordOption>OTHER</recordOption>
    <testCaseGuid>fc760b07-3ce4-4a8a-a8cb-2fc0fbf83607</testCaseGuid>
 </TestCaseEntity>
+

@@ -60,4 +60,11 @@
       <testCaseId>Test Cases/Admin/TC_Admin_Verify_Transaction_Privacy_Restriction</testCaseId>
       <usingDataBindingAtTestSuiteLevel>true</usingDataBindingAtTestSuiteLevel>
    </testCaseLink>
+   <testCaseLink>
+      <guid>a23ec14a-f8b1-419b-a012-3298c2eaee93</guid>
+      <isReuseDriver>false</isReuseDriver>
+      <isRun>true</isRun>
+      <testCaseId>Test Cases/Admin/TC_Admin_Export_PDF_Dashboard</testCaseId>
+      <usingDataBindingAtTestSuiteLevel>true</usingDataBindingAtTestSuiteLevel>
+   </testCaseLink>
 </TestSuiteEntity>

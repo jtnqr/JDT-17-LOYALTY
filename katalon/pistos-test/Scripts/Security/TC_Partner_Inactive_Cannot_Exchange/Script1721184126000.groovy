@@ -36,6 +36,9 @@ WebUI.waitForElementVisible(findTestObject('Page_AdminPartners/btn_maybeLater'),
 WebUI.click(findTestObject('Page_AdminPartners/btn_maybeLater'))
 WebUI.delay(2)
 
+WebUI.deleteAllCookies()
+WebUI.executeJavaScript('localStorage.clear(); sessionStorage.clear();', null)
+
 WebUI.navigateToUrl(GlobalVariable.BASE_URL + '/login')
 WebUI.waitForElementVisible(findTestObject('Page_Login/input_email'), 5)
 WebUI.setText(findTestObject('Page_Login/input_email'), GlobalVariable.MEMBER_EMAIL)
