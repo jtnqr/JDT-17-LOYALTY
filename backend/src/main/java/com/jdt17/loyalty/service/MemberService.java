@@ -81,7 +81,7 @@ public class MemberService {
         }
 
         // audit trails to TRX_AUDIT_TRAIL
-        auditTrailService.logEvent(AuditEventConstant.MEMBER_REGISTERED, null, RoleConstant.SYSTEM, AuditEventConstant.ENTITY_MEMBER, savedMember.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.MEMBER_REGISTERED, null, RoleConstant.SYSTEM, AuditEventConstant.ENTITY_MEMBER, savedMember.getId(), request);
 
         String token = jwtService.generateToken(savedMember.getId().toString(), RoleConstant.MEMBER);
 
@@ -218,10 +218,10 @@ public class MemberService {
         member.setStatus(request.getStatus().toUpperCase());
         Member updatedMember = memberRepository.save(member);
 
-        auditTrailService.logEvent(AuditEventConstant.MEMBER_UPDATED, adminId, RoleConstant.ADMIN, AuditEventConstant.ENTITY_MEMBER, updatedMember.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.MEMBER_UPDATED, adminId, RoleConstant.ADMIN, AuditEventConstant.ENTITY_MEMBER, updatedMember.getId(), request);
 
         if (statusChanged) {
-            auditTrailService.logEvent(AuditEventConstant.MEMBER_STATUS_CHANGED, adminId, RoleConstant.ADMIN, AuditEventConstant.ENTITY_MEMBER, updatedMember.getId(), null);
+            auditTrailService.logEvent(AuditEventConstant.MEMBER_STATUS_CHANGED, adminId, RoleConstant.ADMIN, AuditEventConstant.ENTITY_MEMBER, updatedMember.getId(), request);
         }
 
         return MemberResponse.builder()
