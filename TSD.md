@@ -2,8 +2,8 @@
 # PISTOS – Loyalty App
 
 **Author:** Julius (JDT-17 Apprentice)
-**Version:** 1.3
-**Last Update:** 14/Jul/2026
+**Version:** 1.4
+**Last Update:** 21/Jul/2026
 **Project:** PISTOS (Points Integration System for Transaction-Originated Services)
 
 ---
@@ -16,6 +16,7 @@
 | 1.1 | 07/Jul/2026 | Julius | Corrected login request schema; fixed McD→KFC rate to 0.9; moved Point Exchange to member-scoped POST /api/v1/exchange; corrected metadata |
 | 1.2 | 08/Jul/2026 | Julius | memberId resolved from JWT in /redeem; phone UNIQUE + V6 migration; register response aligned to login shape; audit trail documented as DB-only; exchange-rate REST endpoints; reward catalog scope note; CORS config; PUT /partners/{id} explicit fields; Actuator note |
 | 1.3 | 14/Jul/2026 | Julius | Added Admin Reward CRUD, Image upload endpoints, and Redis caching specifications |
+| 1.4 | 21/Jul/2026 | Julius | Added Admin Dashboard Statistics endpoint specification |
 
 ---
 
@@ -967,6 +968,52 @@ Content-Type: multipart/form-data
 
 ---
 
+### Dashboard (Admin)
+
+#### GET /api/v1/admin/dashboard-stats
+Access: ADMIN only
+
+**Success (200):**
+```json
+{
+  "totalMembers": 100,
+  "activeMembers": 90,
+  "inactiveMembers": 10,
+  "enrolledToday": 5,
+  "pointsIssued": 15000,
+  "pointsRedeemed": 4500,
+  "pointsExpired": 500,
+  "totalPartners": 2,
+  "totalRewards": 11,
+  "redeemedPointsPerMonth": {
+    "Jun 2026": 2000,
+    "Jul 2026": 2500
+  },
+  "popularRewards": [
+    {
+      "name": "KFC Bucket 9 Pcs",
+      "count": 12
+    }
+  ],
+  "exchangeTraffic": {
+    "kfcToMcdCount": 8,
+    "mcdToKfcCount": 4
+  }
+}
+```
+
+**Backend Logic:**
+1. Verify ADMIN JWT
+2. Query member statistics (total, active/inactive counts via status query, and new member sign-ups today using `createdAt`)
+3. Query cumulative transaction points by type (issued via EARN, redeemed via REDEEM, expired via EXPIRED)
+4. Query partner and reward catalog total counts
+5. Query and map historical monthly redeemed points sum grouped by month format "MMM yyyy" sorted chronologically
+6. Query and aggregate popular rewards counts from redemptions, mapping to reward names, sorted descending, limited to top 5
+7. Query point exchange traffic counts from EXCHANGE_OUT transactions matching partner codes 'KFC' and 'MCD'
+8. Return statistics payload
+
+---
+
 ## Authorization Matrix
 
 | Endpoint | Public | MEMBER | ADMIN | PARTNER |
@@ -992,6 +1039,7 @@ Content-Type: multipart/form-data
 | PUT /rewards/{id}/image | — | — | ✓ | — |
 | GET /exchange-rates | — | ✓ | ✓ | — |
 | POST /exchange-rates | — | — | ✓ | — |
+| GET /admin/dashboard-stats | — | — | ✓ | — |
 
 Legend: ✓ = allowed, — = forbidden (403 if JWT valid, 401 if no JWT)
 
