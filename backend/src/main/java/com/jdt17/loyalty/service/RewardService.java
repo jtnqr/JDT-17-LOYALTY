@@ -50,7 +50,7 @@ public class RewardService {
         Reward saved = rewardRepository.save(reward);
 
         // Audit Trail
-        auditTrailService.logEvent(AuditEventConstant.REWARD_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, saved.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.REWARD_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, saved.getId(), request);
 
         return mapToResponse(saved);
     }
@@ -77,7 +77,7 @@ public class RewardService {
         Reward updated = rewardRepository.save(reward);
 
         // Audit Trail
-        auditTrailService.logEvent(AuditEventConstant.REWARD_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, updated.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.REWARD_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_REWARD, updated.getId(), request);
 
         return mapToResponse(updated);
     }

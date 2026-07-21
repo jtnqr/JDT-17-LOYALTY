@@ -75,7 +75,7 @@ public class PartnerService {
         pointBalanceRepository.bulkInitPointBalances(savedPartner.getId());
 
         // Audit Trail
-        auditTrailService.logEvent(AuditEventConstant.PARTNER_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, savedPartner.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_CREATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, savedPartner.getId(), request);
 
         return PartnerResponse.builder()
                 .id(savedPartner.getId())
@@ -112,7 +112,7 @@ public class PartnerService {
         Partner updatedPartner = partnerRepository.save(partner);
 
         // Audit Trail
-        auditTrailService.logEvent(AuditEventConstant.PARTNER_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, updatedPartner.getId(), null);
+        auditTrailService.logEvent(AuditEventConstant.PARTNER_UPDATED, getActorId(), RoleConstant.ADMIN, AuditEventConstant.ENTITY_PARTNER, updatedPartner.getId(), request);
 
         return PartnerResponse.builder()
                 .id(updatedPartner.getId())

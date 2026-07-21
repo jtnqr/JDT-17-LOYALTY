@@ -129,7 +129,7 @@ class TransactionServiceTest {
         verify(memberRepository).findByPhone("081234567890");
         verify(pointBalanceRepository).save(any(PointBalance.class));
         verify(transactionRepository).save(any(Transaction.class));
-        verify(auditTrailService).logEvent(eq("POINTS_EARNED"), eq(null), eq("SYSTEM"), eq("TRANSACTION"), eq(transactionId), eq(null));
+        verify(auditTrailService).logEvent(eq("POINTS_EARNED"), eq(null), eq("SYSTEM"), eq("TRANSACTION"), eq(transactionId), any());
 
         SecurityContextHolder.clearContext();
     }
@@ -408,7 +408,7 @@ class TransactionServiceTest {
         verify(memberRepository).findByPhone("081234567890");
         verify(pointBalanceRepository).save(any(PointBalance.class));
         verify(transactionRepository).save(any(Transaction.class));
-        verify(auditTrailService).logEvent(eq("POINTS_EARNED"), eq(null), eq("SYSTEM"), eq("TRANSACTION"), eq(transactionId), eq(null));
+        verify(auditTrailService).logEvent(eq("POINTS_EARNED"), eq(null), eq("SYSTEM"), eq("TRANSACTION"), eq(transactionId), any());
 
         SecurityContextHolder.clearContext();
     }

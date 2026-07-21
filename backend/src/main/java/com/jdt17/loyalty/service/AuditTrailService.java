@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 @Service
 @Slf4j
@@ -30,12 +32,12 @@ public class AuditTrailService {
                     String strPayload = (String) payload;
                     if ((strPayload.trim().startsWith("{") && strPayload.trim().endsWith("}")) ||
                         (strPayload.trim().startsWith("[") && strPayload.trim().endsWith("]"))) {
-                        jsonPayload = strPayload;
+                        jsonPayload = sanitizeJsonString(strPayload);
                     } else {
-                        jsonPayload = objectMapper.writeValueAsString(strPayload);
+                        jsonPayload = objectMapper.writeValueAsString(sanitizeValue(strPayload));
                     }
                 } else {
-                    jsonPayload = objectMapper.writeValueAsString(payload);
+                    jsonPayload = objectMapper.writeValueAsString(sanitizeObject(payload));
                 }
             }
 
@@ -54,5 +56,58 @@ public class AuditTrailService {
             log.error("Failed to write audit trail for EventType: {}, EntityType: {}, EntityId: {}", eventType, entityType, entityId, e);
             throw new RuntimeException("Failed to write audit trail log", e);
         }
+    }
+
+    private String sanitizeJsonString(String jsonStr) {
+        if (!containsSensitiveKeys(jsonStr)) {
+            return jsonStr;
+        }
+        try {
+            Object parsed = objectMapper.readValue(jsonStr, Object.class);
+            Object sanitized = sanitizeObject(parsed);
+            return objectMapper.writeValueAsString(sanitized);
+        } catch (Exception e) {
+            return jsonStr;
+        }
+    }
+
+    private boolean containsSensitiveKeys(String str) {
+        if (str == null) return false;
+        String lower = str.toLowerCase();
+        return lower.contains("password") || lower.contains("apikey") || lower.contains("api_key") || lower.contains("secret") || lower.contains("token");
+    }
+
+    private Object sanitizeObject(Object obj) {
+        if (obj instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) obj;
+            Map<String, Object> sanitized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                sanitized.put(key, sanitizeValue(key, entry.getValue()));
+            }
+            return sanitized;
+        }
+        return obj;
+    }
+
+    private Object sanitizeValue(String key, Object value) {
+        if (value == null) {
+            return null;
+        }
+        String lowerKey = key.toLowerCase();
+        if (lowerKey.contains("password") || lowerKey.contains("apikey") || lowerKey.contains("api_key") || lowerKey.contains("secret") || lowerKey.contains("token")) {
+            return "******";
+        }
+        if (value instanceof Map || value instanceof java.util.List) {
+            return sanitizeObject(value);
+        }
+        return value;
+    }
+
+    private Object sanitizeValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value;
     }
 }
