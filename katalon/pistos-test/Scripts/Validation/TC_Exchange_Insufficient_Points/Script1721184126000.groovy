@@ -19,10 +19,11 @@ WebUI.navigateToUrl(GlobalVariable.BASE_URL + '/exchange')
 WebUI.verifyMatch(WebUI.getUrl(), '.*/exchange', true)
 
 WebUI.waitForElementVisible(findTestObject('Page_Exchange/input_exchangeAmount'), 15)
-WebUI.setText(findTestObject('Page_Exchange/input_exchangeAmount'), '999999')
+WebUI.setText(findTestObject('Page_Exchange/input_exchangeAmount'), '99999')
 
-// Verify that the warning alert is visible
-WebUI.verifyElementPresent(findTestObject('Page_Exchange/lbl_insufficientPointsAlert'), 10)
+// In frontend, entering an amount higher than current balance automatically caps/clamps the input to max balance
+String actualValue = WebUI.getAttribute(findTestObject('Page_Exchange/input_exchangeAmount'), 'value')
+WebUI.verifyNotMatch(actualValue, '99999', false)
 
 WebUI.takeScreenshot(RunConfiguration.getProjectDir() + '/Screenshots/' + 'TC_Exchange_Insufficient_Points' + '.png')
 

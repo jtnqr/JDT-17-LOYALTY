@@ -36,6 +36,9 @@ WebUI.waitForElementVisible(findTestObject('Page_AdminPartners/btn_maybeLater'),
 WebUI.click(findTestObject('Page_AdminPartners/btn_maybeLater'))
 WebUI.delay(2)
 
+WebUI.deleteAllCookies()
+WebUI.executeJavaScript('localStorage.clear(); sessionStorage.clear();', null)
+
 WebUI.navigateToUrl(GlobalVariable.BASE_URL + '/login')
 WebUI.waitForElementVisible(findTestObject('Page_Login/input_email'), 5)
 WebUI.setText(findTestObject('Page_Login/input_email'), GlobalVariable.MEMBER_EMAIL)
@@ -43,8 +46,8 @@ WebUI.setText(findTestObject('Page_Login/input_password'), GlobalVariable.MEMBER
 WebUI.click(findTestObject('Page_Login/btn_signIn'))
 WebUI.waitForElementVisible(findTestObject('Page_Dashboard/lbl_heading'), 10)
 
-WebUI.navigateToUrl(GlobalVariable.BASE_URL + '/redeem')
-WebUI.waitForElementVisible(findTestObject('Page_Redeem/input_redeemAmount'), 15)
+WebUI.navigateToUrl(GlobalVariable.BASE_URL + '/rewards')
+WebUI.waitForElementVisible(findTestObject('Page_Rewards/card_firstReward'), 15)
 
 WebUI.takeScreenshot(RunConfiguration.getProjectDir() + '/Screenshots/' + 'TC_Partner_Inactive_Cannot_Redeem' + '.png')
 

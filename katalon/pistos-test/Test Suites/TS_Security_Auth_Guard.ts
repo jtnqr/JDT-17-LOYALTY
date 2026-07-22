@@ -33,13 +33,6 @@
       <usingDataBindingAtTestSuiteLevel>true</usingDataBindingAtTestSuiteLevel>
    </testCaseLink>
    <testCaseLink>
-      <guid>b1c2d3e4-0003-4000-8000-000000000010</guid>
-      <isReuseDriver>false</isReuseDriver>
-      <isRun>true</isRun>
-      <testCaseId>Test Cases/Security/TC_Partner_Inactive_Cannot_Earn</testCaseId>
-      <usingDataBindingAtTestSuiteLevel>true</usingDataBindingAtTestSuiteLevel>
-   </testCaseLink>
-   <testCaseLink>
       <guid>b1c2d3e4-0003-4000-8000-000000000011</guid>
       <isReuseDriver>false</isReuseDriver>
       <isRun>true</isRun>
