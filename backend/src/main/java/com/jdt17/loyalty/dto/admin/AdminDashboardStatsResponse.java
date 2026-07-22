@@ -24,7 +24,6 @@ public class AdminDashboardStatsResponse {
     private long totalRewards;
     private Map<String, Long> redeemedPointsPerMonth;
     private List<PopularRewardDetail> popularRewards;
-    private ExchangeTrafficDetail exchangeTraffic;
 
     @Data
     @Builder
@@ -33,14 +32,5 @@ public class AdminDashboardStatsResponse {
     public static class PopularRewardDetail {
         private String name;
         private long count;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ExchangeTrafficDetail {
-        private long kfcToMcdCount;
-        private long mcdToKfcCount;
     }
 }

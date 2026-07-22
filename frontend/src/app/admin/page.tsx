@@ -21,11 +21,6 @@ interface PopularRewardDetail {
   count: number;
 }
 
-interface ExchangeTrafficDetail {
-  kfcToMcdCount: number;
-  mcdToKfcCount: number;
-}
-
 interface DashboardStats {
   totalMembers: number;
   activeMembers: number;
@@ -38,7 +33,6 @@ interface DashboardStats {
   totalRewards: number;
   redeemedPointsPerMonth: Record<string, number>;
   popularRewards: PopularRewardDetail[];
-  exchangeTraffic: ExchangeTrafficDetail;
 }
 
 export default function AdminDashboardPage() {
@@ -106,13 +100,6 @@ export default function AdminDashboardPage() {
     value: val,
   }));
   const maxMonthValue = monthlyData.length > 0 ? Math.max(...monthlyData.map((d) => d.value)) : 0;
-
-  // Exchange traffic details
-  const kfcToMcd = stats?.exchangeTraffic?.kfcToMcdCount ?? 0;
-  const mcdToKfc = stats?.exchangeTraffic?.mcdToKfcCount ?? 0;
-  const totalExchanges = kfcToMcd + mcdToKfc;
-  const kfcToMcdPercent = totalExchanges > 0 ? Math.round((kfcToMcd / totalExchanges) * 100) : 0;
-  const mcdToKfcPercent = totalExchanges > 0 ? 100 - kfcToMcdPercent : 0;
 
   // Popular rewards
   const popularRewards = stats?.popularRewards ?? [];

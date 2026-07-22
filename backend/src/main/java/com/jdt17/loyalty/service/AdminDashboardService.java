@@ -72,28 +72,6 @@ public class AdminDashboardService {
                 .limit(5)
                 .collect(Collectors.toList());
 
-        // 3. Exchange traffic counts
-        List<Transaction> exchangeOuts = transactionRepository.findByType("EXCHANGE_OUT");
-        long kfcToMcdCount = 0;
-        long mcdToKfcCount = 0;
-
-        for (Transaction t : exchangeOuts) {
-            if (t.getPartner() != null && t.getPartner().getCode() != null) {
-                String partnerCode = t.getPartner().getCode().toUpperCase();
-                if ("KFC".equals(partnerCode)) {
-                    kfcToMcdCount++;
-                } else if ("MCD".equals(partnerCode)) {
-                    mcdToKfcCount++;
-                }
-            }
-        }
-
-        AdminDashboardStatsResponse.ExchangeTrafficDetail exchangeTraffic =
-                AdminDashboardStatsResponse.ExchangeTrafficDetail.builder()
-                        .kfcToMcdCount(kfcToMcdCount)
-                        .mcdToKfcCount(mcdToKfcCount)
-                        .build();
-
         return AdminDashboardStatsResponse.builder()
                 .totalMembers(totalMembers)
                 .activeMembers(activeMembers)
@@ -106,7 +84,6 @@ public class AdminDashboardService {
                 .totalRewards(totalRewards)
                 .redeemedPointsPerMonth(redeemedPointsPerMonth)
                 .popularRewards(popularRewards)
-                .exchangeTraffic(exchangeTraffic)
                 .build();
     }
 }
