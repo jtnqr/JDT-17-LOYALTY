@@ -994,11 +994,7 @@ Access: ADMIN only
       "name": "KFC Bucket 9 Pcs",
       "count": 12
     }
-  ],
-  "exchangeTraffic": {
-    "kfcToMcdCount": 8,
-    "mcdToKfcCount": 4
-  }
+  ]
 }
 ```
 
@@ -1009,8 +1005,7 @@ Access: ADMIN only
 4. Query partner and reward catalog total counts
 5. Query and map historical monthly redeemed points sum grouped by month format "MMM yyyy" sorted chronologically
 6. Query and aggregate popular rewards counts from redemptions, mapping to reward names, sorted descending, limited to top 5
-7. Query point exchange traffic counts from EXCHANGE_OUT transactions matching partner codes 'KFC' and 'MCD'
-8. Return statistics payload
+7. Return statistics payload
 
 ---
 
