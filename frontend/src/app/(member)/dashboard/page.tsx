@@ -197,20 +197,22 @@ export default function DashboardPage() {
             ======================================================== */}
         <div className="md:hidden flex-grow flex flex-col pb-20 overflow-y-auto">
           {/* Top Banner (Gradient Hero) */}
-          <section className="pt-6 pb-4 px-5 text-white relative">
-            <div className="flex items-center justify-between mb-6">
+          <section className="pt-3 pb-1 px-5 text-white relative">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-2xl text-brand-primary tracking-wider">
-                  PISTOS
-                </span>
+                <img
+                  src="/logo_pistos_landscape.webp"
+                  alt="Pistos Logo"
+                  className="w-24 h-auto object-contain cursor-pointer"
+                />
               </div>
             </div>
 
-            <div className="space-y-1 bg-gradient-to-br from-[#8B3D06] via-[#A65B28] to-[#C17A4A] p-6 rounded-lg">
-              <h2 className="text-xl font-bold tracking-tight">
+            <div className="space-y-0.5 bg-gradient-to-br from-[#8B3D06] via-[#A65B28] to-[#C17A4A] p-4 rounded-lg">
+              <h2 className="text-lg font-bold tracking-tight">
                 {getGreeting()}, {member?.name?.split(" ")[0]} 👋
               </h2>
-              <p className="text-xs text-white/80 font-medium">
+              <p className="text-[11px] text-white/80 font-medium">
                 Ready to maximize your rewards today?
               </p>
             </div>
