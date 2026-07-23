@@ -24,8 +24,7 @@ const registerSchema = z
     phone: z
       .string()
       .min(1, "Phone Number is required")
-      .regex(/^[0-9]+$/, "Phone number must contain only numbers")
-      .min(8, "Phone number must be at least 8 digits"),
+      .regex(/^8[0-9]{9,11}$/, "Enter 9-12 digits starting with 8"),
     password: z.string().min(6, "Password must be at least 6 characters long"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
     agree: z.boolean().refine((val) => val === true, {
@@ -48,8 +47,11 @@ export function RegisterForm() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    setValue,
   } = useForm<RegisterSchemaType>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       email: "",
@@ -60,17 +62,37 @@ export function RegisterForm() {
     },
   });
 
+  const phoneValue = watch("phone");
+
+  // Real-time phone input filtering: remove +, 62, and 0 prefix
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+
+    // Remove + character
+    value = value.replace(/\+/g, "");
+
+    // Remove leading 62
+    if (value.startsWith("62")) {
+      value = value.slice(2);
+    }
+
+    // Remove leading 0
+    if (value.startsWith("0")) {
+      value = value.slice(1);
+    }
+
+    // Only allow digits
+    value = value.replace(/\D/g, "");
+
+    setValue("phone", value);
+  };
+
   const onSubmit = async (data: RegisterSchemaType) => {
     setIsLoading(true);
     setApiError(null);
 
-    // Normalize phone number to start with '0' as per API spec example (e.g. 081234567890)
-    let formattedPhone = data.phone.replace(/^\+/, "");
-    if (formattedPhone.startsWith("62")) {
-      formattedPhone = "0" + formattedPhone.slice(2);
-    } else if (!formattedPhone.startsWith("0")) {
-      formattedPhone = "0" + formattedPhone;
-    }
+    // Phone input is already filtered to 8xxxxxxxxx format, just prepend 0
+    const formattedPhone = "0" + data.phone;
 
     const payload = {
       name: data.name,
@@ -152,7 +174,8 @@ export function RegisterForm() {
         startAdornment="+62"
         disabled={isLoading}
         error={errors.phone?.message}
-        {...register("phone")}
+        maxLength={12}
+        {...register("phone", { onChange: handlePhoneChange })}
       />
 
       <FormField
