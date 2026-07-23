@@ -24,7 +24,7 @@ const registerSchema = z
     phone: z
       .string()
       .min(1, "Phone Number is required")
-      .regex(/^8[0-9]{9,11}$/, "Enter 9-12 digits starting with 8"),
+      .regex(/^8[0-9]{9,13}$/, "Enter 10-14 digits starting with 8"),
     password: z.string().min(6, "Password must be at least 6 characters long"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
     agree: z.boolean().refine((val) => val === true, {
@@ -174,7 +174,7 @@ export function RegisterForm() {
         startAdornment="+62"
         disabled={isLoading}
         error={errors.phone?.message}
-        maxLength={12}
+        maxLength={14}
         {...register("phone", { onChange: handlePhoneChange })}
       />
 
