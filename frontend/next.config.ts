@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
       process.env.BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
       "http://localhost:8080";
-    console.log("Rewrites configured with backendUrl:", backendUrl);
     return [
       {
         source: "/api/v1/:path*",

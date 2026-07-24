@@ -24,6 +24,7 @@ spring:
     redis:
       host: ${REDIS_HOST:redis}
       port: 6379
+      password: ${REDIS_PASSWORD:}
   cache:
     type: redis
   servlet:
@@ -36,6 +37,15 @@ server:
   error:
     include-message: always
     include-binding-errors: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized
 
 springdoc:
   api-docs:
