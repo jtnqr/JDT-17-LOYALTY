@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestCaseEntity>
+   <description>Verify Admin can trigger Download PDF export feature on dashboard</description>
+   <name>TC_Admin_Export_PDF_Dashboard</name>
+   <tag></tag>
+   <comment></comment>
+   <recordOption>OTHER</recordOption>
+   <testCaseGuid>fe8741ab-83bc-429a-b123-5fc1fbf83608</testCaseGuid>
+</TestCaseEntity>
