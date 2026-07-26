@@ -1,4 +1,4 @@
-const COOKIE_OPTIONS = "; path=/; SameSite=Lax";
+const COOKIE_OPTIONS = "; path=/; SameSite=Lax; Secure";
 
 export function setAuthCookies(token: string, role: string) {
   document.cookie = `token=${encodeURIComponent(token)}${COOKIE_OPTIONS}`;

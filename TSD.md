@@ -326,6 +326,19 @@ CREATE INDEX idx_audit_created ON trx_audit_trail(created_at DESC);
 | V4__seed_rewards.sql | Insert 11 rewards (5 KFC + 6 McDonald's) |
 | V5__seed_demo_members.sql | Insert 1 admin + 3 demo members + initial balances |
 | V6__add_phone_unique_constraint.sql | Add UNIQUE constraint to mst_member.phone |
+| V7__add_image_columns.sql | Add image_url columns to partner/reward tables |
+| V8__seed_image_urls.sql | Seed image URLs for partners and rewards |
+| V9__add_foreign_key_indexes.sql | Add 17 performance indexes on foreign keys and frequently-queried columns |
+
+**V9 Performance Indexes** (added 2026-07-24):
+- `TRX_TRANSACTION`: member_id, partner_id, type, created_at
+- `TRX_POINT_BALANCE`: member_id, partner_id  
+- `TRX_AUDIT_TRAIL`: entity_type, entity_id, created_at
+- `MST_REWARD`: partner_id, status
+- `MST_EXCHANGE_RATE`: from_partner_id, to_partner_id, effective_from
+- `MST_MEMBER`: status, created_at
+
+These indexes optimize paginated queries, foreign key joins, and filtered list endpoints.
 
 ---
 

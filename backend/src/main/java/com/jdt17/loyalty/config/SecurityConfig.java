@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}/points").hasRole(RoleConstant.MEMBER)
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/members/{id}/transactions").hasRole(RoleConstant.MEMBER)
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/exchange").hasRole(RoleConstant.MEMBER)
