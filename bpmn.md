@@ -1,6 +1,6 @@
 # JDT-17-LOYALTY — Process Flows (BPMN Levels 0–3)
 
-> Version: 3.0 · Date: 2026-07-02
+> Version: 3.1 · Date: 2026-07-27 (aligned with TSD v1.5)
 > Description: Process models mapped across standard BPMN hierarchy levels (Level 0 to Level 3) for the Loyalty Points Platform.
 
 ---

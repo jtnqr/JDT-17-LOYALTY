@@ -1,12 +1,14 @@
 # JDT-17-LOYALTY — Entity Relationship Diagram
 
 > **Platform:** Multi-partner loyalty system (KFC / McDonald's pilot)
-> **Version:** 1.0 | **Date:** 2026-07-02
+> **Version:** 1.1 | **Date:** 2026-07-27 (aligned with TSD v1.5)
 >
 > This document is the authoritative data-model reference for the JDT-17-LOYALTY platform.
 > It defines all persistent entities, their fields, and the relationships between them.
 > The diagram is generated from the Technical Specification Document (TSD.md) and must remain
 > in sync with the JPA entity classes in the codebase.
+>
+> **Note:** Database performance optimizations added in V9 migration (27-Jul-2026) include 17 indexes on foreign keys and frequently-queried columns.
 
 ---
 
