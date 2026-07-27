@@ -1,7 +1,7 @@
 # JDT-17-LOYALTY — Use Cases
 
-**Version:** 1.0  
-**Date:** 2026-07-02  
+**Version:** 1.1  
+**Date:** 2026-07-27 (aligned with TSD v1.5)  
 **Source:** Functional Specification Document (FSD.md)
 
 ---
@@ -249,7 +249,7 @@
 
 ### Business Rules Applied
 
-- **BR-1:** Exchange rates are directional and asymmetric — `KFC -> McDonald's = 0.8`, `McDonald's -> KFC = 1.25`. The reverse rate is a separate row in `EXCHANGE_RATE`.
+- **BR-1:** Exchange rates are directional and asymmetric — `KFC -> McDonald's = 0.8`, `McDonald's -> KFC = 0.9`. The reverse rate is a separate row in `EXCHANGE_RATE`.
 - **BR-2:** `targetPoints = floor(points * rate)`. Fractional results are truncated (floor), not rounded.
 - **BR-3:** The `EXCHANGE_IN` transaction carries a `relatedTxId` foreign key pointing to the `EXCHANGE_OUT` transaction, linking the two sides of a single exchange operation.
 - **BR-4:** All five writes (2x TRANSACTION, 2x POINT_BALANCE update, AUDIT_TRAIL) occur within a single DB transaction — all succeed or all roll back.

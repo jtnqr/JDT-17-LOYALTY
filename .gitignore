@@ -30,3 +30,11 @@ katalon/pistos-test/.settings/
 katalon/pistos-test/.classpath
 katalon/pistos-test/.project
 
+
+# AI agent working files (keep local, not in remote repo)
+.hermes/
+AGENTS.md
+frontend/AGENTS.md
+frontend/CLAUDE.md
+KANBAN.md
+links.md

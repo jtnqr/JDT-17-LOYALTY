@@ -68,6 +68,7 @@ cp .env.example .env
 # Edit .env with:
 #   - Strong POSTGRES_PASSWORD
 #   - JWT_SECRET (generate with: openssl rand -hex 64)
+#   - REDIS_PASSWORD (generate with: openssl rand -hex 32)
 #   - Partner API keys (e.g. kfc_api_key_2026_secure_demo_only)
 
 chmod 600 .env
@@ -115,6 +116,8 @@ TRX_POINT_BALANCE (balances per member per partner)
 TRX_TRANSACTION (EARN | REDEEM | EXCHANGE_IN | EXCHANGE_OUT | EXPIRED)
 TRX_AUDIT_TRAIL (compliance logging)
 ```
+
+**Database Migrations**: Flyway manages schema versions (V1-V9). V9 migration (added 27-Jul-2026) includes 17 performance indexes for production optimization. See `backend/src/main/resources/db/migration/` for details.
 
 See `erd.md` for detailed schema.
 
@@ -306,8 +309,9 @@ Before deploying to production:
 3. **Application**
    - Set `SPRING_PROFILES_ACTIVE=prod`
    - Configure logging (JSON format, centralized aggregation)
-   - Enable Spring Boot Actuator endpoints (`/actuator/health`)
+   - Enable Spring Boot Actuator endpoints (`/actuator/health` - used for Docker healthchecks)
    - Set up monitoring (Prometheus, Grafana)
+   - Configure Redis with authentication (`REDIS_PASSWORD`) for session management and rate limiting
 
 4. **Frontend**
    - Build optimized production bundle (`npm run build`)
@@ -320,14 +324,11 @@ Before deploying to production:
 
 ```
 .
-├── AGENTS.md                  # AI agent guidelines (auto-loaded)
 ├── FSD.md                     # Functional Specification
 ├── TSD.md                     # Technical Specification
 ├── README.md                  # This file
 ├── .env.example               # Environment variables template
 ├── docker-compose.yml         # Service orchestration
-├── .hermes/
-│   └── plans/                 # Implementation roadmap
 ├── activity.diagram.md        # Use case flowcharts
 ├── usecase.diagram.md         # Actor-use case relationships
 ├── erd.md                     # Entity relationship diagram
@@ -347,7 +348,6 @@ Before deploying to production:
 | `.hermes/plans/` | Implementation plan (5 phases, task breakdown) |
 | `erd.md` | Detailed entity reference with field specs |
 | `bpmn.md` | BPMN Level 0-3 process flows |
-| `AGENTS.md` | Development guidelines for AI-assisted coding |
 
 ---
 

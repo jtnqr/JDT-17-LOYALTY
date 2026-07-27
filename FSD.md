@@ -15,6 +15,8 @@
 | 1.0.0 | Initial Draft | Verry Kurniawan | 03/07/2026 |
 | 1.1.0 | Added Reward Management module specs & rules | Julius | 14/07/2026 |
 
+**Note:** This FSD is aligned with TSD.md v1.5 (27/Jul/2026) which includes V9 database migration, Redis authentication, and production readiness enhancements.
+
 ---
 
 ## Glossary
