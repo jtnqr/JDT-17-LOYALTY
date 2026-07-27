@@ -2,8 +2,8 @@
 # PISTOS – Loyalty App
 
 **Author:** Julius (JDT-17 Apprentice)
-**Version:** 1.4
-**Last Update:** 21/Jul/2026
+**Version:** 1.5
+**Last Update:** 27/Jul/2026
 **Project:** PISTOS (Points Integration System for Transaction-Originated Services)
 
 ---
@@ -17,6 +17,7 @@
 | 1.2 | 08/Jul/2026 | Julius | memberId resolved from JWT in /redeem; phone UNIQUE + V6 migration; register response aligned to login shape; audit trail documented as DB-only; exchange-rate REST endpoints; reward catalog scope note; CORS config; PUT /partners/{id} explicit fields; Actuator note |
 | 1.3 | 14/Jul/2026 | Julius | Added Admin Reward CRUD, Image upload endpoints, and Redis caching specifications |
 | 1.4 | 21/Jul/2026 | Julius | Added Admin Dashboard Statistics endpoint specification |
+| 1.5 | 27/Jul/2026 | Julius | Added V9 migration (17 database performance indexes), Redis authentication, Spring Boot Actuator health endpoint, Docker container healthchecks, production readiness enhancements |
 
 ---
 
@@ -330,7 +331,7 @@ CREATE INDEX idx_audit_created ON trx_audit_trail(created_at DESC);
 | V8__seed_image_urls.sql | Seed image URLs for partners and rewards |
 | V9__add_foreign_key_indexes.sql | Add 17 performance indexes on foreign keys and frequently-queried columns |
 
-**V9 Performance Indexes** (added 2026-07-24):
+**V9 Performance Indexes** (added 2026-07-27):
 - `TRX_TRANSACTION`: member_id, partner_id, type, created_at
 - `TRX_POINT_BALANCE`: member_id, partner_id  
 - `TRX_AUDIT_TRAIL`: entity_type, entity_id, created_at
@@ -1314,7 +1315,7 @@ public class PointExpiryScheduler {
 | L-8 | No reward stock limits (MVP by design) | Unlimited redemptions | Add stock tracking in future release |
 | L-9 | Partner api_key stored as SHA-256 hash | Plaintext DB exposure enables impersonation | Already hashed; add rotation endpoint post-MVP |
 | L-10 | No REST endpoints to manage MST_REWARD | Reward catalog (add/edit/deactivate) is migration-only in this MVP | Add admin CRUD endpoints post-MVP if catalog needs to change without a deploy |
-| L-11 | Spring Boot Actuator health endpoint not yet exposed | No /actuator/health for liveness/readiness probes | Optional, low priority; enable Actuator and expose only health endpoint when needed |
+| ~~L-11~~ | ~~Spring Boot Actuator health endpoint not yet exposed~~ | ~~No /actuator/health for liveness/readiness probes~~ | ✅ **Resolved in v1.5** — Actuator enabled with /actuator/health exposed for Docker healthchecks |
 
 ---
 
