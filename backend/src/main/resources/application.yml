@@ -63,6 +63,9 @@ cors:
 app:
   uploads:
     dir: ${UPLOAD_DIR:/app/uploads}
+  openapi:
+    public-url: ${OPENAPI_PUBLIC_URL:https://pistos.binaryneedle.my.id}
+    local-url: ${OPENAPI_LOCAL_URL:http://localhost:8082}
 
 logging:
   level:
