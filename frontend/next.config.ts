@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
         source: "/uploads/:path*",
         destination: `${backendUrl}/uploads/:path*`,
       },
+      {
+        source: "/swagger-ui/:path*",
+        destination: `${backendUrl}/swagger-ui/:path*`,
+      },
+      {
+        source: "/swagger-ui.html",
+        destination: `${backendUrl}/swagger-ui.html`,
+      },
+      {
+        source: "/api-docs/:path*",
+        destination: `${backendUrl}/api-docs/:path*`,
+      },
     ];
   },
 };
